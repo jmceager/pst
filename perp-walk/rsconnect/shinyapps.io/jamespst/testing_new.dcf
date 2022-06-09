@@ -1,0 +1,14 @@
+name: testing_new
+title: testing_new
+username:
+account: jamespst
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 6153054
+bundleId: 5936214
+url: https://jamespst.shinyapps.io/testing_new/
+when: 1653330669.26473
+lastSyncTime: 1653330669.26474
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: CHANGELOG.md|LICENSE|README.md

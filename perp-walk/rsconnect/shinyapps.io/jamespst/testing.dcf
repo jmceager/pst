@@ -1,0 +1,14 @@
+name: testing
+title: testing
+username:
+account: jamespst
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 5885126
+bundleId: 5976165
+url: https://jamespst.shinyapps.io/testing/
+when: 1654289916.47653
+lastSyncTime: 1654289916.47656
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: offshorefinder.R|perp_table.R

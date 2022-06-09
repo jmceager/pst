@@ -1,0 +1,206 @@
+/* import font aswesome icons and google font */
+@import url(https://use.fontawesome.com/releases/v6.0.0/css/all.css);
+@import url('https://fonts.googleapis.com/css2?family=Source+Sans+Pro&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Montserrat&display=swap');
+
+body {
+  font-family: "Source Sans Pro", "Open Sans", Arial, sans-serif;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family:"Montserrat", sans-serif;
+}
+
+/* 
+Styling main dashboard appearance:
+Starting with navbar/logo
+*/
+
+.skin-blue .main-header {
+  position: fixed;
+  width: 100%;
+}
+
+
+.skin-blue .main-header .logo {
+  font-family: "Montserrat", sans-serif;
+  font-weight: bold;
+  font-size: 24px;
+  background-color: #003E59;
+}
+
+.skin-blue .main-header .logo:hover {
+  background-color: #00546F;
+}
+
+.skin-blue .main-header .navbar {
+  background-color: #003E59;
+}
+
+
+.skin-blue .main-header .navbar .sidebar-toggle:hover {
+  background-color:  #00546F;
+}
+
+.btn-success {
+  background-color: #61A893;
+  border-color: #61A893;
+}
+
+.btn-success:hover {
+  background-color: #459197;
+  border-color: #459197;
+}
+
+.btn-success:focus {
+  background-color: #459197;
+  border-color: #459197;
+}
+
+.btn-success:active {
+  background-color: #49948A;
+  border-color: #49948A;
+}
+
+.btn.btn-circle{
+  margin-top: 10px;
+  margin-bottom: 10px;
+  margin-right: .5vw;
+  margin-left: .5vw;
+  width: 30px;
+  height: 30px;
+  line-height: 1;
+}
+
+
+.open>.dropdown-menu {
+  display: none;
+}
+
+.dropdown .tippy-popper{
+  margin-right:.5vw;
+}
+
+.dropdown a {
+  margin-right: 20px;
+  margin-left: 20px;
+}
+
+.dropdown .source-link {
+  margin-left: 0px;
+  margin-right: 0px;
+}
+
+.share-icon i {
+  font-size: 1.5em;
+}
+
+#info-down .tippy-popper {
+  width: 20vw;
+}
+
+.tippy-arrow {
+  left: 50%;
+}
+
+/*background gradient??? */
+.content-wrapper {
+  min-height: 100vh !important;
+  overflow: auto;
+  background: rgb(15,32,39);
+  background: -moz-linear-gradient(339deg, rgba(15,32,39,1) 0%, rgba(0,62,89,1) 33%, rgba(69,145,151,1) 66%, rgba(97,168,147,1) 100%);
+  background: -webkit-linear-gradient(339deg, rgba(15,32,39,1) 0%, rgba(0,62,89,1) 33%, rgba(69,145,151,1) 66%, rgba(97,168,147,1) 100%);
+  background: linear-gradient(339deg, rgba(15,32,39,1) 0%, rgba(0,62,89,1) 33%, rgba(69,145,151,1) 66%, rgba(97,168,147,1) 100%);
+  filter: progid:DXImageTransform.Microsoft.gradient(startColorstr="#0f2027",endColorstr="#61a893",GradientType=1);
+  box-shadow: inset 0 0 0 100vmax rgba(0, 0, 0, .4);
+    }
+    
+/* sidebar stuff*/
+.skin-blue .main-sidebar {
+  position: fixed;
+}
+
+.sidebar-menu > li { /* this does the sidebar menu text */
+  font-family:"Montserrat", sans-serif;
+  font-weight:500;
+}
+
+.skin-blue .sidebar-menu>li.active>a, .skin-blue .sidebar-menu>li:hover>a {
+    border-left-color: #59A18B;
+}
+
+.control-label { /* this does the titles of filters */
+  font-family:"Montserrat", sans-serif;
+  font-weight:700;
+}
+
+
+
+/* content / body / boxes */
+.content{
+  position: relative;
+  top: 50px;
+}
+
+.box {
+  border-radius: 12px;
+  background-color: #222d32;
+  border-top: 0px;
+  box-shadow: 4px 4px 16px rgba(0,0,0,.15);
+}
+
+.box-header .box-title {
+  font-weight: 900;
+  color: #ffffff;
+}
+
+.material-switch {
+  color:#ffffff;
+}
+
+#timePlot .text{
+  font-family:  "Montserrat", sans-serif;;
+}
+
+#hlTimePlot .text{
+   font-family: "Montserrat", sans-serif;
+}
+
+/* styling valueboxes:
+according to yes/no values = yellow / red 
+according to system = olive/fuchsia/maroon
+*/
+.small-box {
+  border-radius: 12px;
+}
+
+.col-sm-3 {
+  padding-right: 12px;
+  padding-left: 12px;
+}
+
+.small-box.bg-yellow { 
+  background-color: #999999 !important; 
+  color: #000000 !important; }
+  
+.small-box.bg-red { 
+  background-color: #e41a1c !important; 
+  color: #ffffff !important; }
+
+.small-box.bg-olive { 
+  background-color: #377eb8 !important; 
+  color: #ffffff !important; }
+
+.small-box.bg-fuchsia { 
+  background-color: #984ea3 !important; 
+  color: #ffffff !important; }
+
+.small-box.bg-maroon { 
+  background-color: #ff7f00 !important; 
+  color: #ffffff !important; }
+  
+  /*leaflet?*/
+  .info {
+    font-family: "Source Sans Pro", sans-serif;
+  }
+  
