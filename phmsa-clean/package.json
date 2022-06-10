@@ -1,0 +1,19 @@
+{
+  "name": "phmsa_clean",
+  "version": "1.0.0",
+  "description": "Cleaning PHMSA pipeline incident and mileage data for use in GIS and programming.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jmceager/phmsa_clean.git"
+  },
+  "author": "James Eager",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/jmceager/phmsa_clean/issues"
+  },
+  "homepage": "https://github.com/jmceager/phmsa_clean#readme"
+}
