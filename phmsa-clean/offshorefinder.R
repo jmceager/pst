@@ -22,6 +22,23 @@ library(maptools)
 #   head(20)%>%
 #   mutate(ILOC = glue(lat = LOCATION_LATITUDE,lon = LOCATION_LONGITUDE))
 
+
+cleanLoc <- function(df, col){
+  goodLoc <- df %>%
+    filter(!grepl("NA", .data[[col]]) 
+           & !grepl("Municipality", .data[[col]]) 
+           & !grepl(" Miles", .data[[col]]))
+  
+  badLoc <- df %>%
+    filter(grepl("NA", .data[[col]]) 
+           | grepl("Municipality", .data[[col]]) 
+           | grepl(" Miles", .data[[col]])) %>%
+    mutate(.data[[col]] = glue(lat = LOCATION_LATITUDE, lon = LOCATION_LONGITUDE))
+  
+  return( rbind(goodLoc, badLoc) )
+}
+
+
 glue <- function(lat, lon){
   state <- locState(lat = lat, lon = lon)
   county <- locCounty(lat = lat, lon = lon)

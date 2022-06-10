@@ -33,7 +33,7 @@ gd.clean <- read_xlsx("./data/incidents/gd2010toPresent.xlsx", sheet = 2) %>%
   select(!c(LOCATION_CITY_NAME,LOCATION_STATE_ABBREVIATION))
   
 
-all.gas <- read_xlsx("./data/incidents/gtggungs2010toPresent.xlsx", sheet = 2) %>%
+gt.clean <- read_xlsx("./data/incidents/gtggungs2010toPresent.xlsx", sheet = 2) %>%
   select(all_of(c(gas_cols, "SYSTEM_TYPE", "ON_OFF_SHORE",
                           "ONSHORE_CITY_NAME","OFFSHORE_COUNTY_NAME",
                           "ONSHORE_STATE_ABBREVIATION", "OFFSHORE_STATE_ABBREVIATION")))%>%
@@ -58,9 +58,7 @@ all.gas <- read_xlsx("./data/incidents/gtggungs2010toPresent.xlsx", sheet = 2) %
          )
   )%>%
   select(!c("ONSHORE_CITY_NAME","OFFSHORE_COUNTY_NAME",
-            "ONSHORE_STATE_ABBREVIATION", "OFFSHORE_STATE_ABBREVIATION"))%>%
-  rbind( gd.clean)
-  
+            "ONSHORE_STATE_ABBREVIATION", "OFFSHORE_STATE_ABBREVIATION"))
   
 
 #fix hl to be similar
@@ -74,7 +72,7 @@ hl_cols <- c("REPORT_NUMBER","NAME","OPERATOR_ID", "SIGNIFICANT", "IYEAR","LOCAL
              "INSTALLATION_YEAR", "SYSTEM_PART_INVOLVED",
               "TOTAL_COST_CURRENT","CAUSE", "CAUSE_DETAILS","COMMODITY_RELEASED_TYPE", "NARRATIVE")
 #cleaning
-all.hl <- read_xlsx("./data/incidents/hl2010toPresent.xlsx", sheet = 2)%>% 
+hl.clean <- read_xlsx("./data/incidents/hl2010toPresent.xlsx", sheet = 2)%>% 
   select(hl_cols)%>%
   mutate(SYSTEM_TYPE = "HL (Hazardous Liquids)")%>%
   rename( INTENTIONAL_RELEASE = INTENTIONAL_RELEASE_BBLS,
@@ -102,8 +100,8 @@ all.hl <- read_xlsx("./data/incidents/hl2010toPresent.xlsx", sheet = 2)%>%
   select(!c("ONSHORE_CITY_NAME","OFFSHORE_COUNTY_NAME",
             "ONSHORE_STATE_ABBREVIATION", "OFFSHORE_STATE_ABBREVIATION"))
   
-
-all.inc <- rbind(all.gas, all.hl) %>%
+#dealing with some weird stuff happening in the lat longs 
+all.inc <- rbind(hl.clean, gd.clean, gt.clean) %>%
   mutate(LOCATION_LONGITUDE = if_else(LOCATION_LONGITUDE < -180, 
                                       LOCATION_LONGITUDE/100000,
                                       LOCATION_LONGITUDE))%>%
@@ -114,9 +112,7 @@ all.inc <- rbind(all.gas, all.hl) %>%
   mutate(STATE = str_sub(ILOC, start = -2, end = -1))
 
 
-#location mutations, might as well
-# to add: fix all x miles east places without fixing literal eight mile, al 
-#in other words replace x miles east with y county, state
+#Location mutations using offshore finder, turn this into a function? 
 goodLoc <- all.inc %>%
   filter(!grepl("NA", ILOC) & !grepl("Municipality", ILOC) & !grepl(" Miles", ILOC))
   
