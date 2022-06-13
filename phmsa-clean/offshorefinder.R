@@ -23,18 +23,31 @@ library(maptools)
 #   mutate(ILOC = glue(lat = LOCATION_LATITUDE,lon = LOCATION_LONGITUDE))
 
 
-cleanLoc <- function(df, col){
+cleanLoc <- function(df, col, lat, lon){
+  #clean bad lat longs 
+  df <- df %>%
+    mutate(LOCATION_LONGITUDE = if_else(.data[[lon]] < -180, 
+                                        .data[[lon]]/100000,
+                                        .data[[lon]]))%>%
+    mutate(LOCATION_LONGITUDE = if_else(.data[[lon]] > 0, 
+                                        .data[[lon]]*-1,
+                                        .data[[lon]]))
+  
+  #separate good locations
   goodLoc <- df %>%
     filter(!grepl("NA", .data[[col]]) 
            & !grepl("Municipality", .data[[col]]) 
-           & !grepl(" Miles", .data[[col]]))
+           & !grepl(" Miles", .data[[col]])) %>%
+    mutate(cleanLoc = .data[[col]])
   
+  #run gis on bad locations
   badLoc <- df %>%
     filter(grepl("NA", .data[[col]]) 
            | grepl("Municipality", .data[[col]]) 
            | grepl(" Miles", .data[[col]])) %>%
-    mutate(.data[[col]] = glue(lat = LOCATION_LATITUDE, lon = LOCATION_LONGITUDE))
+    mutate(cleanLoc = glue(lat = .data[[lat]], lon = LOCATION_LONGITUDE))
   
+  #return clean DF
   return( rbind(goodLoc, badLoc) )
 }
 
