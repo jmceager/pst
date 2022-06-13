@@ -5,22 +5,6 @@ library(sf)
 library(maps)
 library(maptools)
 
-# df <- read_csv("./data/all_inc.csv") %>%
-#   filter(grepl("NA", ILOC) | grepl("Municipality", ILOC))%>%
-#   select(LOCATION_LONGITUDE,LOCATION_LATITUDE)%>%
-#   head(50)%>%
-#   rename(X = 1, Y = 2)
-# 
-# 
-# offshoreFinder(df)
-# locCounty(lon = df$X,lat = df$Y)
-# 
-# all <- cbind(locCounty(lon = df$X,lat = df$Y), offshoreFinder(df) )
-
-# x <- all.inc %>%
-#   filter(grepl("NA", ILOC) | grepl("Municipality", ILOC))%>%
-#   head(20)%>%
-#   mutate(ILOC = glue(lat = LOCATION_LATITUDE,lon = LOCATION_LONGITUDE))
 
 
 cleanLoc <- function(df, col, lat, lon){
