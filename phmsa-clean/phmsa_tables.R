@@ -12,11 +12,12 @@ gas_cols <- c( "REPORT_NUMBER", "NAME","OPERATOR_ID", "SIGNIFICANT", "IYEAR","LO
               "INJURY_IND","INJURE","EXPLODE_IND","IGNITE_IND" ,  "NUM_PUB_EVACUATED", 
               "INSTALLATION_YEAR", "SYSTEM_PART_INVOLVED",
               "TOTAL_COST_CURRENT","CAUSE","CAUSE_DETAILS","COMMODITY_RELEASED_TYPE", "NARRATIVE")
-#join
-gd.clean <- read_xlsx("./data/incidents/gd2010toPresent.xlsx", sheet = 2) %>% 
-  select(all_of(  append(gas_cols,c("LOCATION_CITY_NAME","LOCATION_STATE_ABBREVIATION"))))%>%
-  mutate(SYSTEM_TYPE = "GD (Gas Distribution)")%>%
-  mutate(UNINTENTIONAL_RELEASE = replace_na(UNINTENTIONAL_RELEASE,0), 
+
+# full cols 
+gd.full <- read_xlsx("./data/incidents/gd2010toPresent.xlsx", sheet = 2) %>% 
+  mutate(SYSTEM_TYPE = "GD (Gas Distribution)", 
+         SYS = "GD",
+         UNINTENTIONAL_RELEASE = replace_na(UNINTENTIONAL_RELEASE,0), 
          INTENTIONAL_RELEASE = replace_na(INTENTIONAL_RELEASE,0),
          ON_OFF_SHORE = "ONSHORE",
          UNITS = "mscf",
@@ -29,9 +30,43 @@ gd.clean <- read_xlsx("./data/incidents/gd2010toPresent.xlsx", sheet = 2) %>%
          MDY = date(LOCAL_DATETIME),
          IMONTH = month(MDY),
          MSYS = "Gas",
-         ILOC = paste(str_to_title(LOCATION_CITY_NAME),LOCATION_STATE_ABBREVIATION, sep = ", "))%>%
-  select(!c(LOCATION_CITY_NAME,LOCATION_STATE_ABBREVIATION))
+         ILOC = paste(str_to_title(LOCATION_CITY_NAME),LOCATION_STATE_ABBREVIATION, sep = ", ")) %>%
+  cleanLoc(., "ILOC", lat= "LOCATION_LATITUDE", lon = "LOCATION_LONGITUDE")
+
+#short version
+gd.clean <- gd.full %>% 
+  select(all_of(  append(gas_cols)))
   
+
+# gt big
+# need to use col OFF_ACCIDENT_ORIGIN to bring in OCS incidents and "in state waters"
+gt.clean <- read_xlsx("./data/incidents/gtggungs2010toPresent.xlsx", sheet = 2) %>%
+  mutate(SYS = gsub( " .*$", "", SYSTEM_TYPE ),
+         UNINTENTIONAL_RELEASE = replace_na(UNINTENTIONAL_RELEASE,0), 
+         INTENTIONAL_RELEASE = replace_na(INTENTIONAL_RELEASE,0),
+         UNITS = "mscf",
+         TOTAL_RELEASE = UNINTENTIONAL_RELEASE + INTENTIONAL_RELEASE,
+         TOTAL_COST_CURRENT = replace_na(parse_number(TOTAL_COST_CURRENT), 0),
+         EXPLODE_IND = replace_na(EXPLODE_IND, "NO"),
+         IGNITE_IND = replace_na(IGNITE_IND, "NO"),
+         FATAL = replace_na(FATAL, 0),
+         INJURE = replace_na(INJURE, 0),
+         MDY = date(LOCAL_DATETIME),
+         IMONTH = month(MDY),
+         MSYS = "Gas",
+         ILOC =  if_else(ON_OFF_SHORE == "ONSHORE", 
+                         paste(str_to_title(ONSHORE_CITY_NAME), ONSHORE_STATE_ABBREVIATION,
+                               sep = ", "),
+                         paste(paste(str_to_title(OFFSHORE_COUNTY_NAME), "County Waters", sep = " "),
+                               OFFSHORE_STATE_ABBREVIATION,
+                               sep = ", ")
+         )
+  )%>%
+  cleanLoc(.,"ILOC","LOCATION_LATITUDE","LOCATION_LONGITUDE")
+
+
+gt.clean %>% select(ILOC, cleanLoc, ON_OFF_SHORE, OFF_ACCIDENT_ORIGIN) %>% filter(ON_OFF_SHORE == "OFFSHORE") %>% view()
+
 
 gt.clean <- read_xlsx("./data/incidents/gtggungs2010toPresent.xlsx", sheet = 2) %>%
   select(all_of(c(gas_cols, "SYSTEM_TYPE", "ON_OFF_SHORE",
@@ -102,15 +137,13 @@ hl.clean <- read_xlsx("./data/incidents/hl2010toPresent.xlsx", sheet = 2)%>%
   
 #dealing with some weird stuff happening in the lat longs 
 all.inc <- rbind(hl.clean, gd.clean, gt.clean) %>%
-  mutate(LOCATION_LONGITUDE = if_else(LOCATION_LONGITUDE < -180, 
-                                      LOCATION_LONGITUDE/100000,
-                                      LOCATION_LONGITUDE))%>%
-  mutate(LOCATION_LONGITUDE = if_else(LOCATION_LONGITUDE > 0, 
-                                      LOCATION_LONGITUDE*-1,
-                                      LOCATION_LONGITUDE))%>%
   mutate( MoYr = my(paste(IMONTH,IYEAR, sep = "-"))) %>%
   mutate(STATE = str_sub(ILOC, start = -2, end = -1))
 
+
+small.inc <- all.inc %>% head(20)
+
+small.inc %>% cleanLoc(.,"ILOC","LOCATION_LATITUDE", "LOCATION_LONGITUDE") %>% view()
 
 #Location mutations using offshore finder, turn this into a function? 
 goodLoc <- all.inc %>%
