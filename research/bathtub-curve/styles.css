@@ -1,0 +1,36 @@
+/* import font aswesome icons and google font */
+@import url(https://use.fontawesome.com/releases/v6.0.0/css/all.css);
+@import url('https://fonts.googleapis.com/css2?family=Source+Sans+Pro&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Montserrat&display=swap');
+
+body {
+  font-family: "Source Sans Pro", "Open Sans", Arial, sans-serif;
+  font-size: .66em;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family:"Montserrat", sans-serif;
+}
+
+li {
+    margin: 0;
+    padding: 0em;
+}
+
+/* first page logo and stuff */
+.gdbar img {
+  width: 405px !important;
+  height: 150px !important;
+  margin: 8px 8px;
+}
+
+.gdbar {
+  width: 450px !important;
+  height: 170px !important;
+}
+
+slides > slide:not(.nobackground):before {
+      width: 203px;
+      height: 75px;
+      background-size: 203px 75px;
+    }

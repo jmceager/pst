@@ -1,0 +1,292 @@
+---
+title: "Untitled Analysis"
+subtitle: "Specifics (Timeline)"
+runningheader: "Pipeline Safety Trust `r format(Sys.time(), '%m/%Y')`"
+author: "Pipeline Safety Trust"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  tufte::tufte_handout: default
+header-includes:
+  - \usepackage{titling}
+  - \pretitle{\begin{center}
+    \includegraphics[width=2in,height=2in]{img/PST_logo.png}\LARGE\\}
+  - \posttitle{\end{center}}
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r include = FALSE, echo = FALSE}
+rm(list = ls())
+```
+
+
+```{r setup, include=FALSE}
+library(tufte)
+# invalidate cache when the tufte version changes
+knitr::opts_chunk$set(cache.extra = packageVersion('tufte'))
+options(htmltools.dir.version = FALSE)
+
+library(tidyverse)
+library(ggrepel)
+library(RColorBrewer)
+library(ggthemes)
+library(viridis)
+library(scales)
+library(readxl)
+library(kableExtra)
+library(sp)
+library(rgeos)
+library(tufte)
+library(rgdal)
+
+
+knitr::opts_chunk$set(echo = FALSE, include = FALSE, message = FALSE)
+options(knitr.table.format = "latex")
+capt = "Source: PHMSA Incident and Mileage Data (2010-2021)"
+setwd("/Users/jameseager/Documents/projects/requests/Illinois_Age")
+```
+
+```{r theme_pst}
+library(showtext)
+#> Loading required package: sysfonts
+#> Loading required package: showtextdb
+pstFont = "Montserrat"
+font_add_google(pstFont)
+showtext_auto()
+theme_pst <- function(baseSize=10) {
+  (theme(
+                       axis.line.x = element_line(
+                         colour = "#182125",
+                         size = 0.5,
+                         linetype = "solid"
+                       ),
+                       axis.line.y = element_line(
+                         colour = "#182125",
+                         size = 0.5,
+                         linetype = "solid"
+                       ),
+                       axis.ticks.y = element_line(
+                         colour = "#182125",
+                         size = 0.5,
+                         linetype = "solid"
+                       ),
+                       text = element_text(family = pstFont),
+                       axis.text = element_text(colour = "#8C9394",
+                                                size = baseSize * .8),
+                       axis.title = element_text(colour ="black"),
+                       panel.grid.minor.y = element_line(linetype = "dotted", 
+                                                         colour = "#C4C8C6"),
+                       panel.grid.major.y = element_line(colour = "#394C56", 
+                                                         linetype = "dotted"),
+                       panel.grid.major.x = element_blank(),
+                       plot.tag.position = "topright",
+                       plot.tag = element_text(size = baseSize *.66,
+                                               colour = "#8C9394"),
+                       panel.grid.minor.x = element_blank(),
+                       panel.background = element_rect(fill = "#ffffff"),
+                       panel.border = element_blank(),
+                       strip.background = element_blank(),
+                       strip.text = element_blank(),
+                       strip.text.x = element_text(size = baseSize*.8, 
+                                                   face = "bold"),
+                       strip.text.y = element_blank(),
+                       legend.text = element_text(colour = "black",
+                                                  size = baseSize * .8),
+                       legend.background = element_rect(fill = NULL, 
+                                                        color = "#182125"),
+                       legend.title = element_text( face = "bold", 
+                                                    colour = "black",
+                                                    size = baseSize),
+                       legend.position = "right",
+                       legend.key = element_blank(),
+                       #legend.background = element_blank(),
+                       plot.background = element_rect(fill = "#ffffff"),
+                       plot.title = element_text(face = "bold", 
+                                                 colour = "black",
+                                                 size = baseSize*1.2),
+                       plot.subtitle = element_text(colour = "#8C9394",
+                                                    size = baseSize)
+                     )
+  )
+}
+```
+
+```{r nice colors}
+col <- brewer.pal(6,"Set2")
+green <- col[1]
+orange <- col[2]
+purple <- col[3]
+pink <- col[4]
+lime <- col[5]
+yellow <- col[6]
+
+pstBlue <- "#003E59"
+```
+
+```{r loading incident data}
+#all incident data + op mileage
+df <- read_csv("/Users/jameseager/Documents/projects/PHMSA_clean/data/all_inc.csv") 
+
+hazMiles <- read_csv("/Users/jameseager/Documents/projects/PHMSA_clean/data/HL_MilesDecadeAge.csv") %>%
+  mutate(`Pre 1940 or Unknown` = `Pre-20 or Unknown` + `1920-1929` + `1930-1939`,
+         sys = "HL")
+
+disMiles <- read_csv("/Users/jameseager/Documents/projects/PHMSA_clean/data/GD_MilesDecadeAge.csv") %>%
+  mutate(`Pre 1940 or Unknown` = `Unknown...6` + `Unknown...7` + `Pre 1940s`,
+         sys = "GD")
+
+traMiles <- read_csv("/Users/jameseager/Documents/projects/PHMSA_clean/data/GT_MilesDecadeAge.csv") %>%
+  rename(`Total Miles by Decade` = `Total By Decade Miles`,
+         `State Abbreviation` = `State Abbreviation...3`)%>%
+  mutate(sys = "GT")
+
+mileCols <- intersect(colnames(hazMiles), colnames(disMiles))
+
+miles <- hazMiles %>%
+  select(mileCols) %>%
+  rbind(select(disMiles, mileCols)) %>%
+  rbind(select(traMiles, mileCols)) %>%
+  mutate(il = if_else(`State Abbreviation` == "IL", T,F)) %>%
+  filter(`Calendar Year` == 2020,
+         `State Abbreviation` != "N/A",
+         !is.na(`Total Miles by Decade`) ) %>%
+  rename( "1940s" = 5,
+          "1950s" = 6,
+          "1960s" = 7,
+          "1970s" = 8,
+          "1980s" = 9,
+          "1990s" = 10,
+          "2000s" = 11,
+          "2010s" = 12,
+          "2020s" = 13,
+          "Pre-40s" = 16)
+  
+
+```
+
+# Mileage Age Analysis
+
+```{r age dist of mileage}
+
+miles %>%
+  group_by(il) %>%
+  summarise(across(c(5:14), sum))%>%
+  mutate(across(c(2:10), ~.x/`Total Miles by Decade`))%>%
+  select(!`Total Miles by Decade`) %>%
+  pivot_longer(!`il`,
+         names_to = "Decade",
+         values_to = "Percent")%>%
+  ggplot(aes( x = Decade, y = Percent, group = il, fill = il))+
+  geom_bar(position = "dodge", stat = "identity")+
+  theme_pst(baseSize = 12)+
+  scale_y_continuous(labels = scales::percent)+
+  scale_fill_brewer(palette = "Set2", direction = -1,
+                    name = "Geography",
+                    labels = c("Rest of U.S.","Illinois"))+
+  theme(legend.position = c(0.8,0.8))+
+  labs(title = "Pipeline Age Distribution of Illinois",
+       subtitle = "All Systems from the 1940s to Present",
+       caption = capt,
+       tag = "PST 2022")
+  
+wdt = 2560
+hgt = wdt/1.62
+ggsave("./export/AgeBar.png", width = wdt, height = hgt, units = "px")
+```
+
+```{r age of pipeline incidents}
+stateMile <- miles %>%
+  group_by(`State Abbreviation`)%>%
+  summarise(miles = sum(`Total Miles by Decade`)) 
+
+fiveClose <- c("OH","MI","LA","PA","NY")
+
+dfFive <- df %>%
+  filter( STATE %in% fiveClose) %>%
+  mutate(INSTALLATION_YEAR = parse_number(INSTALLATION_YEAR, 
+                                         na = c("NA","UNKNOWN","N/A")),
+         IL = "z")%>%
+  filter(!is.na(INSTALLATION_YEAR) ,
+         !is.na(STATE))
+
+df %>%
+  mutate(IL = if_else(STATE == "IL", "y","n"),
+         INSTALLATION_YEAR = parse_number(INSTALLATION_YEAR, 
+                                         na = c("NA","UNKNOWN","N/A")))%>%
+  filter(!is.na(INSTALLATION_YEAR) ,
+         !is.na(STATE))%>%
+  ggplot(aes(x = INSTALLATION_YEAR, group = IL, fill = IL))+
+  geom_density(alpha = .5)+
+  theme_pst(baseSize = 12)+
+  scale_fill_brewer(palette = "Set2", direction = -1,
+                    name = "Geography",
+                    labels = c("Rest of U.S.","Illinois"))+
+  theme(legend.position = c(0.25,0.8))+
+  labs(title = "Installation Age of Pipeline Incidents",
+       subtitle = "All Systems from the 1940s to Present",
+       caption = capt,
+       tag = "PST 2022",
+       y = "Density of Incidents",
+       x = "Installation Year")
+  
+  
+ggsave("./export/AgeIncident.png", width = wdt, height = hgt, units = "px")
+```
+
+```{r age of HL pipe incidents}
+
+df %>%
+  mutate(IL = if_else(STATE == "IL", T,F),
+         INSTALLATION_YEAR = parse_number(INSTALLATION_YEAR, 
+                                         na = c("NA","UNKNOWN","N/A")))%>%
+  filter(!is.na(INSTALLATION_YEAR) ,
+         !is.na(STATE),
+         IL)%>%
+  mutate(MSYS = if_else(MSYS == "HL", "Hazardous Liquids", MSYS),
+         SYSTEM_TYPE = gsub("(?<=\\()[^()]*(?=\\))(*SKIP)(*F)|.", "", SYSTEM_TYPE, perl=T))%>%
+  ggplot(aes(x = INSTALLATION_YEAR, y = TOTAL_RELEASE, group = MSYS, color = SYSTEM_TYPE))+
+  geom_point(alpha = .7)+
+  theme_pst(baseSize = 12)+
+  scale_fill_brewer(palette = "Set2",
+                    name = "System",
+                    labels = c("Illinois","Rest of US"))+
+  scale_x_continuous(name = "Pipeline Installation Year",
+                     breaks = seq(1940, 2020, 20))+
+  scale_y_continuous(name = "Release Size",
+                     breaks = seq(0,100000, 20000),
+                     labels = c("0","20K","40K","60K","80K", "100K"))+
+  theme(legend.position = c(0.9,0.8))+
+  labs(title = "Incident Spill Size and Pipeline Age in Illinois",
+       subtitle = "All Systems from the 1940s to Present",
+       caption = paste0("Gas Incidents reported in thousand cubic feet (mscf), Liquids in Barrels (BBL)\n", capt),
+       tag = "PST 2022")+
+  facet_wrap(~MSYS)
+  
+  
+ggsave("./export/AgeSizeInc.png", width = wdt, height = hgt, units = "px")
+```
+
+```{r}
+df %>%
+  mutate(IL = if_else(STATE == "IL", T,F),
+         INSTALLATION_YEAR = parse_number(INSTALLATION_YEAR, 
+                                         na = c("NA","UNKNOWN","N/A")))%>%
+  filter(!is.na(INSTALLATION_YEAR) ,
+         !is.na(STATE),
+         IL)%>%
+  mutate(MSYS = if_else(MSYS == "HL", "Hazardous Liquids", MSYS),
+         SYSTEM_TYPE = gsub("(?<=\\()[^()]*(?=\\))(*SKIP)(*F)|.", 
+                            "", SYSTEM_TYPE, perl=T),
+         human = INJURE + FATAL)%>%
+  group_by(IYEAR, IL)%>%
+  ggplot(aes(x = IYEAR, y = AGE))+geom_point()
+```
+
+```{r}
+miles %>% 
+  filter(`Calendar Year` == 2020)%>%
+  group_by(`State Abbreviation`) %>% 
+  summarise(miles = sum(`Total Miles by Decade`, na.rm = T))%>%
+  view()
+```
+
