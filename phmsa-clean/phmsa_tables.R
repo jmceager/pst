@@ -40,7 +40,7 @@ gd.clean <- gd.full %>%
 
 # gt big
 # need to use col OFF_ACCIDENT_ORIGIN to bring in OCS incidents and "in state waters"
-gt.clean <- read_xlsx("./data/incidents/gtggungs2010toPresent.xlsx", sheet = 2) %>%
+gt.full <- read_xlsx("./data/incidents/gtggungs2010toPresent.xlsx", sheet = 2) %>%
   mutate(SYS = gsub( " .*$", "", SYSTEM_TYPE ),
          UNINTENTIONAL_RELEASE = replace_na(UNINTENTIONAL_RELEASE,0), 
          INTENTIONAL_RELEASE = replace_na(INTENTIONAL_RELEASE,0),
@@ -64,36 +64,9 @@ gt.clean <- read_xlsx("./data/incidents/gtggungs2010toPresent.xlsx", sheet = 2) 
   )%>%
   cleanLoc(.,"ILOC","LOCATION_LATITUDE","LOCATION_LONGITUDE")
 
-
-gt.clean %>% select(ILOC, cleanLoc, ON_OFF_SHORE, OFF_ACCIDENT_ORIGIN) %>% filter(ON_OFF_SHORE == "OFFSHORE") %>% view()
-
-
-gt.clean <- read_xlsx("./data/incidents/gtggungs2010toPresent.xlsx", sheet = 2) %>%
-  select(all_of(c(gas_cols, "SYSTEM_TYPE", "ON_OFF_SHORE",
-                          "ONSHORE_CITY_NAME","OFFSHORE_COUNTY_NAME",
-                          "ONSHORE_STATE_ABBREVIATION", "OFFSHORE_STATE_ABBREVIATION")))%>%
-  mutate(UNINTENTIONAL_RELEASE = replace_na(UNINTENTIONAL_RELEASE,0), 
-         INTENTIONAL_RELEASE = replace_na(INTENTIONAL_RELEASE,0),
-         UNITS = "mscf",
-         TOTAL_RELEASE = UNINTENTIONAL_RELEASE + INTENTIONAL_RELEASE,
-         TOTAL_COST_CURRENT = replace_na(parse_number(TOTAL_COST_CURRENT), 0),
-         EXPLODE_IND = replace_na(EXPLODE_IND, "NO"),
-         IGNITE_IND = replace_na(IGNITE_IND, "NO"),
-         FATAL = replace_na(FATAL, 0),
-         INJURE = replace_na(INJURE, 0),
-         MDY = date(LOCAL_DATETIME),
-         IMONTH = month(MDY),
-         MSYS = "Gas",
-         ILOC =  if_else(ON_OFF_SHORE == "ONSHORE", 
-                         paste(str_to_title(ONSHORE_CITY_NAME), ONSHORE_STATE_ABBREVIATION,
-                               sep = ", "),
-                         paste(paste(str_to_title(OFFSHORE_COUNTY_NAME), "County Waters", sep = " "),
-                               OFFSHORE_STATE_ABBREVIATION,
-                               sep = ", ")
-         )
-  )%>%
-  select(!c("ONSHORE_CITY_NAME","OFFSHORE_COUNTY_NAME",
-            "ONSHORE_STATE_ABBREVIATION", "OFFSHORE_STATE_ABBREVIATION"))
+#short version
+gt.clean <- gt.full %>% 
+  select(all_of(  append(gas_cols)))
   
 
 #fix hl to be similar
@@ -107,14 +80,13 @@ hl_cols <- c("REPORT_NUMBER","NAME","OPERATOR_ID", "SIGNIFICANT", "IYEAR","LOCAL
              "INSTALLATION_YEAR", "SYSTEM_PART_INVOLVED",
               "TOTAL_COST_CURRENT","CAUSE", "CAUSE_DETAILS","COMMODITY_RELEASED_TYPE", "NARRATIVE")
 #cleaning
-hl.clean <- read_xlsx("./data/incidents/hl2010toPresent.xlsx", sheet = 2)%>% 
-  select(hl_cols)%>%
+hl.full <- read_xlsx("./data/incidents/hl2010toPresent.xlsx", sheet = 2)%>% 
   mutate(SYSTEM_TYPE = "HL (Hazardous Liquids)")%>%
   rename( INTENTIONAL_RELEASE = INTENTIONAL_RELEASE_BBLS,
           UNINTENTIONAL_RELEASE = UNINTENTIONAL_RELEASE_BBLS)%>%
-  mutate(UNINTENTIONAL_RELEASE = replace_na(UNINTENTIONAL_RELEASE,0), 
-         INTENTIONAL_RELEASE = replace_na(INTENTIONAL_RELEASE,0),
-         UNITS = "US BBLs",
+  mutate(UNINTENTIONAL_RELEASE = replace_na(UNINTENTIONAL_RELEASE,0)*42, 
+         INTENTIONAL_RELEASE = replace_na(INTENTIONAL_RELEASE,0)*42,
+         UNITS = "US Gal.",
          TOTAL_RELEASE = UNINTENTIONAL_RELEASE + INTENTIONAL_RELEASE,
          TOTAL_COST_CURRENT = replace_na(parse_number(TOTAL_COST_CURRENT), 0),
          EXPLODE_IND = replace_na(EXPLODE_IND, "NO"),
@@ -131,10 +103,13 @@ hl.clean <- read_xlsx("./data/incidents/hl2010toPresent.xlsx", sheet = 2)%>%
                                OFFSHORE_STATE_ABBREVIATION,
                                sep = ", ")
                          )
-        ) %>%
-  select(!c("ONSHORE_CITY_NAME","OFFSHORE_COUNTY_NAME",
-            "ONSHORE_STATE_ABBREVIATION", "OFFSHORE_STATE_ABBREVIATION"))
-  
+        )%>%
+  cleanLoc(.,"ILOC","LOCATION_LATITUDE","LOCATION_LONGITUDE")
+
+
+hl.clean <- hl.full %>%
+  select(all_of(append(hl_cols)))
+
 #dealing with some weird stuff happening in the lat longs 
 all.inc <- rbind(hl.clean, gd.clean, gt.clean) %>%
   mutate( MoYr = my(paste(IMONTH,IYEAR, sep = "-"))) %>%
