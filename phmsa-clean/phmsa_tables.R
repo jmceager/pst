@@ -57,12 +57,15 @@ gt.full <- read_xlsx("./data/incidents/gtggungs2010toPresent.xlsx", sheet = 2) %
          ILOC =  if_else(ON_OFF_SHORE == "ONSHORE", 
                          paste(str_to_title(ONSHORE_CITY_NAME), ONSHORE_STATE_ABBREVIATION,
                                sep = ", "),
-                         paste(paste(str_to_title(OFFSHORE_COUNTY_NAME), "County Waters", sep = " "),
-                               OFFSHORE_STATE_ABBREVIATION,
-                               sep = ", ")
+                         if_else(is.na(OFFSHORE_COUNTY_NAME),
+                                 "NA",
+                                 paste(paste(str_to_title(OFFSHORE_COUNTY_NAME), "County Waters", sep = " "),
+                                       OFFSHORE_STATE_ABBREVIATION,
+                                       sep = ", "))
+                         
          )
-  )%>%
-  cleanLoc(.,"ILOC","LOCATION_LATITUDE","LOCATION_LONGITUDE")
+    )%>%
+  cleanLoc(.,"ILOC","LOCATION_LATITUDE","LOCATION_LONGITUDE", "OFF_ACCIDENT_ORIGIN")
 
 #short version
 gt.clean <- gt.full %>% 
@@ -99,13 +102,15 @@ hl.full <- read_xlsx("./data/incidents/hl2010toPresent.xlsx", sheet = 2)%>%
          ILOC =  if_else(ON_OFF_SHORE == "ONSHORE", 
                          paste(str_to_title(ONSHORE_CITY_NAME), ONSHORE_STATE_ABBREVIATION,
                                sep = ", "),
-                         paste(paste(str_to_title(OFFSHORE_COUNTY_NAME), "County Waters", sep = " "),
-                               OFFSHORE_STATE_ABBREVIATION,
-                               sep = ", ")
+                         if_else(is.na(OFFSHORE_COUNTY_NAME),
+                                 "NA",
+                                 paste(paste(str_to_title(OFFSHORE_COUNTY_NAME), "County Waters", sep = " "),
+                                       OFFSHORE_STATE_ABBREVIATION,
+                                       sep = ", "))
+                         
                          )
         )%>%
-  cleanLoc(.,"ILOC","LOCATION_LATITUDE","LOCATION_LONGITUDE")
-
+  cleanLoc(.,"ILOC","LOCATION_LATITUDE","LOCATION_LONGITUDE", "OFF_ACCIDENT_ORIGIN")
 
 hl.clean <- hl.full %>%
   select(all_of(append(hl_cols)))
