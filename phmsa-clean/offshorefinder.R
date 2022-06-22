@@ -5,9 +5,9 @@ library(sf)
 library(maps)
 library(maptools)
 
+#notes: handling of OCS incidents?
 
-
-cleanLoc <- function(df, col, lat, lon){
+cleanLoc <- function(df, col, lat, lon, org){
   #clean bad lat longs 
   df <- df %>%
     mutate(LOCATION_LONGITUDE = if_else(.data[[lon]] < -180, 
@@ -24,22 +24,37 @@ cleanLoc <- function(df, col, lat, lon){
            & !grepl(" Miles", .data[[col]])) %>%
     mutate(cleanLoc = .data[[col]])
   
-  #run gis on bad locations
+  #run gis on bad location
+  
   badLoc <- df %>%
     filter(grepl("NA", .data[[col]]) 
            | grepl("Municipality", .data[[col]]) 
            | grepl(" Miles", .data[[col]])) %>%
-    mutate(cleanLoc = glue(lat = .data[[lat]], lon = LOCATION_LONGITUDE))
+    mutate(cleanLoc = glue(lat = .data[[lat]], lon = LOCATION_LONGITUDE, org = .data[[org]]))
   
   #return clean DF
   return( rbind(goodLoc, badLoc) )
 }
 
 
-glue <- function(lat, lon){
+glue <- function(lat, lon, org = NULL){
   state <- locState(lat = lat, lon = lon)
-  county <- locCounty(lat = lat, lon = lon)
-  paste0(county, ", " ,state)
+  county <- locCounty(lat = lat, lon = lon, org = org)
+  place <- rep("",length(state))
+  #naming places based on origin 
+  #most state waters get a county assigned already
+  for(i in 1:length(place)){
+    if(str_detect("Outer Continental Shelf",county)){
+      place[i] <- paste0(county, ", near ", state)
+    }
+    else if(str_detect("State Waters", county)){
+      place[i] <- paste0(state, " ", county)
+    }
+    else{
+      place[i] <- paste0(county, ", ", state)
+    }
+  }
+  place
 }
 
 
@@ -83,7 +98,7 @@ locState <- function(lat, lon){
 }
 
 #mutate(ILOC = if_else(grepl()))
-locCounty <- function(lat, lon){
+locCounty <- function(lat, lon, org){
   x <- data.frame(X = lon, Y = lat)
   # Prepare SpatialPolygons object with one SpatialPolygon
   # per county
@@ -102,10 +117,20 @@ locCounty <- function(lat, lon){
   # Return the county names of the Polygons object containing each point
   countyNames <- sapply(counties_sp@polygons, function(x) x@ID)
   counties <- countyNames[indices]
+  
+  if(is.null(org)){
+    offshore <- rep("Offshore", length(counties))
+  }
+  else{
+    offshore <- org %>%
+      str_replace("ON THE OUTER CONTINENTAL SHELF", "Outer Continental Shelf") %>%
+      str_remove(" \\s*\\([^\\)]+\\)")%>% # remove (OCS) from string
+      str_replace("IN STATE WATERS", "State Waters")
+  }
 
-  counties <- replace_na(counties, "Offshore")
+  counties <- coalesce(counties, offshore)
   counties <- sub(".*,","",counties)
-  counties <- if_else(counties == "Offshore", counties, paste(counties, "County"))
+  counties <- if_else(counties %in% offshore, counties, paste(counties, "County"))
   counties <- str_to_title(counties)
   
   counties
