@@ -49,7 +49,7 @@ short_cols <- c( "REPORT_NUMBER", "NAME","OPERATOR_ID",  #basic characteristics
                  "FATALITY_IND","FATAL", "INJURY_IND","INJURE", #human impact
                  "EXPLODE_IND","IGNITE_IND" ,  "NUM_PUB_EVACUATED", "TOTAL_COST_CURRENT",#impact 2
                  "INSTALLATION_YEAR", "SYSTEM_PART_INVOLVED", #inc char 
-                 "CAUSE","CAUSE_DETAILS", "NARRATIVE") #inc char 
+                 "CAUSE","CAUSE_DETAILS", "NARRATIVE", "mileage") #inc char 
 
 # full cols 
 gd.full <- read_xlsx("./data/incidents/gd2010toPresent.xlsx", sheet = 2) %>% 
@@ -71,7 +71,9 @@ gd.full <- read_xlsx("./data/incidents/gd2010toPresent.xlsx", sheet = 2) %>%
          MSYS = "Gas",
          ILOC = paste(str_to_title(LOCATION_CITY_NAME),LOCATION_STATE_ABBREVIATION, sep = ", "),
          STATE = LOCATION_STATE_ABBREVIATION) %>%
-  cleanLoc(., "ILOC", lat= "LOCATION_LATITUDE", lon = "LOCATION_LONGITUDE")
+  cleanLoc(., "ILOC", lat= "LOCATION_LATITUDE", lon = "LOCATION_LONGITUDE")%>%
+  left_join(miles, by = c("OPERATOR_ID", "SYSTEM_TYPE", "STATE","IYEAR"))%>%
+  mutate(mileage = replace_na(mileage, 0))
   
 
 # gt big
@@ -102,7 +104,9 @@ gt.full <- read_xlsx("./data/incidents/gtggungs2010toPresent.xlsx", sheet = 2) %
                           ),
          STATE = locState(LOCATION_LATITUDE, LOCATION_LONGITUDE)
     )%>%
-  cleanLoc(.,"ILOC","LOCATION_LATITUDE","LOCATION_LONGITUDE", "OFF_ACCIDENT_ORIGIN")
+  cleanLoc(.,"ILOC","LOCATION_LATITUDE","LOCATION_LONGITUDE", "OFF_ACCIDENT_ORIGIN")%>%
+  left_join(miles, by = c("OPERATOR_ID", "SYSTEM_TYPE", "STATE","IYEAR"))%>%
+  mutate(mileage = replace_na(mileage, 0))
 
   
 
@@ -136,7 +140,9 @@ hl.full <- read_xlsx("./data/incidents/hl2010toPresent.xlsx", sheet = 2)%>%
                          ),
          STATE = locState(LOCATION_LATITUDE,LOCATION_LONGITUDE)
         )%>%
-  cleanLoc(.,"ILOC","LOCATION_LATITUDE","LOCATION_LONGITUDE", "OFF_ACCIDENT_ORIGIN")
+  cleanLoc(.,"ILOC","LOCATION_LATITUDE","LOCATION_LONGITUDE", "OFF_ACCIDENT_ORIGIN")%>%
+  left_join(miles, by = c("OPERATOR_ID", "SYSTEM_TYPE", "STATE","IYEAR"))%>%
+  mutate(mileage = replace_na(mileage, 0))
 
 #### JOINS, BINDS ####
 
@@ -145,8 +151,7 @@ all.inc <- rbind(select(hl.full, all_of(short_cols)),
                  select(gt.full, all_of(short_cols)), 
                  select(gd.full, all_of(short_cols))) 
 
-  left_join(miles, by = c("OPERATOR_ID", "SYSTEM_TYPE", "STATE","IYEAR"))%>%
-  mutate(mileage = replace_na(mileage, 0))
+
 
 #### WRITING EXPORTS ####
   
