@@ -40,17 +40,6 @@ miles <- read.csv("data/GD_MilesDecadeAge.csv") %>%
 
 #### INCIDENT DATA ####
 
-#columns for abridged incidents
-short_cols <- c( "REPORT_NUMBER", "NAME","OPERATOR_ID",  #basic characteristics
-                 "IYEAR","MDY","MoYr" ,"LOCAL_DATETIME" ,   #temporal char
-                 "LOCATION_LATITUDE","LOCATION_LONGITUDE", "cleanLoc", "STATE",#location
-                 "SYS","MSYS" ,"SIGNIFICANT", "SERIOUS","COMMODITY_RELEASED_TYPE",#inc summary
-                 "UNINTENTIONAL_RELEASE", "INTENTIONAL_RELEASE", "TOTAL_RELEASE","UNITS", #releases
-                 "FATALITY_IND","FATAL", "INJURY_IND","INJURE", #human impact
-                 "EXPLODE_IND","IGNITE_IND" ,  "NUM_PUB_EVACUATED", "TOTAL_COST_CURRENT",#impact 2
-                 "INSTALLATION_YEAR", "SYSTEM_PART_INVOLVED", #inc char 
-                 "CAUSE","CAUSE_DETAILS", "NARRATIVE", "mileage") #inc char 
-
 # full cols 
 gd.full <- read_xlsx("./data/incidents/gd2010toPresent.xlsx", sheet = 2) %>% 
   mutate(SYSTEM_TYPE = "GD (Gas Distribution)", 
@@ -145,6 +134,17 @@ hl.full <- read_xlsx("./data/incidents/hl2010toPresent.xlsx", sheet = 2)%>%
   mutate(mileage = replace_na(mileage, 0))
 
 #### JOINS, BINDS ####
+
+#columns for abridged incidents
+short_cols <- c( "REPORT_NUMBER", "NAME","OPERATOR_ID",  #basic characteristics
+                 "IYEAR","MDY","MoYr" ,"LOCAL_DATETIME" ,   #temporal char
+                 "LOCATION_LATITUDE","LOCATION_LONGITUDE", "cleanLoc", "STATE",#location
+                 "SYS","MSYS" ,"SIGNIFICANT", "SERIOUS","COMMODITY_RELEASED_TYPE",#inc summary
+                 "UNINTENTIONAL_RELEASE", "INTENTIONAL_RELEASE", "TOTAL_RELEASE","UNITS", #releases
+                 "FATALITY_IND","FATAL", "INJURY_IND","INJURE", #human impact
+                 "EXPLODE_IND","IGNITE_IND" ,  "NUM_PUB_EVACUATED", "TOTAL_COST_CURRENT",#impact 2
+                 "INSTALLATION_YEAR", "SYSTEM_PART_INVOLVED", #inc char 
+                 "CAUSE","CAUSE_DETAILS", "NARRATIVE", "mileage") #inc char 
 
 #dealing with some weird stuff happening in the lat longs 
 all.inc <- rbind(select(hl.full, all_of(short_cols)), 
