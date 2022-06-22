@@ -35,12 +35,12 @@ miles <- read.csv("data/GD_MilesDecadeAge.csv") %>%
   group_by(OPERATOR_ID, SYSTEM_TYPE, STATE, IYEAR)%>% 
   summarise(mileage = sum(mileage, na.rm = T))
 
-##note: possible to add mileage for install_decade? 
-
+## note: possible to add mileage for install_decade? 
+## note: possible handling of on/offshore mileage 
 
 #### INCIDENT DATA ####
 
-# full cols 
+# gd big 
 gd.full <- read_xlsx("./data/incidents/gd2010toPresent.xlsx", sheet = 2) %>% 
   mutate(SYSTEM_TYPE = "GD (Gas Distribution)", 
          SYS = "GD",
@@ -99,7 +99,7 @@ gt.full <- read_xlsx("./data/incidents/gtggungs2010toPresent.xlsx", sheet = 2) %
 
   
 
-#cleaning
+# hl big
 hl.full <- read_xlsx("./data/incidents/hl2010toPresent.xlsx", sheet = 2)%>% 
   mutate(SYSTEM_TYPE = "HL (Hazardous Liquids)")%>%
   rename( INTENTIONAL_RELEASE = INTENTIONAL_RELEASE_BBLS,
@@ -146,7 +146,7 @@ short_cols <- c( "REPORT_NUMBER", "NAME","OPERATOR_ID",  #basic characteristics
                  "INSTALLATION_YEAR", "SYSTEM_PART_INVOLVED", #inc char 
                  "CAUSE","CAUSE_DETAILS", "NARRATIVE", "mileage") #inc char 
 
-#dealing with some weird stuff happening in the lat longs 
+#abridged all inc  
 all.inc <- rbind(select(hl.full, all_of(short_cols)), 
                  select(gt.full, all_of(short_cols)), 
                  select(gd.full, all_of(short_cols))) 
@@ -158,7 +158,7 @@ all.inc <- rbind(select(hl.full, all_of(short_cols)),
 #csvs for each full table
 
 
-#csv for joined all incidents
+#csv for abrdiged all incidents
 write_csv(new.inc, "./data/all_inc.csv")
 
 #csv for mileage numbers 
