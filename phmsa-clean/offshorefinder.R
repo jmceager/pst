@@ -5,7 +5,6 @@ library(sf)
 library(maps)
 library(maptools)
 
-#notes: handling of OCS incidents?
 
 cleanLoc <- function(df, col, lat, lon, org){
   #clean bad lat longs 
