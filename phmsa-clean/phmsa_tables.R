@@ -5,13 +5,51 @@ library(readxl)
 
 source("offshorefinder.R")
 
-#columns for gas
-gas_cols <- c( "REPORT_NUMBER", "NAME","OPERATOR_ID", "SIGNIFICANT", "IYEAR","LOCAL_DATETIME" ,   
-              "LOCATION_LATITUDE","LOCATION_LONGITUDE", 
-              "UNINTENTIONAL_RELEASE", "INTENTIONAL_RELEASE", "FATALITY_IND","FATAL",
-              "INJURY_IND","INJURE","EXPLODE_IND","IGNITE_IND" ,  "NUM_PUB_EVACUATED", 
-              "INSTALLATION_YEAR", "SYSTEM_PART_INVOLVED",
-              "TOTAL_COST_CURRENT","CAUSE","CAUSE_DETAILS","COMMODITY_RELEASED_TYPE", "NARRATIVE")
+#### MILEAGE DATA ####
+
+## getting mileage data 
+mileCols <- c("system", "Calendar.Year", "State.Abbreviation", "Operator.ID", 
+              "Total.Miles.by.Decade", "Total.By.Decade.Miles")
+
+miles <- read.csv("data/GD_MilesDecadeAge.csv") %>% 
+  mutate(system = "GD (Gas Distribution)") %>% 
+  select(any_of(mileCols))%>%
+  rbind(select(
+    read.csv("data/GT_MilesDecadeAge.csv"), 
+    any_of(mileCols)) %>% 
+      mutate(system = "GT (Gas Transmission)") %>%
+      rename(Total.Miles.by.Decade = Total.By.Decade.Miles)
+  )%>%
+  rbind(select(
+    read.csv("data/HL_MilesDecadeAge.csv"), 
+    any_of(mileCols)) %>% 
+      mutate(system = "HL (Hazardous Liquids)")
+  )%>%
+  #make colnames match incident data
+  rename(mileage = Total.Miles.by.Decade, 
+         SYSTEM_TYPE = system,
+         OPERATOR_ID = Operator.ID,
+         STATE = State.Abbreviation,
+         IYEAR = Calendar.Year)%>%
+  #give snapshots of operator's yearly mileage to match incident years
+  group_by(OPERATOR_ID, SYSTEM_TYPE, STATE, IYEAR)%>% 
+  summarise(mileage = sum(mileage, na.rm = T))
+
+##note: possible to add mileage for install_decade? 
+
+
+#### INCIDENT DATA ####
+
+#columns for abridged incidents
+short_cols <- c( "REPORT_NUMBER", "NAME","OPERATOR_ID",  #basic characteristics
+                 "IYEAR","MDY","MoYr" ,"LOCAL_DATETIME" ,   #temporal char
+                 "LOCATION_LATITUDE","LOCATION_LONGITUDE", "cleanLoc", "STATE",#location
+                 "SYS","MSYS" ,"SIGNIFICANT", "SERIOUS","COMMODITY_RELEASED_TYPE",#inc summary
+                 "UNINTENTIONAL_RELEASE", "INTENTIONAL_RELEASE", "TOTAL_RELEASE","UNITS", #releases
+                 "FATALITY_IND","FATAL", "INJURY_IND","INJURE", #human impact
+                 "EXPLODE_IND","IGNITE_IND" ,  "NUM_PUB_EVACUATED", "TOTAL_COST_CURRENT",#impact 2
+                 "INSTALLATION_YEAR", "SYSTEM_PART_INVOLVED", #inc char 
+                 "CAUSE","CAUSE_DETAILS", "NARRATIVE") #inc char 
 
 # full cols 
 gd.full <- read_xlsx("./data/incidents/gd2010toPresent.xlsx", sheet = 2) %>% 
@@ -29,19 +67,16 @@ gd.full <- read_xlsx("./data/incidents/gd2010toPresent.xlsx", sheet = 2) %>%
          INJURE = replace_na(INJURE, 0),
          MDY = date(LOCAL_DATETIME),
          IMONTH = month(MDY),
+         MoYr = my(paste(IMONTH,IYEAR, sep = "-")),
          MSYS = "Gas",
-         ILOC = paste(str_to_title(LOCATION_CITY_NAME),LOCATION_STATE_ABBREVIATION, sep = ", ")) %>%
+         ILOC = paste(str_to_title(LOCATION_CITY_NAME),LOCATION_STATE_ABBREVIATION, sep = ", "),
+         STATE = LOCATION_STATE_ABBREVIATION) %>%
   cleanLoc(., "ILOC", lat= "LOCATION_LATITUDE", lon = "LOCATION_LONGITUDE")
-
-#short version
-gd.clean <- gd.full %>% 
-  select(all_of(  append(gas_cols)))
   
 
 # gt big
-# need to use col OFF_ACCIDENT_ORIGIN to bring in OCS incidents and "in state waters"
 gt.full <- read_xlsx("./data/incidents/gtggungs2010toPresent.xlsx", sheet = 2) %>%
-  mutate(SYS = gsub( " .*$", "", SYSTEM_TYPE ),
+  mutate(SYS = gsub( " .*$", "", SYSTEM_TYPE ), #accounts for UNGS and GD
          UNINTENTIONAL_RELEASE = replace_na(UNINTENTIONAL_RELEASE,0), 
          INTENTIONAL_RELEASE = replace_na(INTENTIONAL_RELEASE,0),
          UNITS = "mscf",
@@ -53,6 +88,7 @@ gt.full <- read_xlsx("./data/incidents/gtggungs2010toPresent.xlsx", sheet = 2) %
          INJURE = replace_na(INJURE, 0),
          MDY = date(LOCAL_DATETIME),
          IMONTH = month(MDY),
+         MoYr = my(paste(IMONTH,IYEAR, sep = "-")),
          MSYS = "Gas",
          ILOC =  if_else(ON_OFF_SHORE == "ONSHORE", 
                          paste(str_to_title(ONSHORE_CITY_NAME), ONSHORE_STATE_ABBREVIATION,
@@ -63,25 +99,13 @@ gt.full <- read_xlsx("./data/incidents/gtggungs2010toPresent.xlsx", sheet = 2) %
                                        OFFSHORE_STATE_ABBREVIATION,
                                        sep = ", "))
                          
-         )
+                          ),
+         STATE = locState(LOCATION_LATITUDE, LOCATION_LONGITUDE)
     )%>%
   cleanLoc(.,"ILOC","LOCATION_LATITUDE","LOCATION_LONGITUDE", "OFF_ACCIDENT_ORIGIN")
 
-#short version
-gt.clean <- gt.full %>% 
-  select(all_of(  append(gas_cols)))
   
 
-#fix hl to be similar
-#cols
-hl_cols <- c("REPORT_NUMBER","NAME","OPERATOR_ID", "SIGNIFICANT", "IYEAR","LOCAL_DATETIME" , 
-              "LOCATION_LATITUDE","LOCATION_LONGITUDE", 
-              "ON_OFF_SHORE","ONSHORE_CITY_NAME","OFFSHORE_COUNTY_NAME",
-             "ONSHORE_STATE_ABBREVIATION", "OFFSHORE_STATE_ABBREVIATION",
-              "UNINTENTIONAL_RELEASE_BBLS", "INTENTIONAL_RELEASE_BBLS", "FATALITY_IND","FATAL",
-              "INJURY_IND","INJURE","EXPLODE_IND","IGNITE_IND" ,  "NUM_PUB_EVACUATED", 
-             "INSTALLATION_YEAR", "SYSTEM_PART_INVOLVED",
-              "TOTAL_COST_CURRENT","CAUSE", "CAUSE_DETAILS","COMMODITY_RELEASED_TYPE", "NARRATIVE")
 #cleaning
 hl.full <- read_xlsx("./data/incidents/hl2010toPresent.xlsx", sheet = 2)%>% 
   mutate(SYSTEM_TYPE = "HL (Hazardous Liquids)")%>%
@@ -98,6 +122,7 @@ hl.full <- read_xlsx("./data/incidents/hl2010toPresent.xlsx", sheet = 2)%>%
          INJURE = replace_na(INJURE, 0),
          MDY = date(LOCAL_DATETIME),
          IMONTH = month(MDY),
+         MoYr = my(paste(IMONTH,IYEAR, sep = "-")),
          MSYS = "HL",
          ILOC =  if_else(ON_OFF_SHORE == "ONSHORE", 
                          paste(str_to_title(ONSHORE_CITY_NAME), ONSHORE_STATE_ABBREVIATION,
@@ -108,65 +133,25 @@ hl.full <- read_xlsx("./data/incidents/hl2010toPresent.xlsx", sheet = 2)%>%
                                        OFFSHORE_STATE_ABBREVIATION,
                                        sep = ", "))
                          
-                         )
+                         ),
+         STATE = locState(LOCATION_LATITUDE,LOCATION_LONGITUDE)
         )%>%
   cleanLoc(.,"ILOC","LOCATION_LATITUDE","LOCATION_LONGITUDE", "OFF_ACCIDENT_ORIGIN")
 
-hl.clean <- hl.full %>%
-  select(all_of(append(hl_cols)))
+#### JOINS, BINDS ####
 
 #dealing with some weird stuff happening in the lat longs 
-all.inc <- rbind(hl.clean, gd.clean, gt.clean) %>%
-  mutate( MoYr = my(paste(IMONTH,IYEAR, sep = "-"))) %>%
-  mutate(STATE = str_sub(ILOC, start = -2, end = -1))
+all.inc <- rbind(select(hl.full, all_of(short_cols)), 
+                 select(gt.full, all_of(short_cols)), 
+                 select(gd.full, all_of(short_cols))) 
 
-
-small.inc <- all.inc %>% head(20)
-
-small.inc %>% cleanLoc(.,"ILOC","LOCATION_LATITUDE", "LOCATION_LONGITUDE") %>% view()
-
-#Location mutations using offshore finder, turn this into a function? 
-goodLoc <- all.inc %>%
-  filter(!grepl("NA", ILOC) & !grepl("Municipality", ILOC) & !grepl(" Miles", ILOC))
-  
-
-badLoc <- all.inc %>%
-  filter(grepl("NA", ILOC)| grepl("Municipality", ILOC) |  grepl(" Miles", ILOC))%>%
-  mutate(ILOC = glue(lat = LOCATION_LATITUDE, lon = LOCATION_LONGITUDE))
-
-
-## getting mileage data 
-mileCols <- c("system", "Calendar.Year", "State.Abbreviation", "Operator.ID", 
-              "Total.Miles.by.Decade", "Total.By.Decade.Miles")
-
-miles <- read.csv("data/GD_MilesDecadeAge.csv") %>% 
-  mutate(system = "GD (Gas Distribution)") %>% 
-  select(any_of(mileCols))%>%
-  rbind(select(
-    read.csv("data/GT_MilesDecadeAge.csv"), 
-    any_of(mileCols)) %>% 
-      mutate(system = "GT (Gas Transmission)") %>%
-      rename(Total.Miles.by.Decade = Total.By.Decade.Miles)
-        )%>%
-  rbind(select(
-    read.csv("data/HL_MilesDecadeAge.csv"), 
-    any_of(mileCols)) %>% 
-      mutate(system = "HL (Hazardous Liquids)")
-    )%>%
-  #make colnames match incident data
-  rename(mileage = Total.Miles.by.Decade, 
-         SYSTEM_TYPE = system,
-         OPERATOR_ID = Operator.ID,
-         STATE = State.Abbreviation,
-         IYEAR = Calendar.Year)%>%
-  #give snapshots of operator's yearly mileage to match incident years
-  group_by(OPERATOR_ID, SYSTEM_TYPE, STATE, IYEAR)%>% 
-  summarise(mileage = sum(mileage, na.rm = T))
-
-new.inc <- rbind(goodLoc, badLoc) %>%
-  mutate(STATE = str_sub(ILOC, -2,-1))%>%
   left_join(miles, by = c("OPERATOR_ID", "SYSTEM_TYPE", "STATE","IYEAR"))%>%
   mutate(mileage = replace_na(mileage, 0))
+
+#### WRITING EXPORTS ####
+  
+#csvs for each full table
+
 
 #csv for joined all incidents
 write_csv(new.inc, "./data/all_inc.csv")
@@ -174,10 +159,6 @@ write_csv(new.inc, "./data/all_inc.csv")
 #csv for mileage numbers 
 write_csv(miles, "./data/sys_miles.csv")
 
-#build walk of shame csv
-#all.inc %>%
-#  group_by(MoYr, MSYS)%>%
-#  slice(which.max(TOTAL_RELEASE))%>%
-#  write_csv("./data/perp_walk.csv")
+
 
 
