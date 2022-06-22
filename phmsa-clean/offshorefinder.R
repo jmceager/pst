@@ -6,7 +6,8 @@ library(maps)
 library(maptools)
 
 
-cleanLoc <- function(df, col, lat, lon, org){
+cleanLoc <- function(df, col, lat, lon, org = NULL){
+  
   #clean bad lat longs 
   df <- df %>%
     mutate(LOCATION_LONGITUDE = if_else(.data[[lon]] < -180, 
@@ -24,12 +25,20 @@ cleanLoc <- function(df, col, lat, lon, org){
     mutate(cleanLoc = .data[[col]])
   
   #run gis on bad location
-  
-  badLoc <- df %>%
-    filter(grepl("NA", .data[[col]]) 
-           | grepl("Municipality", .data[[col]]) 
-           | grepl(" Miles", .data[[col]])) %>%
-    mutate(cleanLoc = glue(lat = .data[[lat]], lon = LOCATION_LONGITUDE, org = .data[[org]]))
+  if(is.null(org)){
+    badLoc <- df %>%
+      filter(grepl("NA", .data[[col]]) 
+             | grepl("Municipality", .data[[col]]) 
+             | grepl(" Miles", .data[[col]])) %>%
+      mutate(cleanLoc = glue(lat = .data[[lat]], lon = LOCATION_LONGITUDE))
+  }
+  else{
+    badLoc <- df %>%
+      filter(grepl("NA", .data[[col]]) 
+             | grepl("Municipality", .data[[col]]) 
+             | grepl(" Miles", .data[[col]])) %>%
+      mutate(cleanLoc = glue(lat = .data[[lat]], lon = LOCATION_LONGITUDE, org = .data[[org]]))
+  }
   
   #return clean DF
   return( rbind(goodLoc, badLoc) )
@@ -38,7 +47,12 @@ cleanLoc <- function(df, col, lat, lon, org){
 
 glue <- function(lat, lon, org = NULL){
   state <- locState(lat = lat, lon = lon)
-  county <- locCounty(lat = lat, lon = lon, org = org)
+  if(is.null(org)){
+    county <- locCounty(lat = lat, lon = lon)
+  }
+  else{
+    county <- locCounty(lat = lat, lon = lon, org = org)
+  }
   place <- rep("",length(state))
   #naming places based on origin 
   #most state waters get a county assigned already
@@ -97,7 +111,7 @@ locState <- function(lat, lon){
 }
 
 #mutate(ILOC = if_else(grepl()))
-locCounty <- function(lat, lon, org){
+locCounty <- function(lat, lon, org = NULL){
   x <- data.frame(X = lon, Y = lat)
   # Prepare SpatialPolygons object with one SpatialPolygon
   # per county
