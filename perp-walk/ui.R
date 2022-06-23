@@ -21,8 +21,14 @@ fargs <- formals(icon)
 fargs$verify_fa <- FALSE
 formals(icon) <- fargs
 
+# load data just for date 
+recentInc <- read_csv("https://raw.githubusercontent.com/jmceager/pst/main/phmsa-clean/data/clean/all_inc.csv") %>%
+  filter(MDY == max(MDY))
+
 # two months ago day one 
-newDate <- Sys.Date() - months(3) - (day(Sys.Date())-1)
+newDate <- if_else(day(recentInc$MDY[1]) > 25, 
+                   recentInc$MDY[1] - day(recentInc$MDY[1]) + days(1),
+                   recentInc$MDY[1] - months(1) - day(recentInc$MDY[1]) + days(1))
 
 ## use dashboard pieces for ui 
 #### header  ####
