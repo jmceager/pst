@@ -52,7 +52,7 @@ formals(icon) <- fargs
 
 #### data load ####
 #loading data
-incs <- read_csv("./data/all_inc.csv") %>%
+incs <- read_csv("https://raw.githubusercontent.com/jmceager/pst/main/phmsa-clean/data/clean/all_inc.csv") %>%
   mutate(COMMODITY_RELEASED_TYPE = if_else(
     COMMODITY_RELEASED_TYPE == "REFINED AND/OR PETROLEUM PRODUCT (NON-HVL) WHICH IS A LIQUID AT AMBIENT CONDITIONS",
     "NON-HVL REFINED AND/OR PETROL PRODUCT",
