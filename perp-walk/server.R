@@ -1,11 +1,5 @@
-#
-# This is the server logic of a Shiny web application. You can run the
-# application by clicking 'Run App' above.
-#
-# Find out more about building applications with Shiny here:
-#
+#Perp Walk (name in progress) dashboard
 #    http://shiny.rstudio.com/
-#
 
 library(shiny)
 library(shinyWidgets)
@@ -61,12 +55,10 @@ incs <- read_csv("https://raw.githubusercontent.com/jmceager/pst/main/phmsa-clea
             if_else(COMMODITY_RELEASED_TYPE == "BIOFUEL / ALTERNATIVE FUEL(INCLUDING ETHANOL BLENDS)",
                     "BIOFUEL / ALT FUEL", COMMODITY_RELEASED_TYPE)))
   )%>%
-  dplyr::filter(!grepl("GG",SYSTEM_TYPE), !grepl("UNGS",SYSTEM_TYPE)) %>%
-  mutate(daytxt = as.character(MDY, format = "%b %d, %Y"),
+  dplyr::filter(!grepl("GG",SYSTEM_TYPE), !grepl("UNGS",SYSTEM_TYPE)) %>% # dont need gathering or ungs
+  mutate(daytxt = as.character(MDY, format = "%b %d, %Y"), 
          NUM_PUB_EVACUATED = replace_na(NUM_PUB_EVACUATED, 0),
-         humans = FATAL + INJURE,
-         TOTAL_RELEASE = if_else(MSYS == "HL", TOTAL_RELEASE * 42, TOTAL_RELEASE),
-         UNITS = if_else(MSYS == "HL", "gal", UNITS)) 
+         humans = FATAL + INJURE) 
   
 tab_cols <- c("NAME", "MDY","ILOC",  "FATAL","INJURE",
               "NUM_PUB_EVACUATED","IGNITE_IND","EXPLODE_IND",
