@@ -11,17 +11,17 @@ source("offshorefinder.R")
 mileCols <- c("system", "Calendar.Year", "State.Abbreviation", "Operator.ID", 
               "Total.Miles.by.Decade", "Total.By.Decade.Miles")
 
-miles <- read.csv("data/GD_MilesDecadeAge.csv") %>% 
+miles <- read.csv("data/raw/GD_MilesDecadeAge.csv") %>% 
   mutate(system = "GD (Gas Distribution)") %>% 
   select(any_of(mileCols))%>%
   rbind(select(
-    read.csv("data/GT_MilesDecadeAge.csv"), 
+    read.csv("data/raw/GT_MilesDecadeAge.csv"), 
     any_of(mileCols)) %>% 
       mutate(system = "GT (Gas Transmission)") %>%
       rename(Total.Miles.by.Decade = Total.By.Decade.Miles)
   )%>%
   rbind(select(
-    read.csv("data/HL_MilesDecadeAge.csv"), 
+    read.csv("data/raw/HL_MilesDecadeAge.csv"), 
     any_of(mileCols)) %>% 
       mutate(system = "HL (Hazardous Liquids)")
   )%>%
@@ -41,7 +41,7 @@ miles <- read.csv("data/GD_MilesDecadeAge.csv") %>%
 #### INCIDENT DATA ####
 
 # gd big 
-gd.full <- read_xlsx("./data/incidents/gd2010toPresent.xlsx", sheet = 2) %>% 
+gd.full <- read_xlsx("./data/raw/gd2010toPresent.xlsx", sheet = 2) %>% 
   mutate(SYSTEM_TYPE = "GD (Gas Distribution)", 
          SYS = "GD",
          UNINTENTIONAL_RELEASE = replace_na(UNINTENTIONAL_RELEASE,0), 
@@ -66,7 +66,7 @@ gd.full <- read_xlsx("./data/incidents/gd2010toPresent.xlsx", sheet = 2) %>%
   
 
 # gt big
-gt.full <- read_xlsx("./data/incidents/gtggungs2010toPresent.xlsx", sheet = 2) %>%
+gt.full <- read_xlsx("./data/raw/gtggungs2010toPresent.xlsx", sheet = 2) %>%
   mutate(SYS = gsub( " .*$", "", SYSTEM_TYPE ), #accounts for UNGS and GD
          UNINTENTIONAL_RELEASE = replace_na(UNINTENTIONAL_RELEASE,0), 
          INTENTIONAL_RELEASE = replace_na(INTENTIONAL_RELEASE,0),
@@ -100,8 +100,9 @@ gt.full <- read_xlsx("./data/incidents/gtggungs2010toPresent.xlsx", sheet = 2) %
   
 
 # hl big
-hl.full <- read_xlsx("./data/incidents/hl2010toPresent.xlsx", sheet = 2)%>% 
-  mutate(SYSTEM_TYPE = "HL (Hazardous Liquids)")%>%
+hl.full <- read_xlsx("./data/raw/hl2010toPresent.xlsx", sheet = 2)%>% 
+  mutate(SYSTEM_TYPE = "HL (Hazardous Liquids)",
+         SYS = "HL")%>%
   rename( INTENTIONAL_RELEASE = INTENTIONAL_RELEASE_BBLS,
           UNINTENTIONAL_RELEASE = UNINTENTIONAL_RELEASE_BBLS)%>%
   mutate(UNINTENTIONAL_RELEASE = replace_na(UNINTENTIONAL_RELEASE,0)*42, 
@@ -156,13 +157,16 @@ all.inc <- rbind(select(hl.full, all_of(short_cols)),
 #### WRITING EXPORTS ####
   
 #csvs for each full table
+write_csv(gt.full, "./data/clean/gt_inc.csv")
+write_csv(gd.full, "./data/clean/gd_inc.csv")
+write_csv(hl.full, "./data/clean/hl_inc.csv")
 
 
 #csv for abrdiged all incidents
-write_csv(new.inc, "./data/all_inc.csv")
+write_csv(new.inc, "./data/clean/all_inc.csv")
 
 #csv for mileage numbers 
-write_csv(miles, "./data/sys_miles.csv")
+write_csv(miles, "./data/clean/sys_miles.csv")
 
 
 
