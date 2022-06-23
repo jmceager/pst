@@ -308,6 +308,7 @@ body <- dashboardBody(
 #### ui ####
 shinyUI( 
   dashboardPage(
+    title = "Pipeline Safety Trust",
     header,
     sidebar,
     body
