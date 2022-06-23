@@ -22,7 +22,7 @@ fargs$verify_fa <- FALSE
 formals(icon) <- fargs
 
 # load data just for date 
-recentInc <- read_csv("https://raw.githubusercontent.com/jmceager/pst/main/phmsa-clean/data/clean/all_inc.csv") %>%
+recentInc <- incs %>%
   filter(MDY == max(MDY))
 
 # two months ago day one 
@@ -34,11 +34,10 @@ newDate <- if_else(day(recentInc$MDY[1]) > 25,
 #### header  ####
 header <- dashboardHeader(
   title = tags$a(href = "http://pstrust.org",
-                 tags$img(src = "PST_logo_white.png", height='85%')
+                 tags$img(src = "PST_logo_white.png", 
+                          height='85%',
+                          alt = "Pipeline Safety Trust")
   ),
-  #dropdownMenu("sourceMenu"),
-  #dropdownMenu("shareMenu"),
-  #dropdownMenuOutput("helpMenu")
   tags$li(class = "dropdown",
           id="info-down",
           dropMenu(
@@ -112,8 +111,9 @@ sidebar <- dashboardSidebar(
                     minview = "months", 
                     maxview = "decades",
                     value = newDate,
-                    format = "mm/yyyy",
-                    min = min(incs$MoYr)
+                    max = newDate,
+                    min = min(incs$MDY),
+                    format = "mm/yyyy"
          ),
          radioButtons("system", "Pipeline System:",
                       c("All" = "all",
