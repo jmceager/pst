@@ -470,7 +470,7 @@ shinyServer( function(input, output, session) {
                 galRel = galRel[0].replace(/\\B(?=(\\d{3})+(?!\\d))/g, ',')
                 mscfRel = mscfRel.toString().split('.')
                 mscfRel = mscfRel[0].replace(/\\B(?=(\\d{3})+(?!\\d))/g, ',')
-                return [bblRel, ' Gal; ', mscfRel, ' mscf']
+                return [galRel, ' Gal; ', mscfRel, ' mscf']
               }
               else if(galRel >0 && mscfRel == 0){
                 galRel = galRel.toString().split('.')
