@@ -81,11 +81,11 @@ shinyServer( function(input, output, session) {
        "This tab presents the 3 perpetrators in the selected month 
         based on PHMSA data. Perpetrators are defined by their system 
         and the determinant selected in the sidebar. Traditionally, PST has 
-      used the size of release or spill to select a \"Perp of the Month.\" 
-      Now, you can check to see which operators are the worst in a given month 
-      based on the cost of their damage, number of deaths, deaths plus injuries, 
-      or release size. Your selections will carry over to other tabs, where you 
-      can compare incidents and operators through other criteria."
+        used the size of release or spill to select a \"Perp of the Month.\" 
+        Now, you can check to see which operators are the worst in a given month 
+        based on the cost of their damage, number of deaths, deaths plus injuries, 
+        or release size. Your selections will carry over to other tabs, where you 
+        can compare incidents and operators through other criteria."
     }
     else if(input$tabs == "leafs"){
       "This tab presents a map of all incidents in the selected month. Determinants
@@ -456,26 +456,26 @@ shinyServer( function(input, output, session) {
             TOTAL_RELEASE = colDef(aggregate = JS(
               "function(values,rows){
               let mscfRel = 0
-              let bblRel = 0
+              let galRel = 0
               rows.forEach(function(row){
                 if(row['SimSys'] == 'HL'){
-                bblRel += row['TOTAL_RELEASE']
+                galRel += row['TOTAL_RELEASE']
                 }
                 else {
                 mscfRel += row['TOTAL_RELEASE']
                 }
               })
-              if(bblRel > 0 && mscfRel > 0){
-                bblRel = bblRel.toString().split('.')
-                bblRel = bblRel[0].replace(/\\B(?=(\\d{3})+(?!\\d))/g, ',')
+              if(galRel > 0 && mscfRel > 0){
+                galRel = galRel.toString().split('.')
+                galRel = galRel[0].replace(/\\B(?=(\\d{3})+(?!\\d))/g, ',')
                 mscfRel = mscfRel.toString().split('.')
                 mscfRel = mscfRel[0].replace(/\\B(?=(\\d{3})+(?!\\d))/g, ',')
-                return [bblRel, ' BBL; ', mscfRel, ' mscf']
+                return [bblRel, ' Gal; ', mscfRel, ' mscf']
               }
-              else if(bblRel >0 && mscfRel == 0){
-                bblRel = bblRel.toString().split('.')
-                bblRel = bblRel[0].replace(/\\B(?=(\\d{3})+(?!\\d))/g, ',')
-                return [bblRel, ' BBL']
+              else if(galRel >0 && mscfRel == 0){
+                galRel = galRel.toString().split('.')
+                galRel = galRel[0].replace(/\\B(?=(\\d{3})+(?!\\d))/g, ',')
+                return [galRel, ' Gal']
               }
               else{
                 mscfRel = mscfRel.toString().split('.')
@@ -549,8 +549,26 @@ shinyServer( function(input, output, session) {
             SYSTEM_TYPE = colDef(show = F),
             UNITS = colDef(name = "Units", show = F),
             TOTAL_COST_CURRENT = colDef(name = "Cost of Damage", 
-                                        aggregate = "sum",
                                         minWidth = 100,
+                                        aggregate = JS(
+                                          "function(values, rows){ 
+                                          function numFormatter(num) {
+                                            if(num > 999 && num < 1000000){
+                                                return (num/1000).toFixed(1) + 'K'; // convert to K for number from > 1000 < 1 million 
+                                            }else if(num > 1000000){
+                                                return (num/1000000).toFixed(1) + 'M'; // convert to M for number from > 1 million 
+                                            }else if(num < 900){
+                                                return num; // if value < 1000, nothing to do
+                                            }
+                                          }
+                                          let dCost = 0
+                                          rows.forEach(function(row) {
+                                            dCost += row['TOTAL_COST_CURRENT']
+                                          })
+                                          let finalCost = '$' + numFormatter(dCost) 
+                                          return finalCost
+                                          }"
+                                        ),
                                         format = colFormat(currency = "USD",
                                                            separators = TRUE,
                                                            digits = 0)),
