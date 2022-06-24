@@ -238,7 +238,7 @@ body <- dashboardBody(
         )
       )
     ),
-    #### timeline plot? hm ####
+    #### timeline plot ####
     tabItem(
       tabName = "timeline",
       fluidRow(
