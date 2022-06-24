@@ -289,11 +289,11 @@ body <- dashboardBody(
               )
             ),
             br(),
-            uiOutput("timePlot"),
+            plotOutput("timePlot"),
             br(),
             conditionalPanel(
               condition = "input.system == 'all' && input.weight == 'TOTAL_RELEASE'",
-              uiOutput("hlTimePlot")
+              plotOutput("hlTimePlot")
             ) #cond pan
        ) #box 
       ) # row

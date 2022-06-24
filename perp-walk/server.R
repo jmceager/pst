@@ -1321,7 +1321,7 @@ shinyServer( function(input, output, session) {
     }
   })
   
-#### Timeline PLots  ####
+#### Timeline Plots  ####
   plotData <- reactive({
     selMo =  if_else(rep(input$periodSwitch == F,12), rep(month(ymd(input$thisMonth)),12), seq(1,12,1) )
     selYr = year(ymd(input$thisMonth))
@@ -1365,7 +1365,7 @@ shinyServer( function(input, output, session) {
   waitress <- Waitress$new("#timePlot") # call the waitress
   
  #### create plots based on button behavior ####
-  output$timePlot <- renderUI({ 
+  output$timePlot <- renderPlot({ 
     for(i in 1:10){
       waitress$inc(10) # increase by 10%
       Sys.sleep(.1)
@@ -1390,91 +1390,76 @@ shinyServer( function(input, output, session) {
         sysCol <- sysCol[3:4]
       }
     }
-    plotWithTooltips(
-        plot = ggplot(data = df, 
-                      aes(x = MDY,
+    ggplot(data = df, aes(x = MDY,
                           y = df[[input$weight]],
                           fill = SysMax,
                           color = SysMax,
-                          size = df[[input$sizeButton]],
-                          label = NAME))+
-          geom_point(alpha = .7)+
-          scale_fill_manual(values = sysCol, guide = "none")+
-          scale_color_manual(values = sysCol)+
-          scale_x_date(date_labels = if_else( input$periodSwitch, "%b", "%b %d"),
-                       date_breaks = if_else(input$periodSwitch, "1 month", "7 days"),
-                       limits = dayRange(input$thisMonth,if_else(input$periodSwitch, "y","m")),
-                       name = ""
-                       )+
-          scale_size(name = str_wrap(prettysize(),15),
-                     limits = c(0, max(df[[input$sizeButton]])))+
-          scale_y_continuous(name = prettyweight(),
-                             trans = if_else(input$logY == T, "pseudo_log","identity"),
-                             breaks = yBreak(df[[input$weight]], input$logY,"b"),
-                             labels = yBreak(df[[input$weight]], input$logY,"l"))+
-          labs(title = "Perpetrators Among All Incidents",
-               subtitle = paste(weightName(input$weight, input$system), "in", if_else(input$periodSwitch,
-                                                                              paste(year(ymd(input$thisMonth))),
-                                                                              paste(month(ymd(input$thisMonth),
-                                                                                          label = T,
-                                                                                          abbr = F),
-                                                                                    year(ymd(input$thisMonth)))
+                          size = df[[input$sizeButton]]))+
+      geom_point(alpha = .7)+
+      scale_fill_manual(values = sysCol, guide = "none")+
+      scale_color_manual(values = sysCol)+
+      scale_x_date(date_labels = if_else( input$periodSwitch, "%b", "%b %d"),
+                   date_breaks = if_else(input$periodSwitch, "1 month", "7 days"),
+                   limits = dayRange(input$thisMonth,if_else(input$periodSwitch, "y","m")),
+                   name = ""
+                   )+
+      scale_size(name = str_wrap(prettysize(),15),
+                 limits = c(0, max(df[[input$sizeButton]])))+
+      scale_y_continuous(name = prettyweight(),
+                         trans = if_else(input$logY == T, "pseudo_log","identity"),
+                         breaks = yBreak(df[[input$weight]], input$logY,"b"),
+                         labels = yBreak(df[[input$weight]], input$logY,"l"))+
+      labs(title = "Perpetrators Among All Incidents",
+           subtitle = paste(weightName(input$weight, input$system), "in", if_else(input$periodSwitch,
+                                                                                  paste(year(ymd(input$thisMonth))),
+                                                                                  paste(month(ymd(input$thisMonth),
+                                                                                              label = T,
+                                                                                              abbr = F),
+                                                                                        year(ymd(input$thisMonth)))
                )),
-               color = "System")+
-          theme_pst(font = pstFont),
-        varDict = list(NAME = "Operator"),
-        width = (input$width*.7-250)/72,
-        height = ((input$width*.7 - 250)/72)/1.62 
-        )
+           color = "System")+
+      theme_pst(font = pstFont)
   })
 
 
-  output$hlTimePlot <- renderUI({
+  output$hlTimePlot <- renderPlot({
     # data 
     bigdf <-filter(incs, grepl("HL", SYSTEM_TYPE))
     df <- filter(plotData(), grepl("HL", SYSTEM_TYPE))
     #the actual plot
-    plotWithTooltips(
-      plot = ggplot(data = df,
-                    aes(x = MDY,
-                        y = df[[input$weight]],
-                        fill = SysMax,
-                        color = SysMax,
-                        size = df[[input$sizeButton]],
-                        label = NAME))+
-        geom_point(alpha = .7)+
-        scale_color_manual(values = sysCol[5:6])+
-        scale_fill_manual(values = sysCol, guide = "none")+
-        scale_x_date(date_labels = if_else(input$periodSwitch,
-                                           "%b",
-                                           "%b %d"),
-                     date_breaks = if_else(input$periodSwitch, "1 month", "7 days"),
-                     limits = dayRange(input$thisMonth, if_else(input$periodSwitch, "y","m")),
-                     name = ""
-                     )+
-        scale_size(name = str_wrap(prettysize(),15),
-                   limits = c(0, max(df[[input$sizeButton]])))+
-        scale_y_continuous(name = prettyweight(),
-                           trans = if_else(input$logY == T, "pseudo_log","identity"),
-                           breaks = yBreak(filter(plotData(),grepl("HL", SYSTEM_TYPE))[[input$weight]],
-                                           input$logY,"b"),
-                           labels = yBreak(filter(plotData(),grepl("HL", SYSTEM_TYPE))[[input$weight]],
-                                           input$logY,"l"))+
-        labs(title = "Perpetrators Among All Incidents",
-             subtitle = paste(weightName(input$weight, "HL"), "in", if_else(input$periodSwitch,
-                                                                            paste(year(ymd(input$thisMonth))),
-                                                                            paste(month(ymd(input$thisMonth),
-                                                                                        label = T,
-                                                                                        abbr = F),
-                                                                                      year(ymd(input$thisMonth)))
-                                                                            )),
-             color = "System")+
-        theme_pst(font = pstFont),
-      #other args
-      varDict = list(NAME = "Operator"),
-      width = (input$width*.7-250)/72,
-      height = ((input$width*.7 - 250)/72)/1.62
-    )
+    ggplot(data = df, aes(x = MDY,
+                          y = df[[input$weight]],
+                          fill = SysMax,
+                          color = SysMax,
+                          size = df[[input$sizeButton]]))+
+      geom_point(alpha = .7)+
+      scale_color_manual(values = sysCol[5:6])+
+      scale_fill_manual(values = sysCol, guide = "none")+
+      scale_x_date(date_labels = if_else(input$periodSwitch,
+                                         "%b",
+                                         "%b %d"),
+                   date_breaks = if_else(input$periodSwitch, "1 month", "7 days"),
+                   limits = dayRange(input$thisMonth, if_else(input$periodSwitch, "y","m")),
+                   name = ""
+                   )+
+      scale_size(name = str_wrap(prettysize(),15),
+                 limits = c(0, max(df[[input$sizeButton]])))+
+      scale_y_continuous(name = prettyweight(),
+                         trans = if_else(input$logY == T, "pseudo_log","identity"),
+                         breaks = yBreak(filter(plotData(),grepl("HL", SYSTEM_TYPE))[[input$weight]],
+                                         input$logY,"b"),
+                         labels = yBreak(filter(plotData(),grepl("HL", SYSTEM_TYPE))[[input$weight]],
+                                         input$logY,"l"))+
+      labs(title = "Perpetrators Among All Incidents",
+           subtitle = paste(weightName(input$weight, "HL"), "in", if_else(input$periodSwitch,
+                                                                          paste(year(ymd(input$thisMonth))),
+                                                                          paste(month(ymd(input$thisMonth),
+                                                                                      label = T,
+                                                                                      abbr = F),
+                                                                                    year(ymd(input$thisMonth)))
+                                                                          )),
+           color = "System")+
+      theme_pst(font = pstFont)
   })
   
   waiter_hide()
