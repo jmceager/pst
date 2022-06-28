@@ -165,7 +165,7 @@ write_csv(hl.full, "data/clean/hl_inc.csv")
 
 
 #csv for abridged all incidents
-write_csv(new.inc, "data/clean/all_inc.csv")
+write_csv(all.inc, "data/clean/all_inc.csv")
 
 #csv for mileage numbers 
 write_csv(miles, "data/clean/sys_miles.csv")
