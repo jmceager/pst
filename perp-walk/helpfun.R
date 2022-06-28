@@ -70,7 +70,7 @@ breaksizer <- function(x){
 
 ## naming weights to be nicer 
 weightName <- function(weight, system = "all"){
-  unit <- if_else(system == "HL", "(BBL)","(mscf)")
+  unit <- if_else(system == "HL", "(Gal)","(mscf)")
   if(weight == "TOTAL_COST_CURRENT"){
     "Cost of Damage (Current USD)"
   }
