@@ -13,7 +13,6 @@ library(leaflet.providers)
 library(leaflegend)
 library(htmltools)
 library(htmlwidgets)
-library(plotly)
 library(waiter)
 library(ggtips)
 library(showtext)
@@ -55,7 +54,7 @@ incs <- read_csv("https://raw.githubusercontent.com/jmceager/pst/main/phmsa-clea
             if_else(COMMODITY_RELEASED_TYPE == "BIOFUEL / ALTERNATIVE FUEL(INCLUDING ETHANOL BLENDS)",
                     "BIOFUEL / ALT FUEL", COMMODITY_RELEASED_TYPE)))
   )%>%
-  dplyr::filter(!grepl("GG",SYSTEM_TYPE), !grepl("UNGS",SYSTEM_TYPE)) %>% # dont need gathering or ungs
+  dplyr::filter(!grepl("GG",SYS), !grepl("UNGS",SYS)) %>% # dont need gathering or ungs
   mutate(daytxt = as.character(MDY, format = "%b %d, %Y"), 
          NUM_PUB_EVACUATED = replace_na(NUM_PUB_EVACUATED, 0),
          humans = FATAL + INJURE) 
@@ -65,7 +64,7 @@ tab_cols <- c("NAME", "MDY","cleanLoc",  "FATAL","INJURE",
               "COMMODITY_RELEASED_TYPE", "STATE",
               "TOTAL_RELEASE","TOTAL_COST_CURRENT","CAUSE", "NARRATIVE")
 
-all_cols <- c("NAME", "MDY", "cleanLoc", "SYSTEM_TYPE","FATAL","INJURE",
+all_cols <- c("NAME", "MDY", "cleanLoc", "SYS","FATAL","INJURE",
               "NUM_PUB_EVACUATED","IGNITE_IND","EXPLODE_IND",
               "TOTAL_RELEASE", "UNITS","COMMODITY_RELEASED_TYPE", 
               "TOTAL_COST_CURRENT","CAUSE", "NARRATIVE", "STATE")
@@ -130,15 +129,15 @@ shinyServer( function(input, output, session) {
   incidentReact <- reactive({
     if(input$system == "all"){
       incs %>%
-        group_by(MoYr, SYSTEM_TYPE)%>%
+        group_by(MoYr, SYS)%>%
         slice(which.max(.data[[input$weight]]))%>%
         dplyr::filter(.data[[input$weight]]>0)%>%
         select(all_of(all_cols))
     }
     else{
       incs %>%
-        group_by(MoYr, SYSTEM_TYPE)%>%
-        dplyr::filter(grepl(input$system, SYSTEM_TYPE))%>%
+        group_by(MoYr, SYS)%>%
+        dplyr::filter(grepl(input$system, SYS))%>%
         slice(which.max(.data[[input$weight]]))%>%
         dplyr::filter(.data[[input$weight]]>0)%>%
         select(all_of(tab_cols))
@@ -227,7 +226,7 @@ shinyServer( function(input, output, session) {
                   MSYS = colDef(show = F),
                   MoYr = colDef(show = F),
                   STATE = colDef(show = F),
-                  SYSTEM_TYPE = colDef(name = "System"),
+                  SYS = colDef(name = "System"),
                   NAME = colDef(name = "Operator", align = "left", minWidth = 180),
                   FATAL = colDef(name = "Deaths", width = 100),
                   INJURE = colDef(name = "Injuries", width = 100),
@@ -285,7 +284,7 @@ shinyServer( function(input, output, session) {
                   MSYS = colDef(show = F),
                   MoYr = colDef(show = F),
                   STATE = colDef(show = F),
-                  SYSTEM_TYPE = colDef(show = FALSE),
+                  SYS = colDef(show = FALSE),
                   NAME = colDef(name = "Operator", align = "left", minWidth = 180),
                   FATAL = colDef(name = "Deaths", width = 100),
                   INJURE = colDef(name = "Injuries", width = 100),
@@ -339,8 +338,7 @@ shinyServer( function(input, output, session) {
         filter(inc >= 2)%>%
         ungroup()%>%
         select(!NARRATIVE)%>%
-        mutate(SimSys = str_sub(SYSTEM_TYPE, 1,2),
-               STATE = replace_na(STATE, "Offshore"),
+        mutate(STATE = replace_na(STATE, "Offshore"),
                igCol = colorScale(IGIN, pal = "YlOrRd", scale = "P"),
                exCol = colorScale(EXIN, pal = "YlOrRd", scale = "P"),
                fCol = colorScale(FS, pal = "OrRd", scale = "N"),
@@ -379,7 +377,7 @@ shinyServer( function(input, output, session) {
                          show = F),
             STATE = colDef(aggregate = "unique",
                            name = "States"),
-            SimSys = colDef(aggregate = "unique",
+            SYS = colDef(aggregate = "unique",
                             name = "System"),
             FATAL = colDef(name = "Deaths",
                            html = T,
@@ -458,7 +456,7 @@ shinyServer( function(input, output, session) {
               let mscfRel = 0
               let galRel = 0
               rows.forEach(function(row){
-                if(row['SimSys'] == 'HL'){
+                if(row['SYS'] == 'HL'){
                 galRel += row['TOTAL_RELEASE']
                 }
                 else {
@@ -546,7 +544,6 @@ shinyServer( function(input, output, session) {
                                     }"  
                                    )),
             MoYr = colDef(show = F),
-            SYSTEM_TYPE = colDef(show = F),
             UNITS = colDef(name = "Units", show = F),
             TOTAL_COST_CURRENT = colDef(name = "Cost of Damage", 
                                         minWidth = 100,
@@ -625,8 +622,7 @@ shinyServer( function(input, output, session) {
         filter(inc >= 2)%>%
         ungroup()%>%
         select(!NARRATIVE)%>%
-        mutate(SimSys = str_sub(SYSTEM_TYPE, 1,2),
-               STATE = replace_na(STATE, "Offshore"))
+        mutate(STATE = replace_na(STATE, "Offshore"))
       
       #get top 10 names including ties
       iList <- iR %>%
@@ -657,7 +653,7 @@ shinyServer( function(input, output, session) {
             inc = colDef(name = "Perp Count", show = F),
             STATE = colDef(aggregate = "unique",
                            name = "States"),
-            SimSys = colDef(aggregate = "unique",
+            SYS = colDef(aggregate = "unique",
                             name = "System"),
             FATAL = colDef(aggregate = "sum",
                            name = "Deaths"),
@@ -668,26 +664,26 @@ shinyServer( function(input, output, session) {
             TOTAL_RELEASE = colDef(aggregate = JS(
               "function(values,rows){
               let mscfRel = 0
-              let bblRel = 0
+              let galRel = 0
               rows.forEach(function(row){
-                if(row['SimSys'] == 'HL'){
-                bblRel += row['TOTAL_RELEASE']
+                if(row['SYS'] == 'HL'){
+                galRel += row['TOTAL_RELEASE']
                 }
                 else {
                 mscfRel += row['TOTAL_RELEASE']
                 }
               })
-              if(bblRel > 0 && mscfRel > 0){
-                bblRel = bblRel.toString().split('.')
-                bblRel = bblRel[0].replace(/\\B(?=(\\d{3})+(?!\\d))/g, ',')
+              if(galRel > 0 && mscfRel > 0){
+                galRel = galRel.toString().split('.')
+                galRel = galRel[0].replace(/\\B(?=(\\d{3})+(?!\\d))/g, ',')
                 mscfRel = mscfRel.toString().split('.')
                 mscfRel = mscfRel[0].replace(/\\B(?=(\\d{3})+(?!\\d))/g, ',')
-                return [bblRel, ' BBL; ', mscfRel, ' mscf']
+                return [galRel, ' Gal; ', mscfRel, ' mscf']
               }
-              else if(bblRel >0 && mscfRel == 0){
-                bblRel = bblRel.toString().split('.')
-                bblRel = bblRel[0].replace(/\\B(?=(\\d{3})+(?!\\d))/g, ',')
-                return [bblRel, ' BBL']
+              else if(galRel >0 && mscfRel == 0){
+                galRel = galRel.toString().split('.')
+                galRel = galRel[0].replace(/\\B(?=(\\d{3})+(?!\\d))/g, ',')
+                return [galRel, ' Gal']
               }
               else{
                 mscfRel = mscfRel.toString().split('.')
@@ -724,7 +720,6 @@ shinyServer( function(input, output, session) {
                                     }"  
                                  )),
             MoYr = colDef(show = F),
-            SYSTEM_TYPE = colDef(show = F),
             UNITS = colDef(name = "Units", show = F),
             TOTAL_COST_CURRENT = colDef(name = "Cost of Damage", 
                                         aggregate = "sum",
@@ -774,16 +769,16 @@ shinyServer( function(input, output, session) {
   #GD
   recentGD <-  reactive({
     numb <- incs %>% 
-      dplyr::filter(grepl("GD", SYSTEM_TYPE), MoYr == input$thisMonth) %>%
+      dplyr::filter(grepl("GD", SYS), MoYr == input$thisMonth) %>%
       slice_max(.data[[input$weight]])
     if(nrow(numb) == 1) {
       incs %>% 
-        dplyr::filter(grepl("GD", SYSTEM_TYPE), MoYr == input$thisMonth) %>%
+        dplyr::filter(grepl("GD", SYS), MoYr == input$thisMonth) %>%
         slice_max(.data[[input$weight]])
     }
     else {
       incs %>% 
-        dplyr::filter(grepl("GD", SYSTEM_TYPE), MoYr == input$thisMonth) %>%
+        dplyr::filter(grepl("GD", SYS), MoYr == input$thisMonth) %>%
         slice(1)%>%
         mutate(NAME = "N/A",
                INJURE = 0,
@@ -798,16 +793,16 @@ shinyServer( function(input, output, session) {
   #GT
   recentGT <-  reactive({
     numb <- incs %>% 
-      dplyr::filter(grepl("GT", SYSTEM_TYPE), MoYr == input$thisMonth) %>%
+      dplyr::filter(grepl("GT", SYS), MoYr == input$thisMonth) %>%
       slice_max(.data[[input$weight]])
     if(nrow(numb) == 1) {
       incs %>% 
-        dplyr::filter(grepl("GT", SYSTEM_TYPE), MoYr == input$thisMonth) %>%
+        dplyr::filter(grepl("GT", SYS), MoYr == input$thisMonth) %>%
         slice_max(.data[[input$weight]])
     }
     else {
       incs %>% 
-        dplyr::filter(grepl("GT", SYSTEM_TYPE), MoYr == input$thisMonth) %>%
+        dplyr::filter(grepl("GT", SYS), MoYr == input$thisMonth) %>%
         slice(1)%>%
         mutate(NAME = "N/A",
                INJURE = 0,
@@ -1169,11 +1164,11 @@ shinyServer( function(input, output, session) {
       if(input$weight == "TOTAL_RELEASE"){
         incs %>% 
           dplyr::filter(MoYr == input$thisMonth) %>%
-          group_by(SYSTEM_TYPE) %>%
+          group_by(SYS) %>%
           mutate(Max = if_else(.data[[input$weight]] == max(.data[[input$weight]]), T, F),
-                 color = if_else(grepl("GD", SYSTEM_TYPE), 
+                 color = if_else(grepl("GD", SYS), 
                                  if_else(Max == T,"#6a3d9a","#cab2d6"),
-                                 if_else(grepl("GT", SYSTEM_TYPE),
+                                 if_else(grepl("GT", SYS),
                                          if_else(Max == T, "#1f78b4","#a6cee3"),
                                          if_else(Max ==T,"#ff7f00","#fdbf6f")
                                  )
@@ -1187,12 +1182,12 @@ shinyServer( function(input, output, session) {
       else{
         incs %>% 
           dplyr::filter(MoYr == input$thisMonth) %>%
-          group_by(SYSTEM_TYPE) %>%
+          group_by(SYS) %>%
           mutate(Max = if_else(.data[[input$weight]] == max(.data[[input$weight]]) &
                                  max(.data[[input$weight]]) > 0, T, F),
-                 color = if_else(grepl("GD", SYSTEM_TYPE), 
+                 color = if_else(grepl("GD", SYS), 
                                  if_else(Max == T,"#6a3d9a","#cab2d6"),
-                                 if_else(grepl("GT", SYSTEM_TYPE),
+                                 if_else(grepl("GT", SYS),
                                          if_else(Max == T, "#1f78b4","#a6cee3"),
                                          if_else(Max ==T,"#ff7f00","#fdbf6f")
                                          )
@@ -1204,12 +1199,12 @@ shinyServer( function(input, output, session) {
     }
     else {
      incs %>% 
-        dplyr::filter(grepl(input$system, SYSTEM_TYPE), MoYr == input$thisMonth) %>%
+        dplyr::filter(grepl(input$system, SYS), MoYr == input$thisMonth) %>%
         mutate(Max = if_else(.data[[input$weight]] == max(.data[[input$weight]]), T, F),
                size = rangeBrother(.data[[input$weight]]),
-               color = if_else(grepl("GD", SYSTEM_TYPE), 
+               color = if_else(grepl("GD", SYS), 
                                if_else(Max == T,"#6a3d9a","#cab2d6"),
-                               if_else(grepl("GT", SYSTEM_TYPE),
+                               if_else(grepl("GT", SYS),
                                        if_else(Max == T, "#1f78b4","#a6cee3"),
                                        if_else(Max ==T,"#ff7f00","#fdbf6f")
                                         )
@@ -1234,9 +1229,6 @@ shinyServer( function(input, output, session) {
   #draw markers on top that react 
   # note: redo size in the map df so that it's based on quantiles maybe?
   #should size be unique to each month or not? 
-  #     Maybe not so it's clear some months are worse than others 
-  #     also add popup using "paste" and some HTML <br>'s 
-  #     popup can include more info on data and such 
   observe({
     req(input$tabs == "leafs")
     leafletProxy("incMap", data = mapData()) %>%
@@ -1253,7 +1245,7 @@ shinyServer( function(input, output, session) {
                                       mapData()$MDY,
                                       "<br>",
                                       "<b>System:</b>",
-                                      mapData()$SYSTEM_TYPE,
+                                      mapData()$SYS,
                                       "<br>",
                                       "<b>Place:</b> ", 
                                       mapData()$ILOC , 
@@ -1331,9 +1323,9 @@ shinyServer( function(input, output, session) {
           mutate(booMo = if_else(IMONTH %in% selMo, T,F),
                  booYr = if_else(IYEAR == selYr, T,F)) %>%
           dplyr::filter(booMo == T & booYr == T) %>%
-          group_by(SYSTEM_TYPE, MoYr) %>%
+          group_by(SYS, MoYr) %>%
           mutate(Max = if_else(.data[[input$weight]] == max(.data[[input$weight]]), T, F))%>%
-          mutate(SysMax = paste0(str_sub(SYSTEM_TYPE,1,2), ifelse(Max, " Perp", "")),
+          mutate(SysMax = paste0(SYS, ifelse(Max, " Perp", "")),
                  None = 1)
 
       }
@@ -1342,10 +1334,10 @@ shinyServer( function(input, output, session) {
           mutate(booMo = if_else(IMONTH %in% selMo, T,F),
                  booYr = if_else(IYEAR == selYr, T,F)) %>%
           dplyr::filter(booMo == T & booYr == T) %>%
-          group_by(SYSTEM_TYPE, MoYr) %>%
+          group_by(SYS, MoYr) %>%
           mutate(Max = if_else(.data[[input$weight]] == max(.data[[input$weight]]) &
                                  max(.data[[input$weight]]) > 0, T, F))%>%
-          mutate(SysMax = paste0(str_sub(SYSTEM_TYPE,1,2), ifelse(Max, " Perp", "")),
+          mutate(SysMax = paste0(SYS, ifelse(Max, " Perp", "")),
                  None = 1)
       }
     }
@@ -1354,10 +1346,10 @@ shinyServer( function(input, output, session) {
         mutate(booMo = if_else(IMONTH %in% selMo, T,F),
                booYr = if_else(IYEAR == selYr, T,F)) %>%
         dplyr::filter(booMo == T & booYr == T) %>%
-        dplyr::filter(grepl(input$system, SYSTEM_TYPE)) %>%
+        dplyr::filter(grepl(input$system, SYS)) %>%
         group_by(MoYr)%>%
         mutate(Max = if_else(.data[[input$weight]] == max(.data[[input$weight]]), T, F))%>%
-        mutate(SysMax = paste0(str_sub(SYSTEM_TYPE,1,2), ifelse(Max, " Perp", "")),
+        mutate(SysMax = paste0(SYS, ifelse(Max, " Perp", "")),
                None = 1)
     }
   })
@@ -1374,7 +1366,7 @@ shinyServer( function(input, output, session) {
     #for year
     if(input$system == "all" & input$weight == "TOTAL_RELEASE"){
       df <- plotData() %>%
-        filter(!grepl("HL", SYSTEM_TYPE))
+        filter(!grepl("HL", SYS))
       sysCol <- sysCol[1:4] #sysCol is the color dictionairy 
     }
     else{
@@ -1424,8 +1416,8 @@ shinyServer( function(input, output, session) {
 
   output$hlTimePlot <- renderPlot({
     # data 
-    bigdf <-filter(incs, grepl("HL", SYSTEM_TYPE))
-    df <- filter(plotData(), grepl("HL", SYSTEM_TYPE))
+    bigdf <-filter(incs, grepl("HL", SYS))
+    df <- filter(plotData(), grepl("HL", SYS))
     #the actual plot
     ggplot(data = df, aes(x = MDY,
                           y = df[[input$weight]],
@@ -1446,9 +1438,9 @@ shinyServer( function(input, output, session) {
                  limits = c(0, max(df[[input$sizeButton]])))+
       scale_y_continuous(name = prettyweight(),
                          trans = if_else(input$logY == T, "pseudo_log","identity"),
-                         breaks = yBreak(filter(plotData(),grepl("HL", SYSTEM_TYPE))[[input$weight]],
+                         breaks = yBreak(filter(plotData(),grepl("HL", SYS))[[input$weight]],
                                          input$logY,"b"),
-                         labels = yBreak(filter(plotData(),grepl("HL", SYSTEM_TYPE))[[input$weight]],
+                         labels = yBreak(filter(plotData(),grepl("HL", SYS))[[input$weight]],
                                          input$logY,"l"))+
       labs(title = "Perpetrators Among All Incidents",
            subtitle = paste(weightName(input$weight, "HL"), "in", if_else(input$periodSwitch,
@@ -1469,7 +1461,7 @@ shinyServer( function(input, output, session) {
     ## get relevant data 
     if(input$system == "all" & input$weight == "TOTAL_RELEASE"){
       df <- plotData() %>%
-        filter(!grepl("HL", SYSTEM_TYPE))
+        filter(!grepl("HL", SYS))
     }
     else{
       df <- plotData()
