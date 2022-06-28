@@ -60,12 +60,12 @@ incs <- read_csv("https://raw.githubusercontent.com/jmceager/pst/main/phmsa-clea
          NUM_PUB_EVACUATED = replace_na(NUM_PUB_EVACUATED, 0),
          humans = FATAL + INJURE) 
   
-tab_cols <- c("NAME", "MDY","ILOC",  "FATAL","INJURE",
+tab_cols <- c("NAME", "MDY","cleanLoc",  "FATAL","INJURE",
               "NUM_PUB_EVACUATED","IGNITE_IND","EXPLODE_IND",
               "COMMODITY_RELEASED_TYPE", "STATE",
               "TOTAL_RELEASE","TOTAL_COST_CURRENT","CAUSE", "NARRATIVE")
 
-all_cols <- c("NAME", "MDY", "ILOC", "SYSTEM_TYPE","FATAL","INJURE",
+all_cols <- c("NAME", "MDY", "cleanLoc", "SYSTEM_TYPE","FATAL","INJURE",
               "NUM_PUB_EVACUATED","IGNITE_IND","EXPLODE_IND",
               "TOTAL_RELEASE", "UNITS","COMMODITY_RELEASED_TYPE", 
               "TOTAL_COST_CURRENT","CAUSE", "NARRATIVE", "STATE")
@@ -1066,7 +1066,7 @@ shinyServer( function(input, output, session) {
         if_else( recentHL()$NAME != "N/A",
                  paste0(format(recentHL()$MDY, format="%B %d, %Y"),
                         " in ",
-                        recentHL()$ILOC
+                        recentHL()$cleanLoc
                  ),
                  paste("No Incidents with <em>", prettyweight(), "</em> this month", sep = " ")
         )
@@ -1497,8 +1497,9 @@ shinyServer( function(input, output, session) {
       style = style,
       p(HTML(paste0("<b> Operator: </b>", point$NAME, "<br/>",
                     "<b> Date: </b>", point$daytxt, "<br/>",
+                    "<b> Date: </b>", point$cleanLoc, "<br/>",
                     "<b> Release: </b>", point$TOTAL_RELEASE, " ", points$UNITS,"<br/>",
-                    "<b> hp: </b>", point$TOTAL_COST_CURRENT, "<br/>"))
+                    "<b> hp: </b>", point$TOTAL_COST_CURRENT, "<br/>")))
     )
   })
   
