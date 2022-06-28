@@ -1463,5 +1463,44 @@ shinyServer( function(input, output, session) {
   })
   
   waiter_hide()
+  
+  #### GGPlot Tooltips ####
+  output$hover_info <- renderUI({
+    ## get relevant data 
+    if(input$system == "all" & input$weight == "TOTAL_RELEASE"){
+      df <- plotData() %>%
+        filter(!grepl("HL", SYSTEM_TYPE))
+    }
+    else{
+      df <- plotData()
+    }
+    
+    #get the location of the hover and get the relevant data point
+    hover <- input$plot_hover
+    point <- nearPoints(df, hover, threshold = 5, maxpoints = 1, addDist = TRUE,
+                        yvar = input$weight)
+    
+    #no tooltip if cursor not near points 
+    if (nrow(point) == 0) return(NULL)
+    
+    #get the coordinates for the cursor 
+    left_px <- hover$coords_css$x
+    top_px <- hover$coords_css$y
+    
+    # create style property for tooltip
+    # transparent bg and z-index for placement
+    style <- paste0("position:absolute; z-index:100; background-color: rgba(245, 245, 245, 0.85); ",
+                    "left:", left_px + 2, "px; top:", top_px + 2, "px;")
+    
+    # tooltip  as wellPanel
+    wellPanel(
+      style = style,
+      p(HTML(paste0("<b> Operator: </b>", point$NAME, "<br/>",
+                    "<b> Date: </b>", point$daytxt, "<br/>",
+                    "<b> Release: </b>", point$TOTAL_RELEASE, " ", points$UNITS,"<br/>",
+                    "<b> hp: </b>", point$TOTAL_COST_CURRENT, "<br/>"))
+    )
+  })
+  
 }
 )
