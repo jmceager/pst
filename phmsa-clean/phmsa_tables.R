@@ -159,16 +159,16 @@ all.inc <- rbind(select(hl.full, all_of(short_cols)),
 #### WRITING EXPORTS ####
   
 #csvs for each full table
-write_csv(gt.full, "./data/clean/gt_inc.csv")
-write_csv(gd.full, "./data/clean/gd_inc.csv")
-write_csv(hl.full, "./data/clean/hl_inc.csv")
+write_csv(gt.full, "data/clean/gt_inc.csv")
+write_csv(gd.full, "data/clean/gd_inc.csv")
+write_csv(hl.full, "data/clean/hl_inc.csv")
 
 
-#csv for abrdiged all incidents
-write_csv(new.inc, "./data/clean/all_inc.csv")
+#csv for abridged all incidents
+write_csv(new.inc, "data/clean/all_inc.csv")
 
 #csv for mileage numbers 
-write_csv(miles, "./data/clean/sys_miles.csv")
+write_csv(miles, "data/clean/sys_miles.csv")
 
 
 
