@@ -289,7 +289,13 @@ body <- dashboardBody(
               )
             ),
             br(),
-            plotOutput("timePlot"),
+            div(
+              style = "position:relative",
+              plotOutput("timePlot",
+                         hover = hoverOpts("plot_hover", delay = 100, delayType = "debounce")),
+              uiOutput("hover_info")
+              
+            ),
             br(),
             conditionalPanel(
               condition = "input.system == 'all' && input.weight == 'TOTAL_RELEASE'",
