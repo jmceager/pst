@@ -103,6 +103,11 @@ Starting with navbar/logo
   left: 50%;
 }
 
+/* plot stuff */
+#timePlot, #hlTimePlot {
+  height: 66vh !important;
+}
+
 /*background gradient??? */
 .content-wrapper {
   min-height: 100vh !important;
