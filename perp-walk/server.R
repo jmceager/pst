@@ -769,7 +769,7 @@ shinyServer( function(input, output, session) {
   
   
   
-  #### server for main landing: most recent incidents ####
+  #### data for value boxes / this month ####
   # building the data for each box
   #GD
   recentGD <-  reactive({
@@ -847,7 +847,7 @@ shinyServer( function(input, output, session) {
   #title boxes
   output$gtNew <- renderValueBox({
     valueBox(
-      value = tags$p(wrapping(recentGT()$NAME), 
+      value = tags$p(str_wrap(recentGT()$NAME, 18), 
                      style = "font-size: 3vw; white-space: pre-line;"),
       subtitle = HTML(
         if_else( recentGT()$NAME != "N/A",
@@ -954,7 +954,7 @@ shinyServer( function(input, output, session) {
   #title boxes
   output$gdNew <- renderValueBox({
     valueBox(
-      value = tags$p(wrapping(recentGD()$NAME), 
+      value = tags$p(str_wrap(recentGD()$NAME, 18), 
                      style = "font-size: 3vw; white-space: pre-line;"),
       subtitle = HTML(
         if_else( recentGD()$NAME != "N/A",
@@ -1060,7 +1060,7 @@ shinyServer( function(input, output, session) {
   ####column for hl incidents####
   output$hlNew <- renderValueBox({
     valueBox(
-      value = tags$p(wrapping(recentHL()$NAME), 
+      value = tags$p(str_wrap(recentHL()$NAME, 18), 
                      style = "font-size: 3vw; white-space: pre-line;"),
       subtitle = HTML(
         if_else( recentHL()$NAME != "N/A",
