@@ -843,7 +843,7 @@ shinyServer( function(input, output, session) {
   #title boxes
   output$gtNew <- renderValueBox({
     valueBox(
-      value = tags$p(str_wrap(recentGT()$NAME, 18), 
+      value = tags$p(recentGT()$NAME,  
                      style = "font-size: 3vw; white-space: pre-line;"),
       subtitle = HTML(
         if_else( recentGT()$NAME != "N/A",
@@ -952,7 +952,7 @@ shinyServer( function(input, output, session) {
   #title boxes
   output$gdNew <- renderValueBox({
     valueBox(
-      value = tags$p(str_wrap(recentGD()$NAME, 18), 
+      value = tags$p(recentGD()$NAME,
                      style = "font-size: 3vw; white-space: pre-line;"),
       subtitle = HTML(
         if_else( recentGD()$NAME != "N/A",
@@ -1058,7 +1058,7 @@ shinyServer( function(input, output, session) {
   ####column for hl incidents####
   output$hlNew <- renderValueBox({
     valueBox(
-      value = tags$p(str_wrap(recentHL()$NAME, 18), 
+      value = tags$p(recentHL()$NAME, 
                      style = "font-size: 3vw; white-space: pre-line;"),
       subtitle = HTML(
         if_else( recentHL()$NAME != "N/A",
