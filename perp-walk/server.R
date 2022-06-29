@@ -848,7 +848,9 @@ shinyServer( function(input, output, session) {
       subtitle = HTML(
         if_else( recentGT()$NAME != "N/A",
                  paste0(format(recentGT()$MDY, format="%B %d, %Y"),
-                        " in ",
+                        if_else(grepl("Outer Continental Shelf",recentGT()$cleanLoc),
+                                " on the ",
+                                " in "),
                         recentGT()$cleanLoc
                  ),
                  paste0("No Incidents with <em>", prettyweight(), "</em> this month")
@@ -1061,7 +1063,9 @@ shinyServer( function(input, output, session) {
       subtitle = HTML(
         if_else( recentHL()$NAME != "N/A",
                  paste0(format(recentHL()$MDY, format="%B %d, %Y"),
-                        " in ",
+                        if_else(grepl("Outer Continental Shelf",recentHL()$cleanLoc),
+                                " on the ",
+                                " in "),
                         recentHL()$cleanLoc
                  ),
                  paste("No Incidents with <em>", prettyweight(), "</em> this month", sep = " ")
