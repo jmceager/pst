@@ -57,7 +57,8 @@ incs <- read_csv("https://raw.githubusercontent.com/jmceager/pst/main/phmsa-clea
   dplyr::filter(!grepl("GG",SYS), !grepl("UNGS",SYS)) %>% # dont need gathering or ungs
   mutate(daytxt = as.character(MDY, format = "%b %d, %Y"), 
          NUM_PUB_EVACUATED = replace_na(NUM_PUB_EVACUATED, 0),
-         humans = FATAL + INJURE) 
+         humans = FATAL + INJURE,
+         IMONTH = month(MDY)) 
   
 tab_cols <- c("NAME", "MDY","cleanLoc",  "FATAL","INJURE",
               "NUM_PUB_EVACUATED","IGNITE_IND","EXPLODE_IND",
@@ -222,7 +223,7 @@ shinyServer( function(input, output, session) {
                 columns = list(
                   MDY = colDef(format = colFormat(date = TRUE),
                                name = "Date"),
-                  ILOC = colDef(name = "Place", width = 110),
+                  cleanLoc = colDef(name = "Place", width = 110),
                   MSYS = colDef(show = F),
                   MoYr = colDef(show = F),
                   STATE = colDef(show = F),
@@ -280,7 +281,7 @@ shinyServer( function(input, output, session) {
                 columns = list(
                   MDY = colDef(format = colFormat(date = TRUE),
                                name = "Date"),
-                  ILOC = colDef(name = "Place", width = 110),
+                  cleanLoc = colDef(name = "Place", width = 110),
                   MSYS = colDef(show = F),
                   MoYr = colDef(show = F),
                   STATE = colDef(show = F),
@@ -586,7 +587,7 @@ shinyServer( function(input, output, session) {
                                                }"
                                              )),
             CAUSE = colDef(name = "Cause"),
-            ILOC = colDef(name = "Place"),
+            cleanLoc = colDef(name = "Place"),
             MDY = colDef(name = "Date"),
             IGIN = colDef(show = F),
             EXIN = colDef(show = F),
@@ -743,7 +744,7 @@ shinyServer( function(input, output, session) {
                                                }"
                                              )),
             CAUSE = colDef(name = "Cause"),
-            ILOC = colDef(name = "Place"),
+            cleanLoc = colDef(name = "Place"),
             MDY = colDef(name = "Date")
           ),
           theme = reactableTheme(
@@ -848,7 +849,7 @@ shinyServer( function(input, output, session) {
         if_else( recentGT()$NAME != "N/A",
                  paste0(format(recentGT()$MDY, format="%B %d, %Y"),
                         " in ",
-                        recentGT()$ILOC
+                        recentGT()$cleanLoc
                  ),
                  paste0("No Incidents with <em>", prettyweight(), "</em> this month")
         )
@@ -955,7 +956,7 @@ shinyServer( function(input, output, session) {
         if_else( recentGD()$NAME != "N/A",
                  paste0(format(recentGD()$MDY, format="%B %d, %Y"),
                         " in ",
-                        recentGD()$ILOC
+                        recentGD()$cleanLoc
                  ),
                  paste0("No Incidents with <em>", prettyweight(), "</em> this month")
         )
@@ -1248,7 +1249,7 @@ shinyServer( function(input, output, session) {
                                       mapData()$SYS,
                                       "<br>",
                                       "<b>Place:</b> ", 
-                                      mapData()$ILOC , 
+                                      mapData()$cleanLoc , 
                                       "<br>",
                                       "<b>Release:</b> ",
                                       comma(round(mapData()$TOTAL_RELEASE, digits = 0)), " ",
