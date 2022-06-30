@@ -139,11 +139,11 @@ body <- dashboardBody(
                         var width = 0;
                         $(document).on("shiny:connected", function(e) {
                           width = window.innerWidth;
-                          Shiny.onInputChange("width", width);
+                          Shiny.setInputValue("width", width);
                         });
                         $(window).resize(function(e) {
                           width = window.innerWidth;
-                          Shiny.onInputChange("width", width);
+                          Shiny.setInputValue("width", width);
                         });
                         ')),
   tabItems(
