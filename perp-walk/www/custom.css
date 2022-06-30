@@ -108,6 +108,12 @@ Starting with navbar/logo
   height: 66vh !important;
 }
 
+.ggtip {
+  position: absolute;
+  z-index: 100;
+  background-color: rgba(245, 245, 245, 0.85);
+}
+
 /*background gradient??? */
 .content-wrapper {
   min-height: 100vh !important;
