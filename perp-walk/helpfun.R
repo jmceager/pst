@@ -34,6 +34,16 @@ rangeBrother <- function(x){
 
 #custom legend builder
 #sheesh cleaned that up a lot
+unitsMatch <- function(u){
+  if(grepl("Gal", u)){
+    match <- "Liquids, Gal."
+  }
+  else{
+    match <- "Gas, mscf."
+  }
+  return(match)
+}
+
 addLegendCustom <- function(map, weight, weightName, sys, legName,units, opacity = 0.7){
   n <- length(pretty(weight, n = breaksizer(weight)))
   col <- if_else(sys == "HL", "#fdbf6f",
@@ -42,7 +52,7 @@ addLegendCustom <- function(map, weight, weightName, sys, legName,units, opacity
                                  "#b2b2b2")
                          )
                  )
-  title <- if_else(weightName == "TOTAL_RELEASE", paste0("Commodity Released (", units, ")"),
+  title <- if_else(weightName == "TOTAL_RELEASE", paste0("Commodity Released (", unitsMatch(units), ")"),
                    if_else(weightName == "TOTAL_COST_CURRENT", "Cost (2022 USD)",
                            if_else(weightName == "FATAL", "Deaths",
                                    "Deaths + Injuries"))
