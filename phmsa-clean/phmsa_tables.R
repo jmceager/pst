@@ -60,7 +60,7 @@ gd.full <- read_xlsx("./data/raw/gd2010toPresent.xlsx", sheet = 2) %>%
          MSYS = "Gas",
          ILOC = paste(str_to_title(LOCATION_CITY_NAME),LOCATION_STATE_ABBREVIATION, sep = ", "),
          STATE = LOCATION_STATE_ABBREVIATION) %>%
-  cleanLoc(., "ILOC", lat= "LOCATION_LATITUDE", lon = "LOCATION_LONGITUDE")%>%
+  locCleaner(., "ILOC", lat= "LOCATION_LATITUDE", lon = "LOCATION_LONGITUDE")%>%
   left_join(miles, by = c("OPERATOR_ID", "SYSTEM_TYPE", "STATE","IYEAR"))%>%
   mutate(mileage = replace_na(mileage, 0))
   
@@ -94,7 +94,7 @@ gt.full <- read_xlsx("./data/raw/gtggungs2010toPresent.xlsx", sheet = 2) %>%
          STATE = coalesce(ONSHORE_STATE_ABBREVIATION, OFFSHORE_STATE_ABBREVIATION),
          STATE = if_else(is.na(STATE),locState(LOCATION_LATITUDE, LOCATION_LONGITUDE),STATE)  
     )%>%
-  cleanLoc(.,"ILOC","LOCATION_LATITUDE","LOCATION_LONGITUDE", "OFF_ACCIDENT_ORIGIN")%>%
+  locCleaner(.,"ILOC","LOCATION_LATITUDE","LOCATION_LONGITUDE", "OFF_ACCIDENT_ORIGIN")%>%
   left_join(miles, by = c("OPERATOR_ID", "SYSTEM_TYPE", "STATE","IYEAR"))%>%
   mutate(mileage = replace_na(mileage, 0))
 
@@ -132,7 +132,7 @@ hl.full <- read_xlsx("./data/raw/hl2010toPresent.xlsx", sheet = 2)%>%
          STATE = coalesce(ONSHORE_STATE_ABBREVIATION, OFFSHORE_STATE_ABBREVIATION),
          STATE = if_else(is.na(STATE),locState(LOCATION_LATITUDE, LOCATION_LONGITUDE),STATE)
         )%>%
-  cleanLoc(.,"ILOC","LOCATION_LATITUDE","LOCATION_LONGITUDE", "OFF_ACCIDENT_ORIGIN")%>%
+  locCleaner(.,"ILOC","LOCATION_LATITUDE","LOCATION_LONGITUDE", "OFF_ACCIDENT_ORIGIN")%>%
   left_join(miles, by = c("OPERATOR_ID", "SYSTEM_TYPE", "STATE","IYEAR"))%>%
   mutate(mileage = replace_na(mileage, 0))
 
@@ -169,7 +169,3 @@ write_csv(all.inc, "data/clean/all_inc.csv")
 
 #csv for mileage numbers 
 write_csv(miles, "data/clean/sys_miles.csv")
-
-
-
-
