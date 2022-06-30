@@ -40,7 +40,7 @@ locCleaner <- function(df, col, lat, lon, org = NULL){
              | grepl("Municipality", .data[[col]]) 
              | grepl(" Miles", .data[[col]])
              | grepl("[[:digit:]]", .data[[col]])) %>%
-      mutate(cleanLoc = glue(lat = .data[[lat]], lon = .data[[lon]], org = .data[[org]]))
+      mutate(cleanLoc = glue(lat = .data[[lat]], lon = LOCATION_LONGITUDE, org = .data[[org]]))
   }
   
   #return clean DF
