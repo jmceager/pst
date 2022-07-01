@@ -13,7 +13,6 @@ library(leaflet.providers)
 library(htmltools)
 library(htmlwidgets)
 library(waiter)
-library(ggtips)
 library(showtext)
 library(thematic)
 #> Loading required package: sysfonts
@@ -1465,10 +1464,15 @@ shinyServer( function(input, output, session) {
     ## get relevant data 
     if(input$system == "all" & input$weight == "TOTAL_RELEASE"){
       df <- plotData() %>%
-        filter(!grepl("HL", SYS))
+        filter(!grepl("HL", SYS)) 
     }
     else{
       df <- plotData()
+    }
+    
+    if(input$logY){
+      df <- df %>%
+        mutate_at(vars(input$weight),pseudo_log_trans()$transform )
     }
     
     #get the location of the hover and get the relevant data point
@@ -1485,17 +1489,18 @@ shinyServer( function(input, output, session) {
     
     # create style property for tooltip
     # transparent bg and z-index for placement
-    style <- paste0("position:absolute; z-index:100; background-color: rgba(245, 245, 245, 0.85); ",
-                    "left:", left_px + 2, "px; top:", top_px + 2, "px;")
+    pos <- paste0("left:", left_px + 2, "px; top:", top_px + 2, "px;")
     
     # tooltip  as wellPanel
     wellPanel(
-      style = style,
+      class = "ggtip",
+      style = pos,
       p(HTML(paste0("<b> Operator: </b>", point$NAME, "<br/>",
-                    "<b> Date: </b>", point$daytxt, "<br/>",
-                    "<b> Date: </b>", point$cleanLoc, "<br/>",
-                    "<b> Release: </b>", point$TOTAL_RELEASE, " ", points$UNITS,"<br/>",
-                    "<b> hp: </b>", point$TOTAL_COST_CURRENT, "<br/>")))
+                    "<b> Location: </b>", point$cleanLoc, "<br/>",
+                    "<b> Release: </b>", comma(point$TOTAL_RELEASE),"<br/>",
+                    "<b> Cost: </b> $", comma(point$TOTAL_COST_CURRENT), "<br/>",
+                    point
+                    )))
     )
   })
   
