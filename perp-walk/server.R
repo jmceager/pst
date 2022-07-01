@@ -1419,7 +1419,6 @@ shinyServer( function(input, output, session) {
 
   output$hlTimePlot <- renderPlot({
     # data 
-    bigdf <-filter(incs, grepl("HL", SYS))
     df <- filter(plotData(), grepl("HL", SYS))
     #the actual plot
     ggplot(data = df, aes(x = MDY,
@@ -1497,10 +1496,43 @@ shinyServer( function(input, output, session) {
       style = pos,
       p(HTML(paste0("<b> Operator: </b>", point$NAME, "<br/>",
                     "<b> Location: </b>", point$cleanLoc, "<br/>",
+                    "<b> Date: </b>", point$daytxt, "<br/>",
                     "<b> Release: </b>", comma(point$TOTAL_RELEASE),"<br/>",
-                    "<b> Cost: </b> $", comma(point$TOTAL_COST_CURRENT), "<br/>",
-                    point
-                    )))
+                    "<b> Cost: </b> $", comma(point$TOTAL_COST_CURRENT), "<br/>"
+      )))
+    )
+  })
+  
+  output$hl_info <- renderUI({
+    ## get relevant data 
+    df <- filter(plotData(), grepl("HL", SYS))
+    
+    #get the location of the hover and get the relevant data point
+    hover <- input$hl_hover
+    point <- nearPoints(df, hover, threshold = 5, maxpoints = 1, addDist = TRUE,
+                        yvar = input$weight)
+    
+    #no tooltip if cursor not near points 
+    if (nrow(point) == 0) return(NULL)
+    
+    #get the coordinates for the cursor 
+    left_px <- hover$coords_css$x
+    top_px <- hover$coords_css$y
+    
+    # create style property for tooltip
+    # transparent bg and z-index for placement
+    pos <- paste0("left:", left_px + 4, "px; top: calc(70vh + ", top_px + 10, "px);")
+    
+    # tooltip  as wellPanel
+    wellPanel(
+      class = "ggtip",
+      style = pos,
+      p(HTML(paste0("<b> Operator: </b>", point$NAME, "<br/>",
+                    "<b> Location: </b>", point$cleanLoc, "<br/>",
+                    "<b> Date: </b>", point$daytxt, "<br/>",
+                    "<b> Release: </b>", comma(point$TOTAL_RELEASE), " Gal. <br/>",
+                    "<b> Cost: </b> $", comma(point$TOTAL_COST_CURRENT), "<br/>"
+      )))
     )
   })
   
