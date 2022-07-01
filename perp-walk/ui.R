@@ -299,7 +299,9 @@ body <- dashboardBody(
             br(),
             conditionalPanel(
               condition = "input.system == 'all' && input.weight == 'TOTAL_RELEASE'",
-              plotOutput("hlTimePlot")
+              plotOutput("hlTimePlot",
+                         hover = hoverOpts("plot_hover", delay = 100, delayType = "debounce")),
+              uiOutput("hl_info")
             ) #cond pan
        ) #box 
       ) # row
