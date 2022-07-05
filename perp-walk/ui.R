@@ -135,6 +135,7 @@ sidebar <- dashboardSidebar(
 body <- dashboardBody(
   tags$head(tags$title("Perp Walk"),
             tags$link(rel = "stylesheet", type = "text/css", href = "custom.css"),
+            tags$head(includeHTML(("google-analytics.html"))),
             tags$script('
                         var width = 0;
                         $(document).on("shiny:connected", function(e) {
