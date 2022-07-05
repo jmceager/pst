@@ -13,8 +13,13 @@ h1, h2, h3, h4, h5, h6 {
 
 /* 
 Styling main dashboard appearance:
-Starting with navbar/logo
+Starting with content, navbar, logo
 */
+
+.content{
+  position: relative;
+  top: 50px;
+}
 
 .skin-blue .main-header {
   position: fixed;
@@ -71,7 +76,6 @@ Starting with navbar/logo
   height: 30px;
   line-height: 1;
 }
-
 
 .open>.dropdown-menu {
   display: none;
@@ -148,10 +152,7 @@ Starting with navbar/logo
 
 
 /* content / body / boxes */
-.content{
-  position: relative;
-  top: 50px;
-}
+
 
 .box {
   border-radius: 12px;
@@ -159,6 +160,12 @@ Starting with navbar/logo
   border-top: 0px;
   box-shadow: 4px 4px 16px rgba(0,0,0,.15);
 }
+
+.value-name {
+  font-size:3vw;
+  white-space: pre-line;
+}
+
 
 .box-header .box-title {
   font-weight: 900;
@@ -214,4 +221,14 @@ according to system = olive/fuchsia/maroon
   .info {
     font-family: "Source Sans Pro", sans-serif;
   }
+  
+  /* some funky reactive stuff */
+  @media only screen and (max-width: 1200px) {
+
+   .value-name { 
+      font-size: 2.4vw; 
+   }
+
+}
+  
   

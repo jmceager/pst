@@ -842,7 +842,9 @@ shinyServer( function(input, output, session) {
   output$gtNew <- renderValueBox({
     valueBox(
       value = tags$p(recentGT()$NAME,  
-                     style = "font-size: 3vw; white-space: pre-line;"),
+                     class = "value-name"#,
+                     #style = "font-size: 3vw; white-space: pre-line;"
+                     ),
       subtitle = HTML(
         if_else( recentGT()$NAME != "N/A",
                  paste0(format(recentGT()$MDY, format="%B %d, %Y"),
@@ -950,7 +952,8 @@ shinyServer( function(input, output, session) {
   #title boxes
   output$gdNew <- renderValueBox({
     valueBox(
-      value = tags$p(recentGD()$NAME,
+      value = tags$p(recentGD()$NAME, 
+                     class = "value-name",
                      style = "font-size: 3vw; white-space: pre-line;"),
       subtitle = HTML(
         if_else( recentGD()$NAME != "N/A",
@@ -1056,7 +1059,8 @@ shinyServer( function(input, output, session) {
   ####column for hl incidents####
   output$hlNew <- renderValueBox({
     valueBox(
-      value = tags$p(recentHL()$NAME, 
+      value = tags$p(recentHL()$NAME,  
+                     class = "value-name",
                      style = "font-size: 3vw; white-space: pre-line;"),
       subtitle = HTML(
         if_else( recentHL()$NAME != "N/A",
@@ -1521,7 +1525,7 @@ shinyServer( function(input, output, session) {
     
     # create style property for tooltip
     # transparent bg and z-index for placement
-    pos <- paste0("left:", left_px + 4, "px; top: calc(70vh + ", top_px + 10, "px);")
+    pos <- paste0("left:", left_px + 12, "px; top: calc(82vh + ", top_px + 10, "px);")
     
     # tooltip  as wellPanel
     wellPanel(
