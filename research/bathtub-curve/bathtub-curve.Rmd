@@ -41,7 +41,7 @@ options(knitr.table.format = "latex")
 wdt = 2560
 hgt = wdt/1.62
 
-datadir <- "/Users/jameseager/Documents/projects/PHMSA_clean/data/"
+datadir <- "https://raw.githubusercontent.com/jmceager/pst/main/phmsa-clean/data/clean/"
 capt = "Source: PHMSA Incident and Mileage Data (2010-2021)"
 tag = "PST 2022"
 ```
@@ -130,7 +130,7 @@ df.hl <- read.csv(paste0(datadir,"HL_MilesDecadeAge.csv"))
 ## incidents
 gd.inc <- read_csv(paste0(datadir,"all_inc.csv")) %>% filter(grepl("GD", SYSTEM_TYPE))
 gt.inc <- read_csv(paste0(datadir,"all_inc.csv")) %>% filter(grepl("GT", SYSTEM_TYPE))
-hl.inc <- read_csv(paste0(datadir,"all_inc.csv")) %>% filter(grepl("HL", SYSTEM_TYPE))
+hl.inc <- read_csv(paste0(datadir,"all_inc.csv")) %>% filter(grepl("HL", SYS))
 ```
 
 ### Age
