@@ -1,0 +1,314 @@
+ ---
+title: "Untitled Analysis"
+subtitle: "Specifics (Timeline)"
+runningheader: "Pipeline Safety Trust `r format(Sys.time(), '%m/%Y')`"
+author: "Pipeline Safety Trust"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  tufte::tufte_handout: default
+header-includes:
+  - \usepackage{titling}
+  - \pretitle{\begin{center}
+    \includegraphics[width=2in,height=2in]{img/PST_logo.png}\LARGE\\}
+  - \posttitle{\end{center}}
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r include = FALSE, echo = FALSE}
+rm(list = ls())
+```
+
+```{r setup, include=FALSE}
+library(tufte)
+library(incays)
+# invalidate cache when the tufte version changes
+knitr::opts_chunk$set(cache.extra = packageVersion('tufte'))
+options(htmltools.dir.version = FALSE)
+
+library(tidyverse)
+library(ggrepel)
+library(RColorBrewer)
+library(ggthemes)
+library(viridis)
+library(scales)
+library(readxl)
+library(kableExtra)
+library(sp)
+library(sf)
+library(rgeos)
+library(tufte)
+library(rgdal)
+library(ggspatial)
+library(mapboxapi)
+
+knitr::opts_chunk$set(echo = FALSE, include = FALSE, message = FALSE)
+options(knitr.table.format = "latex")
+capt = "Source: PHMSA Incident and Mileage Data (2010-2021)"
+datadir = "https://raw.githubusercontent.com/jmceager/pst/main/phmsa-clean/data/"
+tag = paste("PST", lubridate::year(Sys.Date()))
+##
+moState = "ND"
+moStateL = state.name[match(moState,state.abb)]
+```
+
+```{r theme_pst}
+library(showtext)
+#> Loading required package: sysfonts
+#> Loading required package: showtextdb
+pstFont = "Montserrat"
+font_add_google(pstFont)
+showtext_auto()
+theme_pst <- function(baseSize=8) {
+  (theme(
+                       axis.line.x = element_line(
+                         colour = "#182125",
+                         size = 0.5,
+                         linetype = "solid"
+                       ),
+                       axis.line.y = element_line(
+                         colour = "#182125",
+                         size = 0.5,
+                         linetype = "solid"
+                       ),
+                       axis.ticks.y = element_line(
+                         colour = "#182125",
+                         size = 0.5,
+                         linetype = "solid"
+                       ),
+                       text = element_text(family = pstFont),
+                       axis.text = element_text(colour = "#8C9394",
+                                                size = baseSize * .8),
+                       axis.title = element_text(colour ="black"),
+                       panel.grid.minor.y = element_line(linetype = "dotted", 
+                                                         colour = "#C4C8C6"),
+                       panel.grid.major.y = element_line(colour = "#394C56", 
+                                                         linetype = "dotted"),
+                       panel.grid.major.x = element_blank(),
+                       panel.grid.minor.x = element_blank(),
+                       panel.background = element_blank(),
+                       panel.border = element_blank(),
+                       strip.background = element_rect(linetype = 0),
+                       strip.text = element_blank(),
+                       strip.text.x = element_blank(),
+                       strip.text.y = element_blank(),
+                       legend.text = element_text(colour = "black",
+                                                  size = baseSize * .8),
+                       legend.background = element_rect(fill = NULL, 
+                                                        color = "#182125"),
+                       legend.title = element_text( face = "bold", 
+                                                    colour = "black",
+                                                    size = baseSize),
+                       legend.position = "right",
+                       legend.key = element_blank(),
+                       #legend.background = element_blank(),
+                       plot.tag.position = "topright",
+                       plot.tag = element_text(size = baseSize *.66,
+                                               colour = "#8C9394"),
+                       plot.background = element_blank(),
+                       plot.title = element_text(face = "bold", 
+                                                 colour = "black",
+                                                 size = baseSize*1.2),
+                       plot.subtitle = element_text(colour = "#8C9394",
+                                                    size = baseSize)
+                     )
+  )
+}
+```
+
+```{r nice colors}
+col <- brewer.pal(6,"Set2")
+green <- col[1]
+orange <- col[2]
+purple <- col[3]
+pink <- col[4]
+lime <- col[5]
+yellow <- col[6]
+```
+
+```{r loading incident data}
+#all incident data + op mileage
+df <- read_csv(paste0(datadir, "clean/all_inc.csv")) %>%
+  filter(STATE == moState)
+
+adj.states <- c("SD","MN", "MT") #insert adjacent states here 
+
+df.adj <- read_csv(paste0(datadir, "clean/all_inc.csv"))%>%
+  filter(STATE %in% adj.states)%>%
+  mutate(MSYS = str_sub(SYS, 1,2),
+         MSYS = if_else(MSYS == "UN", "UNGS",MSYS))
+```
+
+```{r}
+df %>%
+  mutate(INSTALLATION_YEAR = parse_number(INSTALLATION_YEAR, na = "UNKNOWN"),
+         INSTALLATION_YEAR = replace_na(INSTALLATION_YEAR, 1900))%>%
+  group_by(STATE) %>%
+  summarise(mean = mean(INSTALLATION_YEAR),
+            mode = modeFind(INSTALLATION_YEAR),
+            median = median(INSTALLATION_YEAR),
+            n = n()) %>% view()
+
+df %>%
+  mutate(INSTALLATION_YEAR = parse_number(INSTALLATION_YEAR, na = c("UNKNOWN", "NA")),
+         INSTALLATION_YEAR = replace_na(INSTALLATION_YEAR, 1900),
+         IDEC = INSTALLATION_YEAR - INSTALLATION_YEAR %% 10) %>%
+  group_by(IDEC)%>%
+  summarize(n = n())
+```
+
+
+```{r mileage data}
+miles <- read_csv(paste0(datadir, "clean/sys_miles.csv")) %>%
+  group_by(STATE) %>%
+  summarise(miles = sum(mileage))
+
+stateMiles <- filter(miles, STATE == moState) %>% select(miles)
+```
+
+# Pipeline Incident Analysis  
+
+\newthought{This makes it caps} or something to start new sections. Links might not show up properly so use this formatting: \href{https://www.phmsa.dot.gov/data-and-statistics/pipeline/pipeline-incident-flagged-files}{\textcolor{Cerulean}{\underline{PHMSA's website}}}. 
+
+## Overview  
+```{r quick facts}
+sig <- df %>%
+  count(SIGNIFICANT)%>%
+  filter(SIGNIFICANT == "YES")
+
+bad <- df %>%
+  count(INJURY_IND, FATALITY_IND) %>%
+  filter(INJURY_IND != "NO" | FATALITY_IND != "NO") %>%
+  summarise(n = sum(n))
+
+fire <- df %>%
+  count(EXPLODE_IND, IGNITE_IND) %>%
+  filter(EXPLODE_IND != "NO" | IGNITE_IND != "NO") %>%
+  summarise(n = sum(n))
+
+death <- df %>%
+  mutate(FATAL = replace_na(FATAL,0)) %>%
+  summarise(FATAL = sum(FATAL))
+
+injure <- df %>%
+  mutate(INJURE = replace_na(INJURE,0)) %>%
+  summarise(INJURE = sum(INJURE))
+
+evac <- df %>%
+  mutate(NUM_PUB_EVACUATED = replace_na(NUM_PUB_EVACUATED,0)) %>%
+  summarise(NUM_PUB_EVACUATED = sum(NUM_PUB_EVACUATED))
+
+rel <- df %>%
+  mutate(UNINTENTIONAL_RELEASE = replace_na(UNINTENTIONAL_RELEASE,0),
+         INTENTIONAL_RELEASE = replace_na(INTENTIONAL_RELEASE,0),
+         TOTAL_RELEASE = UNINTENTIONAL_RELEASE + INTENTIONAL_RELEASE) %>%
+  group_by(SYS)%>%
+  summarise(TOTAL_RELEASE = sum(TOTAL_RELEASE))
+
+gasRel <- filter(rel, !grepl("HL", SYS)) %>%
+  summarise(TOTAL_RELEASE = sum(TOTAL_RELEASE))
+
+hazRel <- filter(rel, grepl("HL", SYS))
+
+modeFind <- function(x) {
+  ux <- unique(x)
+  tab <- tabulate(match(x, ux))
+  ux[tab == max(tab)]
+}
+
+freqOp <- modeFind(df$NAME)
+```
+**Quick Facts**  
+
+From 2010 to today, XXXXXXX has had: 
+  
+*  `r nrow(df)` total incidents including:  
+  +  `r nrow(filter(df,grepl("HL",SYSTEM_TYPE)))` Hazardous Liquid incidents
+  +  `r nrow(filter(df,grepl("GT",SYSTEM_TYPE)))` Gas Transmission incidents  
+  +  `r nrow(filter(df,grepl("GD",SYSTEM_TYPE)))` Gas Distribution incidents  
+*  `r sig[[2]]` significant incidents
+*  `r bad[[1]]` incidents ending in injury and/or fatality
+*  `r fire[[1]]` incidents resulting in fire and/or explosion
+*  `r comma(evac[[1]])` total members of the public evacuated 
+*  `r comma(rel[[1]])` Thousand Cubic Feet (mscf) of gas released as a result of incidents
+
+```{marginfigure include = T, echo = T}
+Place margin text like this 
+```
+
+## Incident Breakdown
+
+```{r}
+
+```
+
+
+## Operator Analysis 
+
+```{r}
+
+```
+
+
+## Spatial Analysis  
+```{r load state shapefile}
+projcrs <- "+proj=longlat +datum=WGS84 +no_defs"
+
+stateShape <- read_sf("gis/us_states.shp")
+
+stateShape <- stateShape[stateShape$NAME == moStateL,]
+
+#mb_access_token("accesstokenhere", install = T)
+```
+
+```{r map, include = TRUE, fig.fullsize = TRUE}
+df.sp <- st_as_sf(df, 
+                  coords = c("LOCATION_LONGITUDE","LOCATION_LATITUDE"),
+                  crs = projcrs) 
+
+df.state <- st_join(df.sp, st_transform(stateShape, crs = projcrs), join = st_within) %>%
+  filter(NAME.y == moStateL)
+
+pst_tiles <- get_static_tiles(location = stateShape,
+                              zoom = 5,
+                              style_id = "cl1pbimv7000114ouzmsb6obk",
+                              username = "jimeagah",
+                              buffer_dist = 1500000,
+                              crop = T)
+
+##ggspatial
+df.state%>%
+  ggplot()+
+  layer_spatial(pst_tiles)+
+  geom_sf(data = stateShape, fill = NA, color = "black")+
+  geom_sf(aes(color = SYS), alpha = .6)+
+  scale_color_brewer(palette = "Set2", name = "System",
+                     labels = c("Gas Distribution","Gas Gathering","Gas Transmission",
+                                "Hazardous Liquids","Underground Natural Gas Storage"))+
+  coord_sf(crs = 3857,
+           xlim = c(-11943962.47 , -10718953.77),
+           ylim = c(5727623.28, 6303756.22))+
+  labs(title = paste0("Incident Locations in ", moStateL),
+       subtitle = "All Systems (2010 - Present)",
+       x = NULL,
+       y = NULL,
+       caption = capt,
+       tag = tag)+
+  theme_void()+
+  theme(legend.position = c(0.1,0.8),
+        text = element_text(pstFont),
+        plot.margin = unit(c(0,0,0,0), "cm"),
+        plot.tag.position = c(.96,0.95),
+        plot.tag = element_text(color = "gray 90", size = 8),
+        plot.title = element_text(face = "bold", colour = "#ffffff", hjust = .015),
+        plot.subtitle = element_text(colour = "#ffffff", hjust = .015),
+        plot.caption = element_text(colour = "gray 90"),
+        legend.title = element_text(colour = "gray 90", face = "bold"),
+        legend.text = element_text(colour = "gray90"),
+        plot.background = element_rect(fill = "#457969", colour = NA)) #fill is to match bg
+
+wdt = 2560
+hgt = wdt/1.62
+ggsave("./map.png", width = wdt, height = hgt, units = "px")
+``` 
+
