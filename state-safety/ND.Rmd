@@ -309,6 +309,6 @@ df.state%>%
 
 wdt = 2560
 hgt = wdt/1.62
-ggsave("./map.png", width = wdt, height = hgt, units = "px")
+ggsave("ND/map.png", width = wdt, height = hgt, units = "px")
 ``` 
 
