@@ -38,104 +38,6 @@ miles <- read.csv("data/raw/GD_MilesDecadeAge.csv") %>%
 ## note: possible to add mileage for install_decade? 
 ## note: possible handling of on/offshore mileage 
 
-#### INCIDENT DATA ####
-
-# gd big 
-gd.full <- read_xlsx("./data/raw/gd2010toPresent.xlsx", sheet = 2) %>% 
-  mutate(SYSTEM_TYPE = "GD (Gas Distribution)", 
-         SYS = "GD",
-         UNINTENTIONAL_RELEASE = replace_na(UNINTENTIONAL_RELEASE,0), 
-         INTENTIONAL_RELEASE = replace_na(INTENTIONAL_RELEASE,0),
-         ON_OFF_SHORE = "ONSHORE",
-         UNITS = "mscf",
-         TOTAL_RELEASE = UNINTENTIONAL_RELEASE + INTENTIONAL_RELEASE,
-         TOTAL_COST_CURRENT = replace_na(parse_number(TOTAL_COST_CURRENT), 0),
-         EXPLODE_IND = replace_na(EXPLODE_IND, "NO"),
-         IGNITE_IND = replace_na(IGNITE_IND, "NO"),
-         FATAL = replace_na(FATAL, 0),
-         INJURE = replace_na(INJURE, 0),
-         MDY = date(LOCAL_DATETIME),
-         IMONTH = month(MDY),
-         MoYr = my(paste(IMONTH,IYEAR, sep = "-")),
-         MSYS = "Gas",
-         ILOC = paste(str_to_title(LOCATION_CITY_NAME),LOCATION_STATE_ABBREVIATION, sep = ", "),
-         STATE = LOCATION_STATE_ABBREVIATION) %>%
-  locCleaner(., "ILOC", lat= "LOCATION_LATITUDE", lon = "LOCATION_LONGITUDE")%>%
-  left_join(miles, by = c("OPERATOR_ID", "SYSTEM_TYPE", "STATE","IYEAR"))%>%
-  mutate(mileage = replace_na(mileage, 0))
-  
-
-# gt big
-gt.full <- read_xlsx("./data/raw/gtggungs2010toPresent.xlsx", sheet = 2) %>%
-  mutate(SYS = gsub( " .*$", "", SYSTEM_TYPE ), #accounts for UNGS and GD
-         UNINTENTIONAL_RELEASE = replace_na(UNINTENTIONAL_RELEASE,0), 
-         INTENTIONAL_RELEASE = replace_na(INTENTIONAL_RELEASE,0),
-         UNITS = "mscf",
-         TOTAL_RELEASE = UNINTENTIONAL_RELEASE + INTENTIONAL_RELEASE,
-         TOTAL_COST_CURRENT = replace_na(parse_number(TOTAL_COST_CURRENT), 0),
-         EXPLODE_IND = replace_na(EXPLODE_IND, "NO"),
-         IGNITE_IND = replace_na(IGNITE_IND, "NO"),
-         FATAL = replace_na(FATAL, 0),
-         INJURE = replace_na(INJURE, 0),
-         MDY = date(LOCAL_DATETIME),
-         IMONTH = month(MDY),
-         MoYr = my(paste(IMONTH,IYEAR, sep = "-")),
-         MSYS = "Gas",
-         ILOC =  if_else(ON_OFF_SHORE == "ONSHORE", 
-                         paste(str_to_title(ONSHORE_CITY_NAME), ONSHORE_STATE_ABBREVIATION,
-                               sep = ", "),
-                         if_else(is.na(OFFSHORE_COUNTY_NAME),
-                                 "NA",
-                                 paste(paste(str_to_title(OFFSHORE_COUNTY_NAME), "County Waters", sep = " "),
-                                       OFFSHORE_STATE_ABBREVIATION,
-                                       sep = ", "))
-                         
-                          ),
-         STATE = coalesce(ONSHORE_STATE_ABBREVIATION, OFFSHORE_STATE_ABBREVIATION),
-         STATE = if_else(is.na(STATE),locState(LOCATION_LATITUDE, LOCATION_LONGITUDE),STATE)  
-    )%>%
-  locCleaner(.,"ILOC","LOCATION_LATITUDE","LOCATION_LONGITUDE", "OFF_ACCIDENT_ORIGIN")%>%
-  left_join(miles, by = c("OPERATOR_ID", "SYSTEM_TYPE", "STATE","IYEAR"))%>%
-  mutate(mileage = replace_na(mileage, 0))
-
-  
-
-# hl big
-hl.full <- read_xlsx("./data/raw/hl2010toPresent.xlsx", sheet = 2)%>% 
-  mutate(SYSTEM_TYPE = "HL (Hazardous Liquids)",
-         SYS = "HL")%>%
-  rename( INTENTIONAL_RELEASE = INTENTIONAL_RELEASE_BBLS,
-          UNINTENTIONAL_RELEASE = UNINTENTIONAL_RELEASE_BBLS)%>%
-  mutate(UNINTENTIONAL_RELEASE = replace_na(UNINTENTIONAL_RELEASE,0)*42, 
-         INTENTIONAL_RELEASE = replace_na(INTENTIONAL_RELEASE,0)*42,
-         UNITS = "US Gal.",
-         TOTAL_RELEASE = UNINTENTIONAL_RELEASE + INTENTIONAL_RELEASE,
-         TOTAL_COST_CURRENT = replace_na(parse_number(TOTAL_COST_CURRENT), 0),
-         EXPLODE_IND = replace_na(EXPLODE_IND, "NO"),
-         IGNITE_IND = replace_na(IGNITE_IND, "NO"),
-         FATAL = replace_na(FATAL, 0),
-         INJURE = replace_na(INJURE, 0),
-         MDY = date(LOCAL_DATETIME),
-         IMONTH = month(MDY),
-         MoYr = my(paste(IMONTH,IYEAR, sep = "-")),
-         MSYS = "HL",
-         ILOC =  if_else(ON_OFF_SHORE == "ONSHORE", 
-                         paste(str_to_title(ONSHORE_CITY_NAME), ONSHORE_STATE_ABBREVIATION,
-                               sep = ", "),
-                         if_else(is.na(OFFSHORE_COUNTY_NAME),
-                                 "NA",
-                                 paste(paste(str_to_title(OFFSHORE_COUNTY_NAME), "County Waters", sep = " "),
-                                       OFFSHORE_STATE_ABBREVIATION,
-                                       sep = ", "))
-                         
-                         ),
-         STATE = coalesce(ONSHORE_STATE_ABBREVIATION, OFFSHORE_STATE_ABBREVIATION),
-         STATE = if_else(is.na(STATE),locState(LOCATION_LATITUDE, LOCATION_LONGITUDE),STATE)
-        )%>%
-  locCleaner(.,"ILOC","LOCATION_LATITUDE","LOCATION_LONGITUDE", "OFF_ACCIDENT_ORIGIN")%>%
-  left_join(miles, by = c("OPERATOR_ID", "SYSTEM_TYPE", "STATE","IYEAR"))%>%
-  mutate(mileage = replace_na(mileage, 0))
-
 #### OPERATOR DATA ####
 # from safety program 
 safe <- read_csv("data/raw/Safety_Program_Data.csv", skip = 2)
@@ -178,6 +80,113 @@ ops<-safe %>%
   )
   )
 
+ops.simple <- ops %>%
+  select(sub.id, sub.name, pri.id, pri.name)
+
+#### INCIDENT DATA ####
+
+# gd big 
+gd.full <- read_xlsx("./data/raw/gd2010toPresent.xlsx", sheet = 2) %>% 
+  mutate(SYSTEM_TYPE = "GD (Gas Distribution)", 
+         SYS = "GD",
+         UNINTENTIONAL_RELEASE = replace_na(UNINTENTIONAL_RELEASE,0), 
+         INTENTIONAL_RELEASE = replace_na(INTENTIONAL_RELEASE,0),
+         ON_OFF_SHORE = "ONSHORE",
+         UNITS = "mscf",
+         TOTAL_RELEASE = UNINTENTIONAL_RELEASE + INTENTIONAL_RELEASE,
+         TOTAL_COST_CURRENT = replace_na(parse_number(TOTAL_COST_CURRENT), 0),
+         EXPLODE_IND = replace_na(EXPLODE_IND, "NO"),
+         IGNITE_IND = replace_na(IGNITE_IND, "NO"),
+         FATAL = replace_na(FATAL, 0),
+         INJURE = replace_na(INJURE, 0),
+         MDY = date(LOCAL_DATETIME),
+         IMONTH = month(MDY),
+         MoYr = my(paste(IMONTH,IYEAR, sep = "-")),
+         MSYS = "Gas",
+         ILOC = paste(str_to_title(LOCATION_CITY_NAME),LOCATION_STATE_ABBREVIATION, sep = ", "),
+         STATE = LOCATION_STATE_ABBREVIATION) %>%
+  locCleaner(., "ILOC", lat= "LOCATION_LATITUDE", lon = "LOCATION_LONGITUDE")%>%
+  left_join(miles, by = c("OPERATOR_ID", "SYSTEM_TYPE", "STATE","IYEAR"))%>%
+  mutate(mileage = replace_na(mileage, 0)) %>%
+  left_join(ops.simple, by = c("OPERATOR_ID" = "sub.id"))%>% 
+  distinct(NARRATIVE, .keep_all = T)
+
+
+# gt big
+gt.full <- read_xlsx("./data/raw/gtggungs2010toPresent.xlsx", sheet = 2) %>%
+  mutate(SYS = gsub( " .*$", "", SYSTEM_TYPE ), #accounts for UNGS and GD
+         UNINTENTIONAL_RELEASE = replace_na(UNINTENTIONAL_RELEASE,0), 
+         INTENTIONAL_RELEASE = replace_na(INTENTIONAL_RELEASE,0),
+         UNITS = "mscf",
+         TOTAL_RELEASE = UNINTENTIONAL_RELEASE + INTENTIONAL_RELEASE,
+         TOTAL_COST_CURRENT = replace_na(parse_number(TOTAL_COST_CURRENT), 0),
+         EXPLODE_IND = replace_na(EXPLODE_IND, "NO"),
+         IGNITE_IND = replace_na(IGNITE_IND, "NO"),
+         FATAL = replace_na(FATAL, 0),
+         INJURE = replace_na(INJURE, 0),
+         MDY = date(LOCAL_DATETIME),
+         IMONTH = month(MDY),
+         MoYr = my(paste(IMONTH,IYEAR, sep = "-")),
+         MSYS = "Gas",
+         ILOC =  if_else(ON_OFF_SHORE == "ONSHORE", 
+                         paste(str_to_title(ONSHORE_CITY_NAME), ONSHORE_STATE_ABBREVIATION,
+                               sep = ", "),
+                         if_else(is.na(OFFSHORE_COUNTY_NAME),
+                                 "NA",
+                                 paste(paste(str_to_title(OFFSHORE_COUNTY_NAME), "County Waters", sep = " "),
+                                       OFFSHORE_STATE_ABBREVIATION,
+                                       sep = ", "))
+                         
+                          ),
+         STATE = coalesce(ONSHORE_STATE_ABBREVIATION, OFFSHORE_STATE_ABBREVIATION),
+         STATE = if_else(is.na(STATE),locState(LOCATION_LATITUDE, LOCATION_LONGITUDE),STATE)  
+    )%>%
+  locCleaner(.,"ILOC","LOCATION_LATITUDE","LOCATION_LONGITUDE", "OFF_ACCIDENT_ORIGIN")%>%
+  left_join(miles, by = c("OPERATOR_ID", "SYSTEM_TYPE", "STATE","IYEAR"))%>%
+  mutate(mileage = replace_na(mileage, 0))%>%
+  left_join(ops.simple, by = c("OPERATOR_ID" = "sub.id"))%>% 
+  distinct(NARRATIVE, .keep_all = T)
+  
+
+# hl big
+hl.full <- read_xlsx("./data/raw/hl2010toPresent.xlsx", sheet = 2)%>% 
+  mutate(SYSTEM_TYPE = "HL (Hazardous Liquids)",
+         SYS = "HL")%>%
+  rename( INTENTIONAL_RELEASE = INTENTIONAL_RELEASE_BBLS,
+          UNINTENTIONAL_RELEASE = UNINTENTIONAL_RELEASE_BBLS)%>%
+  mutate(UNINTENTIONAL_RELEASE = replace_na(UNINTENTIONAL_RELEASE,0)*42, 
+         INTENTIONAL_RELEASE = replace_na(INTENTIONAL_RELEASE,0)*42,
+         UNITS = "US Gal.",
+         TOTAL_RELEASE = UNINTENTIONAL_RELEASE + INTENTIONAL_RELEASE,
+         TOTAL_COST_CURRENT = replace_na(parse_number(TOTAL_COST_CURRENT), 0),
+         EXPLODE_IND = replace_na(EXPLODE_IND, "NO"),
+         IGNITE_IND = replace_na(IGNITE_IND, "NO"),
+         FATAL = replace_na(FATAL, 0),
+         INJURE = replace_na(INJURE, 0),
+         MDY = date(LOCAL_DATETIME),
+         IMONTH = month(MDY),
+         MoYr = my(paste(IMONTH,IYEAR, sep = "-")),
+         MSYS = "HL",
+         ILOC =  if_else(ON_OFF_SHORE == "ONSHORE", 
+                         paste(str_to_title(ONSHORE_CITY_NAME), ONSHORE_STATE_ABBREVIATION,
+                               sep = ", "),
+                         if_else(is.na(OFFSHORE_COUNTY_NAME),
+                                 "NA",
+                                 paste(paste(str_to_title(OFFSHORE_COUNTY_NAME), "County Waters", sep = " "),
+                                       OFFSHORE_STATE_ABBREVIATION,
+                                       sep = ", "))
+                         
+                         ),
+         STATE = coalesce(ONSHORE_STATE_ABBREVIATION, OFFSHORE_STATE_ABBREVIATION),
+         STATE = if_else(is.na(STATE),locState(LOCATION_LATITUDE, LOCATION_LONGITUDE),STATE)
+        )%>%
+  locCleaner(.,"ILOC","LOCATION_LATITUDE","LOCATION_LONGITUDE", "OFF_ACCIDENT_ORIGIN")%>%
+  left_join(miles, by = c("OPERATOR_ID", "SYSTEM_TYPE", "STATE","IYEAR"))%>%
+  mutate(mileage = replace_na(mileage, 0))%>%
+  left_join(ops.simple, by = c("OPERATOR_ID" = "sub.id"))%>% 
+  distinct(NARRATIVE, .keep_all = T)
+
+
 #### JOINS, BINDS ####
 
 #columns for abridged incidents
@@ -189,7 +198,8 @@ short_cols <- c( "REPORT_NUMBER", "NAME","OPERATOR_ID",  #basic characteristics
                  "FATALITY_IND","FATAL", "INJURY_IND","INJURE", #human impact
                  "EXPLODE_IND","IGNITE_IND" ,  "NUM_PUB_EVACUATED", "TOTAL_COST_CURRENT",#impact 2
                  "INSTALLATION_YEAR", "SYSTEM_PART_INVOLVED", #inc char 
-                 "CAUSE","CAUSE_DETAILS", "NARRATIVE", "mileage") #inc char 
+                 "CAUSE","CAUSE_DETAILS", "NARRATIVE", #inc char 
+                 "mileage", "pri.id","pri.name")  #joined char
 
 #abridged all inc  
 all.inc <- rbind(select(hl.full, all_of(short_cols)), 
