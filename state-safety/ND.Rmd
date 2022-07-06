@@ -117,6 +117,7 @@ theme_pst <- function(baseSize=8) {
 ```
 
 ```{r nice colors}
+#brewer pal
 col <- brewer.pal(6,"Set2")
 green <- col[1]
 orange <- col[2]
@@ -124,6 +125,12 @@ purple <- col[3]
 pink <- col[4]
 lime <- col[5]
 yellow <- col[6]
+
+#pst 
+darkBlue <- "#003E59"
+midBlue <- "#00546F"
+bluGreen <- "#459197"
+liteGreen <- "#61A893"
 ```
 
 ```{r loading incident data}
@@ -140,7 +147,7 @@ df.adj <- read_csv(paste0(datadir, "clean/all_inc.csv"))%>%
 ```
 
 ```{r}
-df %>%
+read_csv(paste0(datadir, "clean/all_inc.csv")) %>%
   mutate(INSTALLATION_YEAR = parse_number(INSTALLATION_YEAR, na = "UNKNOWN"),
          INSTALLATION_YEAR = replace_na(INSTALLATION_YEAR, 1900))%>%
   group_by(STATE) %>%
@@ -149,7 +156,7 @@ df %>%
             median = median(INSTALLATION_YEAR),
             n = n()) %>% view()
 
-df %>%
+read_csv(paste0(datadir, "clean/all_inc.csv")) %>%
   mutate(INSTALLATION_YEAR = parse_number(INSTALLATION_YEAR, na = c("UNKNOWN", "NA")),
          INSTALLATION_YEAR = replace_na(INSTALLATION_YEAR, 1900),
          IDEC = INSTALLATION_YEAR - INSTALLATION_YEAR %% 10) %>%
@@ -208,7 +215,7 @@ rel <- df %>%
 gasRel <- filter(rel, !grepl("HL", SYS)) %>%
   summarise(TOTAL_RELEASE = sum(TOTAL_RELEASE))
 
-hazRel <- filter(rel, grepl("HL", SYS))
+liqRel <- filter(rel, grepl("HL", SYS))
 
 modeFind <- function(x) {
   ux <- unique(x)
@@ -217,6 +224,20 @@ modeFind <- function(x) {
 }
 
 freqOp <- modeFind(df$NAME)
+
+quickFacts <- tibble(
+  #names
+  var = c("totInc","liqInc","trnInc","dstInc", 
+          "sigInc","humanInd","inj","ftl",
+          "fire","evac", "gasRel","liqRel",
+          "modeOp"),
+  #values
+  val = c(nrow(df), nrow(filter(df,grepl("HL",SYS))),
+          nrow(filter(df,grepl("GT",SYS))), nrow(filter(df,grepl("GD",SYS))),
+          sig[[2]], bad[[1]], injure[[1]], death[[1]],
+          fire[[1]], comma(evac[[1]]),comma(gasRel[[1]]), comma(liqRel[[2]]),
+          freqOp)
+  )
 ```
 **Quick Facts**  
 
@@ -246,7 +267,24 @@ Place margin text like this
 ## Operator Analysis 
 
 ```{r}
-
+#note: figure out how to more accurately rep ipm 
+df.t <- df %>%
+  mutate(SIGNIFICANT = if_else(SIGNIFICANT == "YES", 1,0),
+         EXPLODE_IND = if_else(EXPLODE_IND == "YES", 1,0),
+         IGNITE_IND = if_else(IGNITE_IND == "YES", 1,0)) %>%
+  group_by(pri.name, SYS)%>%
+  summarise(miles = mean(mileage),
+            n = n(),
+            sig = sum(SIGNIFICANT)/n,
+            ipm = n/(miles/1000),
+            trend = "",
+            fatal = sum(FATAL),
+            injure = sum(INJURE),
+            evac = sum(NUM_PUB_EVACUATED, na.rm = T),
+            cost = sum(TOTAL_COST_CURRENT)/1000,
+            cpi = cost/ n ,
+            rel = sum(TOTAL_RELEASE),
+            rpi = rel/n )
 ```
 
 
