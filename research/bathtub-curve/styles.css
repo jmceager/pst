@@ -30,7 +30,7 @@ li {
 }
 
 slides > slide:not(.nobackground):before {
-      width: 203px;
-      height: 75px;
-      background-size: 203px 75px;
+      width: 163px;
+      height: 60px;
+      background-size: 163px 60px;
     }
