@@ -1,7 +1,7 @@
 ---
 title: "GT & HL Incidents by Installation"
 subtitle: "Analyzing Options & Alternatives"
-author: "Pipeline Safety Trust"
+author: "James Eager"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output: 
   ioslides_presentation:
@@ -354,7 +354,7 @@ rbind(gt.base, gt.offcomp)%>%
 
 ```
 
-## 1970s Offshore | Anomaly or Expected? 
+## Offshore Incidents | The 1970s: Anomaly or Expected? 
 
 
 ```{r}
@@ -414,6 +414,7 @@ perAllInc <- round((gtAllInc[[2,"n"]] / sum(gtAllInc$n) )*100, 1)
     -   In-state pipelines offer a more balanced proportion, as we'll see on the next plot  
  
 
+## Offshore Incidents | Mileage Plotted
 
 
 ```{r OCS vs rest mileage, include = TRUE}
@@ -543,7 +544,7 @@ rbind(gt.unknown.split, gt.unknown.group)%>%
                      labels = c("Unknown", "Pre-40s", 
                                 paste0("'",seq(40,90,10),"s"),
                                 "'00s","'10s","'20s" ))+
-  scale_fill_brewer(palette = "Set2", name = "Pre-40s & Unknown")+
+  scale_fill_manual(values = c(darkBlue, bluGreen), name = "Pre-40s & Unknown")+
   theme(legend.position = c(.85,.77))+
   labs(title = "Pipeline Incidents Per 1,000 Miles by Installation Decade",
        subtitle = "Significant Incidents of Onshore Gas Transmission Lines from the 1940s to Present",
@@ -609,7 +610,7 @@ rbind(gt.unknown.split, gt.unknown.group)%>%
                      labels = c("Unknown", "Pre-40s", 
                                 paste0("'",seq(40,90,10),"s"),
                                 "'00s","'10s","'20s" ))+
-  scale_fill_brewer(palette = "Set2", name = "Pre-40s & Unknown")+
+  scale_fill_manual(values = c(darkBlue, bluGreen), name = "Pre-40s & Unknown")+
   theme(legend.position = c(.85,.77))+
   labs(title = "Pipeline Incidents Per 1,000 Miles by Installation Decade",
        subtitle = "Significant Incidents of Onshore Gas Transmission Lines from the 1940s to Present",
