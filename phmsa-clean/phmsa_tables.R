@@ -136,6 +136,48 @@ hl.full <- read_xlsx("./data/raw/hl2010toPresent.xlsx", sheet = 2)%>%
   left_join(miles, by = c("OPERATOR_ID", "SYSTEM_TYPE", "STATE","IYEAR"))%>%
   mutate(mileage = replace_na(mileage, 0))
 
+#### OPERATOR DATA ####
+# from safety program 
+safe <- read_csv("data/raw/Safety_Program_Data.csv", skip = 2)
+
+
+ops<-safe %>%
+  mutate(sub.id = SUBMITTING_OPID,
+         sub.name = SUBMITTING_OPID_NAME,
+         sub.status = SUBMITTING_OPID_STATUS,
+         sub.sys = SYSTEM_TYPE,
+         pri.id = `D&A_PRIMARY_OPID`,
+         pri.id = coalesce(OME_PRIMARY_OPID, `D&A_PRIMARY_OPID`, 
+                           IM_PRIMARY_OPID, OPA_PRIMARY_OPID,
+                           PA_PRIMARY_OPID, DP_PRIMARY_OPID, 
+                           OQ_PRIMARY_OPID, CRM_PRIMARY_OPID),
+         pri.name = coalesce(OME_PRIMARY_NAME, `D&A_PRIMARY_NAME`, 
+                             IM_PRIMARY_NAME, OPA_PRIMARY_NAME,
+                             PA_PRIMARY_NAME, DP_PRIMARY_NAME, 
+                             OQ_PRIMARY_NAME, CRM_PRIMARY_NAME),
+         pri.status = coalesce(OME_STATUS, `D&A_STATUS`, 
+                               IM_STATUS, OPA_STATUS,
+                               PA_STATUS, DP_STATUS, 
+                               OQ_STATUS, CRM_STATUS)
+         #pri.name = `D&A_PRIMARY_NAME`#,
+         # pri.name = replace_na(OME_PRIMARY_NAME),
+         #pri.name = replace_na(PA_PRIMARY_NAME),
+         #pri.name = replace_na(OQ_PRIMARY_NAME),
+         #pri.name = replace_na(OPA_PRIMARY_NAME),
+  )%>%
+  select(sub.id,sub.name,sub.sys,sub.status,pri.id,pri.name, pri.status) %>%
+  distinct() %>%
+  mutate(pri.name = if_else(str_detect(pri.name,regex("enbridge",ignore_case = TRUE)),
+                            "Enbridge",pri.name
+  ),
+  pri.name = if_else(str_detect(pri.name,regex("BP",ignore_case = TRUE)),
+                     "BP",pri.name
+  ),
+  pri.name = if_else(str_detect(pri.name,regex("kinder morgan",ignore_case = TRUE)),
+                     "Kinder Morgan",pri.name
+  )
+  )
+
 #### JOINS, BINDS ####
 
 #columns for abridged incidents
@@ -169,3 +211,6 @@ write_csv(all.inc, "data/clean/all_inc.csv")
 
 #csv for mileage numbers 
 write_csv(miles, "data/clean/sys_miles.csv")
+
+#csv for op match 
+write.csv(ops, "data/clean/operator_id_match.csv")
