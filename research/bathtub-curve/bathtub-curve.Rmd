@@ -41,7 +41,7 @@ options(knitr.table.format = "latex")
 wdt = 2560
 hgt = wdt/1.62
 
-datadir <- "https://raw.githubusercontent.com/jmceager/pst/main/phmsa-clean/data/clean/"
+datadir <- "https://raw.githubusercontent.com/jmceager/pst/main/phmsa-clean/data/"
 capt = "Source: PHMSA Incident and Mileage Data (2010-2021)"
 tag = "PST 2022"
 ```
@@ -123,21 +123,25 @@ yellow <- col[6]
 
 ```{r loading data}
 ## mileage
-df.gd <- read.csv(paste0(datadir,"GD_MilesDecadeAge.csv"))
-df.gt <- read.csv(paste0(datadir,"GT_MilesDecadeAge.csv"))
-df.hl <- read.csv(paste0(datadir,"HL_MilesDecadeAge.csv"))
+gd.mi <- read.csv(paste0(datadir,"raw/GD_MilesDecadeAge.csv")) 
+gt.mi <- read.csv(paste0(datadir,"raw/GT_MilesDecadeAge.csv"))
+hl.mi <- read.csv(paste0(datadir,"raw/HL_MilesDecadeAge.csv"))
 
 ## incidents
-gd.inc <- read_csv(paste0(datadir,"all_inc.csv")) %>% filter(grepl("GD", SYSTEM_TYPE))
-gt.inc <- read_csv(paste0(datadir,"all_inc.csv")) %>% filter(grepl("GT", SYSTEM_TYPE))
-hl.inc <- read_csv(paste0(datadir,"all_inc.csv")) %>% filter(grepl("HL", SYS))
+gd.inc <- read_csv(paste0(datadir,"clean/all_inc.csv")) %>% filter(grepl("GD", SYS))
+gt.inc <- read_csv(paste0(datadir,"clean/all_inc.csv")) %>% filter(grepl("GT", SYS)) %>%
+  mutate(STATE = if_else(grepl("Outer Continental Shelf", cleanLoc), "OCSG", STATE))
+hl.inc <- read_csv(paste0(datadir,"clean/all_inc.csv")) %>% filter(grepl("HL", SYS)) %>%
+  mutate(STATE = if_else(grepl("Outer Continental Shelf", cleanLoc), 
+                         if_else(STATE == "CA", "OCSP", "OCSG"),
+                         STATE))
 ```
 
 ### Age
 
 ```{r normalize bathtubs by miles}
 #ok
-gtMileNorm <- df.gt %>% 
+gtMileNorm <- gt.mi %>% 
   filter(!State.Abbreviation %in% c("OCSAT", "OCSG","OCSP"))%>%
   select(Calendar.Year, starts_with("X"), starts_with("Pre"))%>%
   rename(X1930 = Pre.1940.or.Unknown) %>%
@@ -150,7 +154,7 @@ gtMileNorm <- df.gt %>%
 
 
 
-hlMileNorm <- df.hl %>%
+hlMileNorm <- hl.mi %>%
   select(Calendar.Year, starts_with("X")) %>%
   filter(Calendar.Year >= 2010)%>%
   group_by(Calendar.Year)%>%
@@ -779,7 +783,7 @@ ggsave("bathtub-curve/exports/plots/PartsComp.png", width = wdt, height = hgt, u
 
 ```{r unknown phmsa?}
 #ok
-gtMileNormUk <- df.gt %>% 
+gtMileNormUk <- gt.mi %>% 
   filter(!State.Abbreviation %in% c("OCSAT", "OCSG","OCSP"))%>%
   rename(X1930 = Trans.pre.1940.Onshore.Miles,
          X1920 = Trans.Unknown.by.Dec.Onshore.Miles) %>%
