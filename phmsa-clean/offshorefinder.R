@@ -95,9 +95,8 @@ locState <- function(lat, lon){
   proj4string(x) <- crs
   #x <- spTransform(x, crs)
   statesProj <- spTransform(states, crs)
-  #stateList <- states$NAME
-  # view(cbind(stateList, st_distance(st_as_sf(x[1,]), st_as_sf(statesProj), by_element = T)))
-  # view(cbind(stateList, gDistance((x[1,]), (statesProj), byid = T)))
+  
+  
   ## Set up containers for results
   n <- length(x)
   nearState <- character(n)
@@ -131,11 +130,11 @@ locCounty <- function(lat, lon, org = NULL){
                                      proj4string=CRS("+proj=longlat +datum=WGS84"))
   
   # Convert pointsDF to a SpatialPoints object 
-  pointsSP <- SpatialPoints(x, 
+  points_sp <- SpatialPoints(x, 
                             proj4string=CRS("+proj=longlat +datum=WGS84"))
   
   # Use 'over' to get _indices_ of the Polygons object containing each point 
-  indices <- over(pointsSP, counties_sp)
+  indices <- over(points_sp, counties_sp)
   
   # Return the county names of the Polygons object containing each point
   countyNames <- sapply(counties_sp@polygons, function(x) x@ID)
@@ -154,7 +153,6 @@ locCounty <- function(lat, lon, org = NULL){
 
   counties <- coalesce(counties, offshore)
   counties <- sub(".*,","",counties)
-  counties <- if_else(counties %in% offshore, counties, paste(counties, "County Waters"))
   counties <- str_to_title(counties)
   
   counties
