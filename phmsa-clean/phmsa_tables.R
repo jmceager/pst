@@ -61,11 +61,6 @@ ops<-safe %>%
                                IM_STATUS, OPA_STATUS,
                                PA_STATUS, DP_STATUS, 
                                OQ_STATUS, CRM_STATUS)
-         #pri.name = `D&A_PRIMARY_NAME`#,
-         # pri.name = replace_na(OME_PRIMARY_NAME),
-         #pri.name = replace_na(PA_PRIMARY_NAME),
-         #pri.name = replace_na(OQ_PRIMARY_NAME),
-         #pri.name = replace_na(OPA_PRIMARY_NAME),
   )%>%
   select(sub.id,sub.name,sub.sys,sub.status,pri.id,pri.name, pri.status) %>%
   distinct() %>%
@@ -86,7 +81,7 @@ ops.simple <- ops %>%
 #### INCIDENT DATA ####
 
 # gd big 
-gd.full <- read_xlsx("./data/raw/gd2010toPresent.xlsx", sheet = 2) %>% 
+gd.full <- read_xlsx("data/raw/gd2010toPresent.xlsx", sheet = 2) %>% 
   mutate(SYSTEM_TYPE = "GD (Gas Distribution)", 
          SYS = "GD",
          UNINTENTIONAL_RELEASE = replace_na(UNINTENTIONAL_RELEASE,0), 
@@ -139,6 +134,9 @@ gt.full <- read_xlsx("./data/raw/gtggungs2010toPresent.xlsx", sheet = 2) %>%
                          
                           ),
          STATE = coalesce(ONSHORE_STATE_ABBREVIATION, OFFSHORE_STATE_ABBREVIATION),
+         STATE = if_else(is.na(STATE) & grepl("OCS", OFF_ACCIDENT_ORIGIN),
+                         "OCS",
+                         STATE),
          STATE = if_else(is.na(STATE),locState(LOCATION_LATITUDE, LOCATION_LONGITUDE),STATE)  
     )%>%
   locCleaner(.,"ILOC","LOCATION_LATITUDE","LOCATION_LONGITUDE", "OFF_ACCIDENT_ORIGIN")%>%
