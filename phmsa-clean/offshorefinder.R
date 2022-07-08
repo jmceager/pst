@@ -126,12 +126,12 @@ locCounty <- function(lat, lon, org = NULL){
   # per county
   counties <- maps::map('county', fill=TRUE, col="transparent", plot=FALSE)
   IDs <- sapply(strsplit(counties$names, ":"), function(x) x[1])
-  counties_sp <- map2SpatialPolygons(counties, IDs=IDs,
+  counties_sp <- map2SpatialPolygons(counties, 
+                                     IDs=IDs,
                                      proj4string=CRS("+proj=longlat +datum=WGS84"))
   
   # Convert pointsDF to a SpatialPoints object 
-  points_sp <- SpatialPoints(x, 
-                            proj4string=CRS("+proj=longlat +datum=WGS84"))
+  points_sp <- SpatialPoints(x, proj4string=CRS("+proj=longlat +datum=WGS84"))
   
   # Use 'over' to get _indices_ of the Polygons object containing each point 
   indices <- over(points_sp, counties_sp)
