@@ -40,5 +40,6 @@ vignettes/*.pdf
 
 # Mac stuff 
 .DS_Store
+/rsconnect/
 
 .dcf
