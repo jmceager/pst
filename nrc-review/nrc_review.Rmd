@@ -45,7 +45,6 @@ library(ggspatial)
 library(mapboxapi)
 
 #update root directory as needed
-#knitr::opts_knit$set(root.dir = "/Users/jameseager/Documents/pst/nrc_calls")
 
 #some general knit options
 knitr::opts_chunk$set(echo = FALSE, include = FALSE, message = FALSE, warning = FALSE,
@@ -64,9 +63,12 @@ yellow <- colors[6]
 ```
 
 ```{r}
-path <- "2022_04_17.xlsx"
+path <- "https://nrc.uscg.mil/FOIAFiles/Current.xlsx"
 
-all <- read_xlsx(path, sheet = 2) %>%
+temp = tempfile(fileext = ".xlsx")
+download.file(path, destfile=temp, mode='wb')
+
+all <- read_xlsx(temp, sheet = 2) %>%
   mutate(
     INCIDENT_DATE_TIME = parse_date_time(INCIDENT_DATE_TIME, orders = "mdY HM"),
     INC_DATE = dmy(paste(day(INCIDENT_DATE_TIME), month(INCIDENT_DATE_TIME), year(INCIDENT_DATE_TIME), sep = "-")),
