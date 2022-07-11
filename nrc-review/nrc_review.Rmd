@@ -44,7 +44,8 @@ library(rgdal)
 library(ggspatial)
 library(mapboxapi)
 
-#update root directory as needed
+#geocoding of locations
+source("nrc_keys.R")
 
 #some general knit options
 knitr::opts_chunk$set(echo = FALSE, include = FALSE, message = FALSE, warning = FALSE,
@@ -68,7 +69,7 @@ path <- "https://nrc.uscg.mil/FOIAFiles/Current.xlsx"
 temp = tempfile(fileext = ".xlsx")
 download.file(path, destfile=temp, mode='wb')
 
-all <- read_xlsx(temp, sheet = 2) %>%
+all <- read_xlsx(temp, sheet = 2 )%>%
   mutate(
     INCIDENT_DATE_TIME = parse_date_time(INCIDENT_DATE_TIME, orders = "mdY HM"),
     INC_DATE = dmy(paste(day(INCIDENT_DATE_TIME), month(INCIDENT_DATE_TIME), year(INCIDENT_DATE_TIME), sep = "-")),
@@ -76,7 +77,7 @@ all <- read_xlsx(temp, sheet = 2) %>%
     LOC_FULL = paste(LOC_FIRST, LOCATION_STATE, sep = ", ")
     )
 
-commons <- read_xlsx(path, sheet = 2) %>%
+commons <- read_xlsx(temp, sheet = 2) %>%
   mutate(
     INCIDENT_DATE_TIME = parse_date_time(INCIDENT_DATE_TIME, orders = "mdY HM"),
     INC_DATE = dmy(paste(day(INCIDENT_DATE_TIME), month(INCIDENT_DATE_TIME), year(INCIDENT_DATE_TIME), sep = "-")),
@@ -84,7 +85,7 @@ commons <- read_xlsx(path, sheet = 2) %>%
     LOC_FULL = paste(LOC_FIRST, LOCATION_STATE, sep = ", ")
     ) %>%
   filter(INC_DATE >= max(INC_DATE) - weeks(2)) %>%
-  left_join( read_xlsx(path, sheet = 3), by = "SEQNOS")
+  left_join( read_xlsx(temp, sheet = 3), by = "SEQNOS")
 
 #set another text bit for plotting
 tr <- stamp("03.22.87")
@@ -98,36 +99,12 @@ capt = paste("Data from NRC FOIA:", timerange)
 ```
 
 
-```{r geocoding}
-pipes <- commons %>% 
-  filter(TYPE_OF_INCIDENT == "PIPELINE") %>%
-  mutate(human = if_else( ANY_EVACUATIONS == "Y" | 
-                            ANY_INJURIES == "Y" |
-                            ANY_FATALITIES == "Y",
-                          "H",
-                          "NA"),
-         dmg = if_else(ANY_DAMAGES == "Y"|
-                         FIRE_INVOLVED == "Y",
-                       "D",
-                       "NA"),
-         hd = paste0(human, dmg),
-         hd = str_replace(hd, "NANA", "None"),
-         hd = str_remove(hd, "NA"))
-register_google(key = "AIzaSyBSxdEir9Vz3beRDju9REejDrgJBvA4eng")
-#pipes_geocode <- geocode(pipes$LOC_FULL)
-#write.csv(pipes_geocode, "pipes_geo.csv")
-pipes_geocode <- read_csv("pipes_geo.csv")[,2:3]
-pipes <- cbind(pipes, pipes_geocode)
-
-# bw_map <- get_googlemap(center = c(-97.9, 40), zoom = 4,
-#   color = "bw",
-#   style = "feature:road|visibility:off&style=element:labels|visibility:off&style=feature:administrative|visibility:off")
-```
 
 
 
+```{r adding other sheets} 
+pipes <- read_csv("pipes_geo.csv")
 
-```{r adding other sheets }
 pipetype <- read_xlsx(path, sheet = 4) %>%
   select(SEQNOS, PIPELINE_TYPE)
 
@@ -278,27 +255,6 @@ spPipes %>%
         legend.spacing = unit(.3,"cm"))+
   labs(caption = capt,
        title = "Pipeline Incident Call Locations")
-    
-## SUPERSEDED
-# ggmap(bw_map, extent = "panel")+
-#   geom_path(data = states.proj, aes(long, lat, group = group), colour = "gray15")+
-#   geom_point(data = relPipes, aes(x = lon, y = lat, color = hd, shape = MEDIUM_DESC),
-#              alpha = .8)+
-#   geom_text_repel(data = relPipes, aes(x = lon, y = lat, label = SEQNOS), 
-#                   nudge_x = 0.05, size = 2, min.segment.length = 0)+
-#   scale_color_manual(values = cols,
-#                      labels = c("Neither","Human","Damage","Both"),
-#                      name = "Impact:")+
-#   theme_void()+
-#   theme(legend.position = "right",
-#         legend.justification = "center",
-#         legend.direction = "vertical",
-#         legend.background = element_blank(),
-#         legend.key = element_blank(),
-#         legend.text = element_text(size = 3),
-#         legend.title = element_blank())+
-#   labs(caption = capt,
-#        title = "Pipeline Incident Calls to NRC",
-#        subtitle = timerange)
+ 
 ```
 
