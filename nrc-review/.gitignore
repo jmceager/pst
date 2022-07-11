@@ -3,4 +3,8 @@
 
 *.pdf
 
+<<<<<<< HEAD
 *.Rproj
+=======
+.Rproj
+>>>>>>> 95cf353ab6d33c8b624f672cfcefaa1a0629eeec
