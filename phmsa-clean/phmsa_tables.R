@@ -176,7 +176,10 @@ hl.full <- read_xlsx("./data/raw/hl2010toPresent.xlsx", sheet = 2)%>%
                          
                          ),
          STATE = coalesce(ONSHORE_STATE_ABBREVIATION, OFFSHORE_STATE_ABBREVIATION),
-         STATE = if_else(is.na(STATE),locState(LOCATION_LATITUDE, LOCATION_LONGITUDE),STATE)
+         STATE = if_else(is.na(STATE) & grepl("OCS", OFF_ACCIDENT_ORIGIN),
+                         "OCS",
+                         STATE),
+         STATE = if_else(is.na(STATE),locState(LOCATION_LATITUDE, LOCATION_LONGITUDE),STATE) 
         )%>%
   locCleaner(.,"ILOC","LOCATION_LATITUDE","LOCATION_LONGITUDE", "OFF_ACCIDENT_ORIGIN")%>%
   left_join(miles, by = c("OPERATOR_ID", "SYSTEM_TYPE", "STATE","IYEAR"))%>%
