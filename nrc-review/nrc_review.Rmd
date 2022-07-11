@@ -1,0 +1,302 @@
+---
+title: "NRC Rundown (2 weeks)"
+subtitle: "Pipeline Incident Calls (2 weeks)"
+runningheader: "Pipeline Safety Trust `r format(Sys.time(), '%m/%Y')`"
+author: "Pipeline Safety Trust"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  tufte::tufte_handout: default
+header-includes:
+  - \usepackage{titling}
+  - \pretitle{\begin{center}
+    \includegraphics[width=2in,height=2in]{img/PST_logo.png}\LARGE\\}
+  - \posttitle{\end{center}}
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r delete all, include = FALSE, echo = FALSE}
+rm(list = ls())
+```
+
+```{r setup, include=FALSE}
+library(tufte)
+# invalidate cache when the tufte version changes
+knitr::opts_chunk$set(cache.extra = packageVersion('tufte'))
+options(htmltools.dir.version = FALSE)
+
+#relevant libs, some more useful than others
+library(tidyverse)
+library(ggrepel)
+library(lubridate)
+library(RColorBrewer)
+library(ggthemes)
+library(viridis)
+library(scales)
+library(readxl)
+library(kableExtra)
+library(ggmap)
+library(sp)
+library(sf)
+library(rgeos)
+library(tufte)
+library(rgdal)
+library(ggspatial)
+library(mapboxapi)
+
+#update root directory as needed
+#knitr::opts_knit$set(root.dir = "/Users/jameseager/Documents/pst/nrc_calls")
+
+#some general knit options
+knitr::opts_chunk$set(echo = FALSE, include = FALSE, message = FALSE, warning = FALSE,
+                      kable.force.latex = T)
+options(knitr.table.format = "latex")
+```
+
+```{r color setup}
+colors <- brewer.pal(6,"Set2")
+green <- colors[1]
+orange <- colors[2]
+blue <- colors[3]
+pink <- colors[4]
+limegreen <- colors[5]
+yellow <- colors[6]
+```
+
+```{r}
+path <- "2022_04_17.xlsx"
+
+all <- read_xlsx(path, sheet = 2) %>%
+  mutate(
+    INCIDENT_DATE_TIME = parse_date_time(INCIDENT_DATE_TIME, orders = "mdY HM"),
+    INC_DATE = dmy(paste(day(INCIDENT_DATE_TIME), month(INCIDENT_DATE_TIME), year(INCIDENT_DATE_TIME), sep = "-")),
+    LOC_FIRST = coalesce(LOCATION_NEAREST_CITY, LOCATION_COUNTY),
+    LOC_FULL = paste(LOC_FIRST, LOCATION_STATE, sep = ", ")
+    )
+
+commons <- read_xlsx(path, sheet = 2) %>%
+  mutate(
+    INCIDENT_DATE_TIME = parse_date_time(INCIDENT_DATE_TIME, orders = "mdY HM"),
+    INC_DATE = dmy(paste(day(INCIDENT_DATE_TIME), month(INCIDENT_DATE_TIME), year(INCIDENT_DATE_TIME), sep = "-")),
+    LOC_FIRST = coalesce(LOCATION_NEAREST_CITY, LOCATION_COUNTY),
+    LOC_FULL = paste(LOC_FIRST, LOCATION_STATE, sep = ", ")
+    ) %>%
+  filter(INC_DATE >= max(INC_DATE) - weeks(2)) %>%
+  left_join( read_xlsx(path, sheet = 3), by = "SEQNOS")
+
+#set another text bit for plotting
+tr <- stamp("03.22.87")
+timerange = paste("From", 
+                  tr((max(commons$INC_DATE) - weeks(2))),
+                  "to",
+                  tr(max(commons$INC_DATE)))
+#generic caption text, update to reflect data 
+cp <- stamp("8 March, 2022")
+capt = paste("Data from NRC FOIA:", timerange)
+```
+
+
+```{r geocoding}
+pipes <- commons %>% 
+  filter(TYPE_OF_INCIDENT == "PIPELINE") %>%
+  mutate(human = if_else( ANY_EVACUATIONS == "Y" | 
+                            ANY_INJURIES == "Y" |
+                            ANY_FATALITIES == "Y",
+                          "H",
+                          "NA"),
+         dmg = if_else(ANY_DAMAGES == "Y"|
+                         FIRE_INVOLVED == "Y",
+                       "D",
+                       "NA"),
+         hd = paste0(human, dmg),
+         hd = str_replace(hd, "NANA", "None"),
+         hd = str_remove(hd, "NA"))
+register_google(key = "AIzaSyBSxdEir9Vz3beRDju9REejDrgJBvA4eng")
+#pipes_geocode <- geocode(pipes$LOC_FULL)
+#write.csv(pipes_geocode, "pipes_geo.csv")
+pipes_geocode <- read_csv("pipes_geo.csv")[,2:3]
+pipes <- cbind(pipes, pipes_geocode)
+
+# bw_map <- get_googlemap(center = c(-97.9, 40), zoom = 4,
+#   color = "bw",
+#   style = "feature:road|visibility:off&style=element:labels|visibility:off&style=feature:administrative|visibility:off")
+```
+
+
+
+
+```{r adding other sheets }
+pipetype <- read_xlsx(path, sheet = 4) %>%
+  select(SEQNOS, PIPELINE_TYPE)
+
+pipes <- left_join(pipes, pipetype, by = "SEQNOS")
+
+mattype <- read_xlsx(path, sheet = 5) %>%
+  select(SEQNOS, NAME_OF_MATERIAL)
+
+pipes <- left_join(pipes, mattype, by = "SEQNOS")
+```
+
+
+
+```{r include = FALSE}
+pipes %>%
+  count(NAME_OF_MATERIAL)%>%
+  group_by(fct_lump(NAME_OF_MATERIAL,n = 4,w = n))%>%
+  tally(n)%>%
+  rename(NAME_OF_MATERIAL = 1)%>%
+  ggplot(aes(x = reorder(NAME_OF_MATERIAL, n), y = n))+
+  geom_point(color = blue)+
+  geom_segment( aes( xend=reorder(NAME_OF_MATERIAL, n), y=0, yend=n), color = blue)+
+ # geom_label(aes(label = n), size = 3, nudge_y = 20)+
+  coord_flip()+
+  labs(x = "",
+       y = "",
+       caption = capt,
+       title = "NRC Pipeline Calls by Reported Material",
+       subtitle = timerange)+
+  theme_clean(base_size = 8)+
+  theme(plot.title.position = "plot",
+        panel.grid.major.x = element_line(linetype = "dotted", colour = "gray35"),
+        panel.grid.major.y = element_blank(),
+        legend.position = "none")
+```
+
+
+```{r clean data}
+cols = c("None" = green, "H" = pink, "D" = yellow, "HD" = orange)
+
+materials <- c("CRUDE", "GAS", "PETROLEUM","KEROSENE","ETHYLENE","DIESEL")
+
+
+relPipes<- pipes %>%
+  filter((hd != "None" | MEDIUM_DESC == "WATER") & 
+        grepl(paste(materials, collapse="|"), NAME_OF_MATERIAL, fixed = F)) %>%
+  mutate(NUMBER_EVACUATED = replace_na(NUMBER_EVACUATED,0),
+         NUMBER_INJURED = replace_na(NUMBER_INJURED, 0),
+         NUMBER_FATALITIES = replace_na(NUMBER_FATALITIES, 0),
+         PIPELINE_TYPE = str_trunc(PIPELINE_TYPE,8),
+         BODY_OF_WATER = replace_na(BODY_OF_WATER, "None"),
+         protocol = if_else(grepl("///",DESCRIPTION_OF_INCIDENT),"Y","Z"),
+         SEQNOS = str_sub(as.character(SEQNOS), -3))%>%
+  arrange(INC_DATE, protocol)%>%
+  distinct(LOC_FULL,INC_DATE, .keep_all = T)%>%
+  filter(!grepl("ROODHOUSE", LOC_FULL))
+```
+
+
+```{r some reported figures}
+fires = filter(count(relPipes, FIRE_INVOLVED), FIRE_INVOLVED == "Y")$n
+evac = filter(count(relPipes, ANY_EVACUATIONS), ANY_EVACUATIONS == "Y")$n
+evac_n = sum(relPipes$NUMBER_EVACUATED, na.rm = T)
+injury = filter(count(relPipes, ANY_INJURIES), ANY_INJURIES == "Y")$n
+injury_n = sum(relPipes$NUMBER_INJURED, na.rm = T)
+fatal = filter(count(relPipes, ANY_FATALITIES), ANY_FATALITIES == "Y")$n
+fatal = paste(fatal)
+fatal_n = sum(relPipes$NUMBER_FATALITIES, na.rm = T)
+damage = filter(count(relPipes, ANY_DAMAGES), ANY_DAMAGES == "Y")$n
+offshore = filter(count(relPipes, OFFSHORE), OFFSHORE == "Y")$n
+states = unique(relPipes$LOCATION_STATE)
+states_n = length(states)
+
+phmsa_r = nrow(filter(relPipes, grepl("PHMSA", FEDERAL_AGENCY_NOTIFIED)))
+
+```
+
+Calls counted here include those which reported spills of `r str_to_lower(materials)` and either caused direct human impact (injury, evacuation, or fatality), direct damage (fire, reported damage), or occured in water. `r nrow(relPipes)` calls fitting these criteria occurred over the past 2 weeks in `r states_n` states : `r states`. There may be some discrepancies between the list and the table, as there are occasionally instances where a column like "ANY_EVACUATION" returns "Y" (yes), but the number is either 0 or unknown at the time of the call or update.  
+
+Number of calls that reported:  
+  
+* Fire: `r fires`  
+* Evacuation: `r evac` (`r evac_n` evacuated)  
+* Injury: `r injury` (`r injury_n` injured)  
+* Fatality: `r fatal` (`r fatal_n` dead)  
+* Damage: `r damage`  
+* Offshore Spill: `r offshore`  
+* to PHMSA: `r phmsa_r`
+
+```{r include = TRUE}
+
+relPipes %>%
+  select(LOC_FULL, INC_DATE,INCIDENT_CAUSE,
+         PIPELINE_TYPE,NAME_OF_MATERIAL,FIRE_INVOLVED,
+         NUMBER_EVACUATED,NUMBER_INJURED,NUMBER_FATALITIES,
+         BODY_OF_WATER,protocol )%>%
+  mutate(LOC_FULL = str_wrap(LOC_FULL, 8),
+         NAME_OF_MATERIAL= if_else(NAME_OF_MATERIAL == "NATURAL GAS",
+                                   "NG","HL"),
+         INCIDENT_CAUSE = str_trunc(INCIDENT_CAUSE, 10),
+         protocol = if_else(protocol=="Y", T,F),
+         INC_DATE = paste0(month(INC_DATE),"-",day(INC_DATE)))%>%
+  kbl(col.names = c("Place","Date","Cause","Type","Material",
+                    "Fire?","Evac.","Inj.","Ftl.", "Water", "Updated?"))%>%
+  kable_paper("striped", font_size = 8, full_width = F)
+```
+
+```{r map setup}
+state.file <- "/Users/jameseager/Library/CloudStorage/OneDrive-pstrust.org/DataViz/GIS/Pipelines/Processing/us_states.shp"
+
+projcrs <- "+proj=longlat +datum=WGS84 +no_defs"
+
+states.proj<-read_sf(state.file)
+
+#mb_access_token("pk.eyJ1IjoiamltZWFnYWgiLCJhIjoiY2l2aWw3YmJnMDIxdzJ5bXFuZDZ4bnU1YiJ9.lMwViZI1fDl75hf6XGm78g", install = T)
+
+sat_tiles <- get_static_tiles(location = states.proj,
+                              zoom = 4,
+                              style_id = "light-v10",
+                              username = "mapbox",
+                              crop = T)
+
+spPipes <- st_as_sf(filter(relPipes, !is.na(lon)), 
+                    coords = c("lon", "lat"), 
+                    crs = projcrs)
+
+```
+
+```{r include = TRUE, fig.fullwidth = TRUE}
+cols = c("None" = green, "H" = pink, "D" = yellow, "HD" = orange)
+
+
+spPipes %>%
+  ggplot()+
+  layer_spatial(sat_tiles)+
+  geom_sf(data = states.proj, fill = NA, color = "gray25", size = .5)+
+  geom_sf(aes(color = hd, shape = MEDIUM_DESC), alpha = .75)+
+  scale_shape(name = "Release Medium")+
+  scale_color_manual(values = cols,
+                     labels = c("Neither","Human","Damage","Both"),
+                     name = "Impact:")+
+  coord_sf(crs = 3857,
+           xlim = c(-13692297.369799, -6901808.430296),
+           ylim = c(2511525.230043, 6446275.839285))+
+  theme_void()+
+  theme(legend.text = element_text(size = 3),
+        legend.title = element_text(size = 4),
+        legend.spacing = unit(.3,"cm"))+
+  labs(caption = capt,
+       title = "Pipeline Incident Call Locations")
+    
+## SUPERSEDED
+# ggmap(bw_map, extent = "panel")+
+#   geom_path(data = states.proj, aes(long, lat, group = group), colour = "gray15")+
+#   geom_point(data = relPipes, aes(x = lon, y = lat, color = hd, shape = MEDIUM_DESC),
+#              alpha = .8)+
+#   geom_text_repel(data = relPipes, aes(x = lon, y = lat, label = SEQNOS), 
+#                   nudge_x = 0.05, size = 2, min.segment.length = 0)+
+#   scale_color_manual(values = cols,
+#                      labels = c("Neither","Human","Damage","Both"),
+#                      name = "Impact:")+
+#   theme_void()+
+#   theme(legend.position = "right",
+#         legend.justification = "center",
+#         legend.direction = "vertical",
+#         legend.background = element_blank(),
+#         legend.key = element_blank(),
+#         legend.text = element_text(size = 3),
+#         legend.title = element_blank())+
+#   labs(caption = capt,
+#        title = "Pipeline Incident Calls to NRC",
+#        subtitle = timerange)
+```
+
