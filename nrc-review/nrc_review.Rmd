@@ -20,27 +20,21 @@ rm(list = ls())
 ```
 
 ```{r setup, include=FALSE}
-library(tufte)
 # invalidate cache when the tufte version changes
 knitr::opts_chunk$set(cache.extra = packageVersion('tufte'))
 options(htmltools.dir.version = FALSE)
 
 #relevant libs, some more useful than others
 library(tidyverse)
-library(ggrepel)
 library(lubridate)
 library(RColorBrewer)
 library(ggthemes)
-library(viridis)
 library(scales)
 library(readxl)
 library(kableExtra)
 library(ggmap)
-library(sp)
 library(sf)
-library(rgeos)
 library(tufte)
-library(rgdal)
 library(ggspatial)
 library(mapboxapi)
 
@@ -61,60 +55,97 @@ blue <- colors[3]
 pink <- colors[4]
 limegreen <- colors[5]
 yellow <- colors[6]
+
+#pst 
+darkBlue <- "#003E59"
+midBlue <- "#00546F"
+bluGreen <- "#459197"
+liteGreen <- "#61A893"
+```
+
+```{r theme_pst}
+library(showtext)
+#> Loading required package: sysfonts
+#> Loading required package: showtextdb
+pstFont = "Montserrat"
+font_add_google(pstFont)
+showtext_auto()
+theme_pst <- function(baseSize=8) {
+  (theme(
+                       axis.line.x = element_line(
+                         colour = "#182125",
+                         size = 0.5,
+                         linetype = "solid"
+                       ),
+                       axis.line.y = element_line(
+                         colour = "#182125",
+                         size = 0.5,
+                         linetype = "solid"
+                       ),
+                       axis.ticks.y = element_line(
+                         colour = "#182125",
+                         size = 0.5,
+                         linetype = "solid"
+                       ),
+                       text = element_text(family = pstFont),
+                       axis.text = element_text(colour = "#8C9394",
+                                                size = baseSize * .8),
+                       axis.title = element_text(colour ="black"),
+                       panel.grid.minor.y = element_line(linetype = "dotted", 
+                                                         colour = "#C4C8C6"),
+                       panel.grid.major.y = element_line(colour = "#394C56", 
+                                                         linetype = "dotted"),
+                       panel.grid.major.x = element_blank(),
+                       panel.grid.minor.x = element_blank(),
+                       panel.background = element_blank(),
+                       panel.border = element_blank(),
+                       strip.background = element_rect(linetype = 0),
+                       strip.text = element_blank(),
+                       strip.text.x = element_blank(),
+                       strip.text.y = element_blank(),
+                       legend.text = element_text(colour = "black",
+                                                  size = baseSize * .8),
+                       legend.background = element_rect(fill = NULL, 
+                                                        color = "#182125"),
+                       legend.title = element_text( face = "bold", 
+                                                    colour = "black",
+                                                    size = baseSize),
+                       legend.position = "right",
+                       legend.key = element_blank(),
+                       #legend.background = element_blank(),
+                       plot.tag.position = "topright",
+                       plot.tag = element_text(size = baseSize *.66,
+                                               colour = "#8C9394"),
+                       plot.background = element_blank(),
+                       plot.title = element_text(face = "bold", 
+                                                 colour = "black",
+                                                 size = baseSize*1.2),
+                       plot.subtitle = element_text(colour = "#8C9394",
+                                                    size = baseSize)
+                     )
+  )
+}
 ```
 
 ```{r}
-path <- "https://nrc.uscg.mil/FOIAFiles/Current.xlsx"
 
-temp = tempfile(fileext = ".xlsx")
-download.file(path, destfile=temp, mode='wb')
-
-all <- read_xlsx(temp, sheet = 2 )%>%
-  mutate(
-    INCIDENT_DATE_TIME = parse_date_time(INCIDENT_DATE_TIME, orders = "mdY HM"),
-    INC_DATE = dmy(paste(day(INCIDENT_DATE_TIME), month(INCIDENT_DATE_TIME), year(INCIDENT_DATE_TIME), sep = "-")),
-    LOC_FIRST = coalesce(LOCATION_NEAREST_CITY, LOCATION_COUNTY),
-    LOC_FULL = paste(LOC_FIRST, LOCATION_STATE, sep = ", ")
-    )
-
-commons <- read_xlsx(temp, sheet = 2) %>%
-  mutate(
-    INCIDENT_DATE_TIME = parse_date_time(INCIDENT_DATE_TIME, orders = "mdY HM"),
-    INC_DATE = dmy(paste(day(INCIDENT_DATE_TIME), month(INCIDENT_DATE_TIME), year(INCIDENT_DATE_TIME), sep = "-")),
-    LOC_FIRST = coalesce(LOCATION_NEAREST_CITY, LOCATION_COUNTY),
-    LOC_FULL = paste(LOC_FIRST, LOCATION_STATE, sep = ", ")
-    ) %>%
-  filter(INC_DATE >= max(INC_DATE) - weeks(2)) %>%
-  left_join( read_xlsx(temp, sheet = 3), by = "SEQNOS")
+pipes <- read_csv("pipes_geo.csv") %>%
+  left_join( read_xlsx(temp, sheet = 3), by = "SEQNOS", suffix = c("",".x"))%>%    #incident details
+  left_join( read_xlsx(temp, sheet = 4), by = "SEQNOS", suffix = c("",".y"))%>%    #incident details
+  left_join( read_xlsx(temp, sheet = 5), by = "SEQNOS", suffix = c("",".z"))      #material details
 
 #set another text bit for plotting
 tr <- stamp("03.22.87")
 timerange = paste("From", 
-                  tr((max(commons$INC_DATE) - weeks(2))),
+                  tr((max(pipes$INC_DATE) - weeks(2))),
                   "to",
-                  tr(max(commons$INC_DATE)))
+                  tr(max(pipes$INC_DATE)))
 #generic caption text, update to reflect data 
 cp <- stamp("8 March, 2022")
 capt = paste("Data from NRC FOIA:", timerange)
 ```
 
 
-
-
-
-```{r adding other sheets} 
-pipes <- read_csv("pipes_geo.csv")
-
-pipetype <- read_xlsx(path, sheet = 4) %>%
-  select(SEQNOS, PIPELINE_TYPE)
-
-pipes <- left_join(pipes, pipetype, by = "SEQNOS")
-
-mattype <- read_xlsx(path, sheet = 5) %>%
-  select(SEQNOS, NAME_OF_MATERIAL)
-
-pipes <- left_join(pipes, mattype, by = "SEQNOS")
-```
 
 
 
@@ -125,7 +156,7 @@ pipes %>%
   tally(n)%>%
   rename(NAME_OF_MATERIAL = 1)%>%
   ggplot(aes(x = reorder(NAME_OF_MATERIAL, n), y = n))+
-  geom_point(color = blue)+
+  geom_point(color = darkBlue)+
   geom_segment( aes( xend=reorder(NAME_OF_MATERIAL, n), y=0, yend=n), color = blue)+
  # geom_label(aes(label = n), size = 3, nudge_y = 20)+
   coord_flip()+
@@ -134,7 +165,7 @@ pipes %>%
        caption = capt,
        title = "NRC Pipeline Calls by Reported Material",
        subtitle = timerange)+
-  theme_clean(base_size = 8)+
+  theme_pst(baseSize = 12)+
   theme(plot.title.position = "plot",
         panel.grid.major.x = element_line(linetype = "dotted", colour = "gray35"),
         panel.grid.major.y = element_blank(),
@@ -149,6 +180,7 @@ materials <- c("CRUDE", "GAS", "PETROLEUM","KEROSENE","ETHYLENE","DIESEL")
 
 
 relPipes<- pipes %>%
+  #mutate(sig = if_else())
   filter((hd != "None" | MEDIUM_DESC == "WATER") & 
         grepl(paste(materials, collapse="|"), NAME_OF_MATERIAL, fixed = F)) %>%
   mutate(NUMBER_EVACUATED = replace_na(NUMBER_EVACUATED,0),
@@ -248,12 +280,13 @@ spPipes %>%
                      name = "Impact:")+
   coord_sf(crs = 3857,
            xlim = c(-13692297.369799, -6901808.430296),
-           ylim = c(2511525.230043, 6446275.839285))+
+           ylim = c(2511525.230043, 6546275.839285))+
   theme_void()+
   theme(legend.text = element_text(size = 3),
         legend.title = element_text(size = 4),
-        legend.spacing = unit(.3,"cm"))+
-  labs(caption = capt,
+        legend.spacing = unit(.3,"cm"),
+        legend.position = c(0.9,0.05))+
+  labs(caption = paste0(capt, "\n (c) Mapbox, (c) OpenStreetMap"),
        title = "Pipeline Incident Call Locations")
  
 ```
