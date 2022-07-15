@@ -14,14 +14,18 @@ library(reactable)
 
 source("nrc_geocode.R")
 
-df <- nrcGeo("https://nrc.uscg.mil/FOIAFiles/Current.xlsx")
+#df <- nrcGeo("https://nrc.uscg.mil/FOIAFiles/Current.xlsx")
+#write.csv(df, file = "nrc-review/testing.csv")
+df <- read_csv("testing.csv")
+df <- df[,2:length(df)]  %>%
+  mutate(SEQNOS = parse_number(SEQNOS))
 ds <- stamp("8 March, 2022")
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
 
     # Application title
-    titlePanel("NRC Data Review"),
+    titlePanel("NRC Pipeline Calls"),
 
     # Sidebar with a slider input for number of bins 
     fluidRow(
@@ -30,7 +34,7 @@ ui <- fluidPage(
                tags$a(href = "https://nrc.uscg.mil/", "Data Source"),
                hr(),
                radioButtons("time", 
-                            h3("Time Filtering"),
+                            h3("Time Period"),
                             choices = c("Dates" = 1,
                                         "Weeks" = 2),
                             selected = 1),
@@ -55,6 +59,9 @@ ui <- fluidPage(
                leafletOutput("map")
                ) #close col
         ), # close row 
+    fluidRow(
+      verbatimTextOutput("Click_text")
+    ),
     fluidRow(
       column(12,
              reactableOutput("table"))
@@ -91,7 +98,7 @@ server <- function(input, output) {
     leafletProxy("map", data = rdf()) %>%
      # removeControl("legend")%>%
       addCircleMarkers( #weight = 1, fillOpacity = 0.6,
-                       lat = ~lat, lng = ~lon#,
+                       lat = ~lat, lng = ~lon, layerId = ~SEQNOS
                        # popup = paste0("<b>Operator:</b>",
                        #                df$RESPONSIBLE_COMPANY,
                        #                "<br>",
@@ -117,9 +124,29 @@ server <- function(input, output) {
       )
     
   })
+  
+  clickInc <- reactiveVal()
+  
+  #check for clicked point on map
+  observeEvent(input$map_marker_click, {
+    # Capture the info of the clicked polygon
+    if(is.null(input$map_marker_click)){
+      clickInc(NULL)     # Reset filter
+    }
+    else{
+      clickInc(input$map_marker_click$id)
+    }
+  })
+  
 
   output$table <- renderReactable({
-    reactable(rdf())
+    if(is.null(clickInc())){
+      tdf <- rdf()
+    }
+    else{
+      tdf <- rdf() %>% dplyr::filter(SEQNOS == clickInc())
+    }
+    reactable(tdf)
   })
   
 }# close server
