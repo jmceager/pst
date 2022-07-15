@@ -26,6 +26,9 @@ ui <- fluidPage(
     # Sidebar with a slider input for number of bins 
     fluidRow(
         column(4, 
+               h5(paste0("Last Updated:\n",ds(max(df$INC_DATE)))),
+               tags$a(href = "https://nrc.uscg.mil/", "Data Source"),
+               hr(),
                radioButtons("time", 
                             h3("Time Filtering"),
                             choices = c("Dates" = 1,
@@ -34,7 +37,7 @@ ui <- fluidPage(
                hr(),
                conditionalPanel(condition = "input.time == 1",
                                 dateRangeInput("date",
-                                               h5("Date Range"),
+                                               h5("Date Range (dd-mm-yyyy)"),
                                                start = max(df$INC_DATE) - weeks(2),
                                                end  = max(df$INC_DATE),
                                                max = max(df$INC_DATE),
@@ -49,13 +52,13 @@ ui <- fluidPage(
 
         # main info
         column(8,
-               h4(paste0("FOIA Spreadsheet Last Updated: ",ds(max(df$INC_DATE)))),
-               hr(),
-               leafletOutput("map"),
-               hr(),
-               reactableOutput("table")
+               leafletOutput("map")
                ) #close col
-        ) # close row 
+        ), # close row 
+    fluidRow(
+      column(12,
+             reactableOutput("table"))
+    )
 ) # close page 
 
 # Define server logic required to draw a histogram
