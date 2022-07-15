@@ -1,11 +1,3 @@
-#
-# This is a Shiny web application. You can run the application by clicking
-# the 'Run App' button above.
-#
-# Find out more about building applications with Shiny here:
-#
-#    http://shiny.rstudio.com/
-#
 library(shiny)
 library(tidyverse)
 library(leaflet)
@@ -14,12 +6,28 @@ library(reactable)
 
 source("nrc_geocode.R")
 
+# get cols
+cols <- c("SEQNOS", "LOC_FULL", "RESPONSIBLE_COMPANY","INC_DATE", "INCIDENT_DATE_TIME",
+          "INCIDENT_CAUSE","NAME_OF_MATERIAL", "AMOUNT_OF_MATERIAL","UNIT_OF_MEASURE",
+          "MEDIUM_DESC","ADDITIONAL_MEDIUM_INFO","ANY_DAMAGES","DAMAGE_AMOUNT",
+          "FIRE_INVOLVED","ANY_INJURIES","NUMBER_INJURED","NUMBER_HOSPITALIZED",
+          "ANY_FATALITIES","NUMBER_FATALITIES","NUMBER_EVACUATED")
 #df <- nrcGeo("https://nrc.uscg.mil/FOIAFiles/Current.xlsx")
 #write.csv(df, file = "nrc-review/testing.csv")
 df <- read_csv("testing.csv")
 df <- df[,2:length(df)]  %>%
-  mutate(SEQNOS = parse_number(SEQNOS))
+  select(cols)%>%
+  mutate(SEQNOS = parse_number(SEQNOS),
+         SYS = if_else(grepl("LIQUEFIED NATURAL GAS", NAME_OF_MATERIAL),
+                       "LNG",
+                       if_else(grepl("NATURAL GAS", NAME_OF_MATERIAL),
+                               "Gas",
+                               "Liquid"
+                               ) #end second ifelse
+                       )# end first ifelse
+         )# end mutate
 ds <- stamp("8 March, 2022")
+
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
@@ -31,8 +39,11 @@ ui <- fluidPage(
     fluidRow(
         column(4, 
                h5(paste0("Last Updated:\n",ds(max(df$INC_DATE)))),
-               tags$a(href = "https://nrc.uscg.mil/", "Data Source"),
+               tags$a(href = "https://nrc.uscg.mil/", "NRC Calls FOIA Spreadsheet (Source)"),
                hr(),
+               helpText("Filter pipeline-specific calls to the NRC by specific 
+                         dates or weeks. Then, use the map to filter rows 
+                         in the table below."),
                radioButtons("time", 
                             h3("Time Period"),
                             choices = c("Dates" = 1,
@@ -59,13 +70,11 @@ ui <- fluidPage(
                leafletOutput("map")
                ) #close col
         ), # close row 
-    fluidRow(
-      verbatimTextOutput("Click_text")
-    ),
+    #fluidrow for table
     fluidRow(
       column(12,
              reactableOutput("table"))
-    )
+    ) # close row
 ) # close page 
 
 # Define server logic required to draw a histogram
@@ -82,7 +91,7 @@ server <- function(input, output) {
     }
   })
 
-  #leaf base map
+  #### leaflet ####
   output$map <- renderLeaflet({
     leaflet()%>%
       addProviderTiles(providers$OpenStreetMap.HOT)%>%
@@ -99,29 +108,7 @@ server <- function(input, output) {
      # removeControl("legend")%>%
       addCircleMarkers( #weight = 1, fillOpacity = 0.6,
                        lat = ~lat, lng = ~lon, layerId = ~SEQNOS
-                       # popup = paste0("<b>Operator:</b>",
-                       #                df$RESPONSIBLE_COMPANY,
-                       #                "<br>",
-                       #                "<b>Date:</b>",
-                       #                ds(df$INC_DATE),
-                       #                "<br>",
-                       #                "<b>Place:</b> ", 
-                       #                df$LOC_FULL, 
-                       #                "<br>",
-                       #                "<b>Release:</b> ",
-                       #                comma(round(df$AMOUNT_OF_MATERIAL, digits = 0)), " ",
-                       #                mapData()$UNIT_OF_MEASURE,
-                       #                "<br>",
-                       #                "<b>Material:</b> $",
-                       #                df$NAME_OF_MATERIAL,
-                       #                "<br>",
-                       #                "<b>Medium:</b> ",
-                       #                df$MEDIUM_DESC,
-                       #                "<br>",
-                       #                "<b>Cause:</b> ",
-                       #                df$INCIDENT_CAUSE
-                       # )
-      )
+                       )
     
   })
   
@@ -129,7 +116,7 @@ server <- function(input, output) {
   
   #check for clicked point on map
   observeEvent(input$map_marker_click, {
-    # Capture the info of the clicked polygon
+    # Capture the info of the clicked marker
     if(is.null(input$map_marker_click)){
       clickInc(NULL)     # Reset filter
     }
@@ -138,7 +125,7 @@ server <- function(input, output) {
     }
   })
   
-
+#### reactable ####
   output$table <- renderReactable({
     if(is.null(clickInc())){
       tdf <- rdf()
