@@ -11,12 +11,13 @@ cols <- c("SEQNOS", "LOC_FULL", "RESPONSIBLE_COMPANY","INC_DATE", "INCIDENT_DATE
           "INCIDENT_CAUSE","NAME_OF_MATERIAL", "AMOUNT_OF_MATERIAL","UNIT_OF_MEASURE",
           "MEDIUM_DESC","ADDITIONAL_MEDIUM_INFO","ANY_DAMAGES","DAMAGE_AMOUNT",
           "FIRE_INVOLVED","ANY_INJURIES","NUMBER_INJURED","NUMBER_HOSPITALIZED",
-          "ANY_FATALITIES","NUMBER_FATALITIES","NUMBER_EVACUATED")
+          "ANY_FATALITIES","NUMBER_FATALITIES","NUMBER_EVACUATED",
+          "lat","lon")
 #df <- nrcGeo("https://nrc.uscg.mil/FOIAFiles/Current.xlsx")
 #write.csv(df, file = "nrc-review/testing.csv")
 df <- read_csv("testing.csv")
 df <- df[,2:length(df)]  %>%
-  select(cols)%>%
+  select(all_of(cols))%>%
   mutate(SEQNOS = parse_number(SEQNOS),
          SYS = if_else(grepl("LIQUEFIED NATURAL GAS", NAME_OF_MATERIAL),
                        "LNG",
@@ -97,7 +98,7 @@ server <- function(input, output) {
       addProviderTiles(providers$OpenStreetMap.HOT)%>%
       fitBounds(-124.39, 25.82, -66.94, 49.38)%>%
       addEasyButton(easyButton(
-        icon="globe", title="Zoom to Extent",
+        icon="map", title="Zoom to Extent",
         onClick=JS("function(btn, map){ map.fitBounds([[25.82, -124.39],[49.38, -66.94]]);}")))
   }) # close leaflet
   
@@ -106,9 +107,7 @@ server <- function(input, output) {
   observe({
     leafletProxy("map", data = rdf()) %>%
      # removeControl("legend")%>%
-      addCircleMarkers( #weight = 1, fillOpacity = 0.6,
-                       lat = ~lat, lng = ~lon, layerId = ~SEQNOS
-                       )
+      addCircleMarkers(lat = ~lat, lng = ~lon, layerId = ~SEQNOS)
     
   })
   
