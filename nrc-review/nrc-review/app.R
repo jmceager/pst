@@ -35,6 +35,9 @@ ui <- fluidPage(
 
     # Application title
     titlePanel("NRC Pipeline Calls"),
+    
+    #header
+    tags$style("@import url(https://use.fontawesome.com/releases/v6.0.0/css/all.css);"),
 
     # Sidebar with a slider input for number of bins 
     fluidRow(
@@ -62,8 +65,8 @@ ui <- fluidPage(
                conditionalPanel(condition = "input.time == 2",
                                 numericInput(inputId = "week",
                                              label = h5("# of Weeks"),
-                                             value = 2))
-                 #close wellpanel
+                                             value = 2)),
+               hr()
                ), #close column
 
         # main info
@@ -83,12 +86,14 @@ server <- function(input, output) {
   
   rdf <- reactive({
     if(input$time == 1){
-      df %>% 
-        dplyr::filter(between(INC_DATE, input$date[1], input$date[2]))
+      rdf <- df %>% 
+        dplyr::filter(between(INC_DATE, input$date[1], input$date[2])) %>%
+        mutate(selected = factor(if_else(SEQNOS == clickInc(), "Y", "N")))
     }
     else{
-      df %>% 
-        dplyr::filter(between(INC_DATE, max(INC_DATE) - weeks(input$week), max(INC_DATE)))
+      rdf <- df %>% 
+        dplyr::filter(between(INC_DATE, max(INC_DATE) - weeks(input$week), max(INC_DATE))) %>%
+        mutate(selected = factor(if_else(SEQNOS == clickInc(), "Y", "N")))
     }
   })
 
@@ -98,7 +103,7 @@ server <- function(input, output) {
       addProviderTiles(providers$OpenStreetMap.HOT)%>%
       fitBounds(-124.39, 25.82, -66.94, 49.38)%>%
       addEasyButton(easyButton(
-        icon="map", title="Zoom to Extent",
+        icon="fa-solid fa-globe", title="Zoom to Extent",
         onClick=JS("function(btn, map){ map.fitBounds([[25.82, -124.39],[49.38, -66.94]]);}")))
   }) # close leaflet
   
@@ -116,7 +121,7 @@ server <- function(input, output) {
   #check for clicked point on map
   observeEvent(input$map_marker_click, {
     # Capture the info of the clicked marker
-    if(is.null(input$map_marker_click)){
+    if(!is.null(clickInc()) && clickInc() == input$map_marker_click$id){
       clickInc(NULL)     # Reset filter
     }
     else{
