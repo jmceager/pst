@@ -47,7 +47,8 @@ ui <- fluidPage(
                hr(),
                helpText("Filter pipeline-specific calls to the NRC by specific 
                          dates or weeks. Then, use the map to filter rows 
-                         in the table below."),
+                         in the table below. To clear your map selection, click
+                         on your selected circle again. "),
                radioButtons("time", 
                             h3("Time Period"),
                             choices = c("Dates" = 1,
@@ -129,15 +130,14 @@ server <- function(input, output) {
   # leaf proxy / observe filters & clicks
   observe({
     #create palette
-    selPal <- colorFactor(palette = c("#003E59", "#61A893"), # white / black for sel or not
-                          rdf()$selected)
+    selPal <- colorFactor(palette = c("#003E59", "#61A893"), rdf()$selected)
     #update map 
     leafletProxy("map", data = rdf()) %>%
      # removeControl("legend")%>%
       addCircleMarkers(lat = ~lat, lng = ~lon, layerId = ~SEQNOS,
-                       weight = 1, fillOpacity = .7, 
+                       weight = 2, fillOpacity = .6, 
                        color = "#003E59",
-                       fillColor = ~selPal(selected),
+                       fillColor = ~selPal(selected)
                        )
     
   })
