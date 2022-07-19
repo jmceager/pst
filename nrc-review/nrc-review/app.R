@@ -84,19 +84,36 @@ ui <- fluidPage(
 # Define server logic required to draw a histogram
 server <- function(input, output) {
   
+  clickInc <- reactiveVal()
+  
   rdf <- reactive({
-    if(input$time == 1){
-      rdf <- df %>% 
-        dplyr::filter(between(INC_DATE, input$date[1], input$date[2])) %>%
-        mutate(selected = factor(if_else(SEQNOS == clickInc(), "Y", "N")))
+    if(is.null(clickInc())){
+      if(input$time == 1){
+        rdf <- df %>% 
+          dplyr::filter(between(INC_DATE, input$date[1], input$date[2])) %>%
+          mutate(selected = "N")
+      }
+      else{
+        rdf <- df %>% 
+          dplyr::filter(between(INC_DATE, max(INC_DATE) - weeks(input$week), max(INC_DATE))) %>%
+          mutate(selected = "N")
+      }
     }
     else{
-      rdf <- df %>% 
-        dplyr::filter(between(INC_DATE, max(INC_DATE) - weeks(input$week), max(INC_DATE))) %>%
-        mutate(selected = factor(if_else(SEQNOS == clickInc(), "Y", "N")))
+      if(input$time == 1){
+        rdf <- df %>% 
+          dplyr::filter(between(INC_DATE, input$date[1], input$date[2])) %>%
+          mutate(selected = if_else(SEQNOS == clickInc(), "Y", "N"))
+      }
+      else{
+        rdf <- df %>% 
+          dplyr::filter(between(INC_DATE, max(INC_DATE) - weeks(input$week), max(INC_DATE))) %>%
+          mutate(selected = if_else(SEQNOS == clickInc(), "Y", "N"))
+      }
     }
+    
   })
-
+  
   #### leaflet ####
   output$map <- renderLeaflet({
     leaflet()%>%
@@ -108,15 +125,22 @@ server <- function(input, output) {
   }) # close leaflet
   
   outputOptions(output, "map", suspendWhenHidden = FALSE)
-  # leaf proxy / observe filters 
+  
+  # leaf proxy / observe filters & clicks
   observe({
+    #create palette
+    selPal <- colorFactor(palette = c("#003E59", "#61A893"), # white / black for sel or not
+                          rdf()$selected)
+    #update map 
     leafletProxy("map", data = rdf()) %>%
      # removeControl("legend")%>%
-      addCircleMarkers(lat = ~lat, lng = ~lon, layerId = ~SEQNOS)
+      addCircleMarkers(lat = ~lat, lng = ~lon, layerId = ~SEQNOS,
+                       weight = 1, fillOpacity = .7, 
+                       color = "#003E59",
+                       fillColor = ~selPal(selected),
+                       )
     
   })
-  
-  clickInc <- reactiveVal()
   
   #check for clicked point on map
   observeEvent(input$map_marker_click, {
