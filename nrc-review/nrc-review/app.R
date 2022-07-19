@@ -13,20 +13,11 @@ cols <- c("SEQNOS", "LOC_FULL", "RESPONSIBLE_COMPANY","INC_DATE", "INCIDENT_DATE
           "FIRE_INVOLVED","ANY_INJURIES","NUMBER_INJURED","NUMBER_HOSPITALIZED",
           "ANY_FATALITIES","NUMBER_FATALITIES","NUMBER_EVACUATED",
           "lat","lon")
-#df <- nrcGeo("https://nrc.uscg.mil/FOIAFiles/Current.xlsx")
+df <- nrcGeo("https://nrc.uscg.mil/FOIAFiles/Current.xlsx")
 #write.csv(df, file = "nrc-review/testing.csv")
-df <- read_csv("testing.csv")
+#df <- read_csv("testing.csv")
 df <- df[,2:length(df)]  %>%
-  select(all_of(cols))%>%
-  mutate(SEQNOS = parse_number(SEQNOS),
-         SYS = if_else(grepl("LIQUEFIED NATURAL GAS", NAME_OF_MATERIAL),
-                       "LNG",
-                       if_else(grepl("NATURAL GAS", NAME_OF_MATERIAL),
-                               "Gas",
-                               "Liquid"
-                               ) #end second ifelse
-                       )# end first ifelse
-         )# end mutate
+  select(all_of(cols))
 ds <- stamp("8 March, 2022")
 
 

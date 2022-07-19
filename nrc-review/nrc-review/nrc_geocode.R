@@ -69,6 +69,14 @@ nrcGeo <- function(path){
            UNIT_OF_MEASURE = if_else(UNIT_OF_MEASURE == "BARREL(S)",
                                      "GALLON(S)",
                                      UNIT_OF_MEASURE),
+           SEQNOS = parse_number(SEQNOS),
+           SYS = if_else(grepl("LIQUEFIED NATURAL GAS", NAME_OF_MATERIAL),
+                         "LNG",
+                         if_else(grepl("NATURAL GAS", NAME_OF_MATERIAL),
+                                 "Gas",
+                                 "Liquid"
+                         ) #end second ifelse
+           ),# end first ifelse
            size = if_else(SYS == "Gas", 
                           cut(AMOUNT_OF_MATERIAL, breaks = gasBreaks, labels = breakLab),
                           cut(AMOUNT_OF_MATERIAL, breaks = liqBreaks, labels = breakLab))
