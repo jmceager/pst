@@ -9,7 +9,7 @@ materials <- c("CRUDE", "GAS", "PETROLEUM","KEROSENE","ETHYLENE","DIESEL", "OIL"
 #sizes for systems 
 gasBreaks <- c(0, 40, 1000, 8000, 600000)
 liqBreaks <- c(0, 20, 100, 1000, 5000000)
-breakLab <- c(3,6,9,12,15)
+breakLab <- c(4,8,12,16)
 
 nrcGeo <- function(path){
   temp = tempfile(fileext = ".xlsx")
@@ -79,9 +79,35 @@ nrcGeo <- function(path){
            ),# end first ifelse
            size = if_else(SYS == "Gas", 
                           cut(AMOUNT_OF_MATERIAL, breaks = gasBreaks, labels = breakLab),
-                          cut(AMOUNT_OF_MATERIAL, breaks = liqBreaks, labels = breakLab))
+                          cut(AMOUNT_OF_MATERIAL, breaks = liqBreaks, labels = breakLab)),
+           INCIDENT_DATE_TIME = format(INCIDENT_DATE_TIME, format = "%H:%M:%S"),
+           UNIT_OF_MEASURE = if_else(UNIT_OF_MEASURE == "GALLON(S)",
+                                     "Gal",
+                                     if_else(grepl("UNKNOWN", UNIT_OF_MEASURE),
+                                             "Unknown",
+                                             if_else(grepl("CF", UNIT_OF_MEASURE),
+                                                     "MSCF",
+                                                     "NA")
+                                             )
+                                     )
            )
   
   
   return(pipes_geocode)
+}
+
+addLegendCustom <- function(map,title, legName , position, opacity = 0.7){
+  prettyNumb <- c("25%","50%","75%", "100%")
+  colors <- rep("#003E59", 4)
+  sizes <- breakLab*2
+  colorAdditions <- paste0(colors, "; width:", sizes, "px; height:", sizes, "px;","border-radius:50%;  vertical-align:middle; display: inline-block;" )
+  labelAdditions <- paste0("<div style='display: inline-block;height: ", sizes, "px;margin-top: 4px;line-height: ", sizes, "px;'>", prettyNumb, "</div>")
+  return(addLegend(map, 
+                   title = title,
+                   colors = colorAdditions, 
+                   labels = labelAdditions, 
+                   opacity = opacity, 
+                   layerId = legName,
+                   position = position))
+  
 }
