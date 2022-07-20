@@ -12,12 +12,14 @@ cols <- c("SEQNOS", "LOC_FULL", "RESPONSIBLE_COMPANY","INC_DATE", "INCIDENT_DATE
           "MEDIUM_DESC","ADDITIONAL_MEDIUM_INFO","ANY_DAMAGES","DAMAGE_AMOUNT",
           "FIRE_INVOLVED","ANY_INJURIES","NUMBER_INJURED","NUMBER_HOSPITALIZED",
           "ANY_FATALITIES","NUMBER_FATALITIES","NUMBER_EVACUATED",
-          "lat","lon")
-df <- nrcGeo("https://nrc.uscg.mil/FOIAFiles/Current.xlsx")
-#write.csv(df, file = "nrc-review/testing.csv")
-#df <- read_csv("testing.csv")
-df <- df[,2:length(df)]  %>%
-  select(all_of(cols))
+          "lat","lon", "SYS", "size")
+#df <- nrcGeo("https://nrc.uscg.mil/FOIAFiles/Current.xlsx") %>%
+#  select(all_of(cols))
+#write.csv(df, file = "testing.csv")
+df <- read_csv("testing.csv") 
+df <- df[,2:length(df)] %>%
+  mutate(INCIDENT_DATE_TIME = format(INCIDENT_DATE_TIME, format = "%H:%M:%S"))
+
 ds <- stamp("8 March, 2022")
 
 
@@ -34,7 +36,7 @@ ui <- fluidPage(
     fluidRow(
         column(4, 
                h5(paste0("Last Updated:\n",ds(max(df$INC_DATE)))),
-               tags$a(href = "https://nrc.uscg.mil/", "NRC Calls FOIA Spreadsheet (Source)"),
+               tags$a(href = "https://nrc.uscg.mil/", "NRC FOIA Spreadsheet"),
                hr(),
                helpText("Filter pipeline-specific calls to the NRC by specific 
                          dates or weeks. Then, use the map to filter rows 
@@ -103,6 +105,8 @@ server <- function(input, output) {
           mutate(selected = if_else(SEQNOS == clickInc(), "Y", "N"))
       }
     }
+    rdf %>%
+      mutate(size = replace_na(size, 8))
     
   })
   
@@ -110,7 +114,7 @@ server <- function(input, output) {
   output$map <- renderLeaflet({
     leaflet()%>%
       addProviderTiles(providers$OpenStreetMap.HOT)%>%
-      fitBounds(-124.39, 25.82, -66.94, 49.38)%>%
+      fitBounds(-124.39, 25.82, -66.54, 49.38)%>%
       addEasyButton(easyButton(
         icon="fa-solid fa-globe", title="Zoom to Extent",
         onClick=JS("function(btn, map){ map.fitBounds([[25.82, -124.39],[49.38, -66.94]]);}")))
@@ -124,13 +128,14 @@ server <- function(input, output) {
     selPal <- colorFactor(palette = c("#003E59", "#61A893"), rdf()$selected)
     #update map 
     leafletProxy("map", data = rdf()) %>%
-     # removeControl("legend")%>%
+      removeControl("legend")%>%
       addCircleMarkers(lat = ~lat, lng = ~lon, layerId = ~SEQNOS,
                        weight = 2, fillOpacity = .6, 
                        color = "#003E59",
-                       fillColor = ~selPal(selected)
-                       )
-    
+                       fillColor = ~selPal(selected),
+                       radius = ~size
+                       )%>%
+      addLegendCustom(legName = "legend", title = "Quartile", position = "bottomright")
   })
   
   #check for clicked point on map
@@ -152,7 +157,73 @@ server <- function(input, output) {
     else{
       tdf <- rdf() %>% dplyr::filter(SEQNOS == clickInc())
     }
-    reactable(tdf)
+    reactable(tdf,
+              #options
+              searchable = TRUE,
+              striped = TRUE,
+              highlight = TRUE,
+              sortable = TRUE,
+              showPageSizeOptions = TRUE,
+              showSortable = TRUE,
+              filterable=TRUE,
+              #theme stuff
+              defaultColDef = colDef(
+                align = "center",
+                width = 80
+              ),
+              defaultSorted = list(INC_DATE = "desc"),
+              minRows = 10,
+              defaultPageSize = 20,
+              pageSizeOptions = c(10,20,30),
+              #column definitions
+              columns = list(
+                INC_DATE = colDef(format = colFormat(date = TRUE),
+                             name = "Date"),
+                LOC_FULL = colDef(name = "Place", width = 110),
+                RESPONSIBLE_COMPANY = colDef(name = "Operator"),
+                SEQNOS = colDef(show = F),
+                INCIDENT_DATE_TIME = colDef(name = "Time", format = colFormat(time = TRUE)),
+                NAME_OF_MATERIAL = colDef(name = "Material"),
+                MEDIUM_DESC = colDef(name = "Release Medium"),
+                ADDITIONAL_MEDIUM_INFO = colDef(name = "Medium Info"),
+                ANY_DAMAGES = colDef(name = "Damage?"),
+                DAMAGE_AMOUNT = colDef(name = "Damage Cost", format = colFormat(currency = "USD")),
+                AMOUNT_OF_MATERIAL = colDef(name = "Amount Released",
+                                       format = colFormat(separators = TRUE),
+                                       minWidth = 140),
+                INCIDENT_CAUSE = colDef(name = "Cause"),
+                UNIT_OF_MEASURE = colDef(name = "Release Unit", minWidth = 110),
+                FIRE_INVOLVED = colDef(name = "Fire?"),
+                ANY_INJURIES = colDef(name = "Injuries?"),
+                NUMBER_INJURED = colDef(name = "Injured"),
+                NUMBER_HOSPITALIZED = colDef(name = "Hospitalized"),
+                ANY_FATALITIES = colDef(name = "Fatalities?"),
+                NUMBER_FATALITIES = colDef(name = "Fatalities"),
+                NUMBER_EVACUATED = colDef(name = "Evacuations"),
+                lat = colDef(show = F),
+                lon = colDef(show = F),
+                SYS = colDef(show = F),
+                size = colDef(show = F),
+                selected = colDef(show = F),
+                details = colDef(name = "Details", sortable = FALSE, show = TRUE,
+                                 cell = function() htmltools::tags$button("Show details"))
+                ),
+              onClick = JS("function(rowInfo, column) {
+                            // Only handle click events on the 'details' column
+                            if (column.id !== 'details') {
+                              return
+                            }
+                        
+                            // Display an alert dialog with details for the row
+                            window.alert('Details for row ' + rowInfo.index + ':\\n' + JSON.stringify(rowInfo.values, null, 2))
+                        
+                            // Send the click event to Shiny, which will be available in input$show_details
+                            // Note that the row index starts at 0 in JavaScript, so we add 1
+                            if (window.Shiny) {
+                              Shiny.setInputValue('show_details', { index: rowInfo.index + 1 }, { priority: 'event' })
+                            }
+                          }")
+              )
   })
   
 }# close server
