@@ -152,20 +152,22 @@ server <- function(input, output) {
 #### reactable ####
   output$table <- renderReactable({
     if(is.null(clickInc())){
-      tdf <- rdf()
+      tdf <- rdf() %>%
+        mutate(details = NA)
     }
     else{
-      tdf <- rdf() %>% dplyr::filter(SEQNOS == clickInc())
+      tdf <- rdf() %>% 
+        dplyr::filter(SEQNOS == clickInc()) %>%
+        mutate(details = NA)
     }
     reactable(tdf,
               #options
-              searchable = TRUE,
+              filterable = TRUE,
               striped = TRUE,
               highlight = TRUE,
               sortable = TRUE,
               showPageSizeOptions = TRUE,
               showSortable = TRUE,
-              filterable=TRUE,
               #theme stuff
               defaultColDef = colDef(
                 align = "center",
@@ -205,7 +207,7 @@ server <- function(input, output) {
                 SYS = colDef(show = F),
                 size = colDef(show = F),
                 selected = colDef(show = F),
-                details = colDef(name = "Details", sortable = FALSE, show = TRUE,
+                details = colDef(name = "Details", sortable = FALSE, 
                                  cell = function() htmltools::tags$button("Show details"))
                 ),
               onClick = JS("function(rowInfo, column) {
