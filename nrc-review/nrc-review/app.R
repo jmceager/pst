@@ -13,9 +13,12 @@ cols <- c("SEQNOS", "LOC_FULL", "RESPONSIBLE_COMPANY","INC_DATE", "INCIDENT_DATE
           "FIRE_INVOLVED","ANY_INJURIES","NUMBER_INJURED","NUMBER_HOSPITALIZED",
           "ANY_FATALITIES","NUMBER_FATALITIES","NUMBER_EVACUATED",
           "lat","lon", "SYS", "size")
+# real time data 
 #df <- nrcGeo("https://nrc.uscg.mil/FOIAFiles/Current.xlsx") %>%
 #  select(all_of(cols))
+#write to csv for testing 
 #write.csv(df, file = "testing.csv")
+# reading testing data
 df <- read_csv("testing.csv") 
 df <- df[,2:length(df)] %>%
   mutate(INCIDENT_DATE_TIME = format(INCIDENT_DATE_TIME, format = "%H:%M:%S"))
@@ -23,7 +26,7 @@ df <- df[,2:length(df)] %>%
 ds <- stamp("8 March, 2022")
 
 
-# Define UI for application that draws a histogram
+# Define UI 
 ui <- fluidPage(
 
     # Application title
@@ -32,16 +35,17 @@ ui <- fluidPage(
     #header
     tags$style("@import url(https://use.fontawesome.com/releases/v6.0.0/css/all.css);"),
 
-    # Sidebar with a slider input for number of bins 
+    # fluid row layout
     fluidRow(
         column(4, 
                h5(paste0("Last Updated:\n",ds(max(df$INC_DATE)))),
                tags$a(href = "https://nrc.uscg.mil/", "NRC FOIA Spreadsheet"),
                hr(),
                helpText("Filter pipeline-specific calls to the NRC by specific 
-                         dates or weeks. Then, use the map to filter rows 
-                         in the table below. To clear your map selection, click
-                         on your selected circle again. "),
+                         dates or weeks. Selecting points in the map will select 
+                         rows in the table below. To clear your map selection, click
+                         on your selected circle again. You can also sort and filter 
+                         the table using the headers and search boxes in each column."),
                radioButtons("time", 
                             h3("Time Period"),
                             choices = c("Dates" = 1,
@@ -135,7 +139,7 @@ server <- function(input, output) {
                        fillColor = ~selPal(selected),
                        radius = ~size
                        )%>%
-      addLegendCustom(legName = "legend", title = "Quartile", position = "bottomright")
+      addLegendCustom(legName = "legend", title = "Release Quartile", position = "bottomright")
   })
   
   #check for clicked point on map
@@ -171,7 +175,7 @@ server <- function(input, output) {
               #theme stuff
               defaultColDef = colDef(
                 align = "center",
-                width = 80
+                minWidth = 100
               ),
               defaultSorted = list(INC_DATE = "desc"),
               minRows = 10,
@@ -184,12 +188,12 @@ server <- function(input, output) {
                 LOC_FULL = colDef(name = "Place", width = 110),
                 RESPONSIBLE_COMPANY = colDef(name = "Operator"),
                 SEQNOS = colDef(show = F),
-                INCIDENT_DATE_TIME = colDef(name = "Time", format = colFormat(time = TRUE)),
+                INCIDENT_DATE_TIME = colDef(name = "Time", show = F),
                 NAME_OF_MATERIAL = colDef(name = "Material"),
                 MEDIUM_DESC = colDef(name = "Release Medium"),
-                ADDITIONAL_MEDIUM_INFO = colDef(name = "Medium Info"),
-                ANY_DAMAGES = colDef(name = "Damage?"),
-                DAMAGE_AMOUNT = colDef(name = "Damage Cost", format = colFormat(currency = "USD")),
+                ADDITIONAL_MEDIUM_INFO = colDef(name = "Medium Info", show = F),
+                ANY_DAMAGES = colDef(name = "Damage?", show = F),
+                DAMAGE_AMOUNT = colDef(name = "Damage Cost", format = colFormat(currency = "USD"), show = F),
                 AMOUNT_OF_MATERIAL = colDef(name = "Amount Released",
                                        format = colFormat(separators = TRUE),
                                        minWidth = 140),
@@ -197,11 +201,11 @@ server <- function(input, output) {
                 UNIT_OF_MEASURE = colDef(name = "Release Unit", minWidth = 110),
                 FIRE_INVOLVED = colDef(name = "Fire?"),
                 ANY_INJURIES = colDef(name = "Injuries?"),
-                NUMBER_INJURED = colDef(name = "Injured"),
-                NUMBER_HOSPITALIZED = colDef(name = "Hospitalized"),
+                NUMBER_INJURED = colDef(name = "Injured", show = F),
+                NUMBER_HOSPITALIZED = colDef(name = "Hospitalized", show = F),
                 ANY_FATALITIES = colDef(name = "Fatalities?"),
-                NUMBER_FATALITIES = colDef(name = "Fatalities"),
-                NUMBER_EVACUATED = colDef(name = "Evacuations"),
+                NUMBER_FATALITIES = colDef(name = "Fatalities", show = F),
+                NUMBER_EVACUATED = colDef(name = "Evacuations", show = F),
                 lat = colDef(show = F),
                 lon = colDef(show = F),
                 SYS = colDef(show = F),
