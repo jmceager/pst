@@ -3,6 +3,7 @@ library(tidyverse)
 library(leaflet)
 library(leaflet.providers)
 library(reactable)
+library(waiter)
 
 source("nrc_geocode.R")
 
@@ -13,18 +14,17 @@ cols <- c("SEQNOS", "LOC_FULL", "RESPONSIBLE_COMPANY","INC_DATE", "INCIDENT_DATE
           "FIRE_INVOLVED","ANY_INJURIES","NUMBER_INJURED","NUMBER_HOSPITALIZED",
           "ANY_FATALITIES","NUMBER_FATALITIES","NUMBER_EVACUATED",
           "lat","lon", "SYS", "size")
-# real time data 
-#df <- nrcGeo("https://nrc.uscg.mil/FOIAFiles/Current.xlsx") %>%
-#  select(all_of(cols))
-#write to csv for testing 
-#write.csv(df, file = "testing.csv")
-# reading testing data
-df <- read_csv("testing.csv") 
-df <- df[,2:length(df)] %>%
-  mutate(INCIDENT_DATE_TIME = format(INCIDENT_DATE_TIME, format = "%H:%M:%S"))
+## real time data 
+df <- nrcGeo("https://nrc.uscg.mil/FOIAFiles/Current.xlsx") %>%
+  select(all_of(cols))
+## write to csv for testing 
+# write.csv(df, file = "testing.csv")
+## reading testing data
+# df <- read_csv("testing.csv") 
+# df <- df[,2:length(df)] %>%
+#   mutate(INCIDENT_DATE_TIME = format(INCIDENT_DATE_TIME, format = "%H:%M:%S"))
 
 ds <- stamp("8 March, 2022")
-
 
 # Define UI 
 ui <- fluidPage(
@@ -34,6 +34,18 @@ ui <- fluidPage(
     
     #header
     tags$style("@import url(https://use.fontawesome.com/releases/v6.0.0/css/all.css);"),
+    useWaiter(),
+    useHostess(),
+    waiterShowOnLoad(
+      color = "#BDDBD2",
+      hostess_loader(
+        "loader", 
+        preset = "circle", 
+        text_color = "#003E59",
+        class = "label-center",
+        center_page = TRUE
+      )
+    ),
 
     # fluid row layout
     fluidRow(
@@ -82,6 +94,8 @@ ui <- fluidPage(
 # Define server logic required to draw a histogram
 server <- function(input, output) {
   
+  hostess <- Hostess$new("loader")
+  
   clickInc <- reactiveVal()
   
   rdf <- reactive({
@@ -110,7 +124,8 @@ server <- function(input, output) {
       }
     }
     rdf %>%
-      mutate(size = replace_na(size, 8))
+      mutate(size = as.double(size),
+             size = replace_na(size, 8))
     
   })
   
@@ -175,18 +190,18 @@ server <- function(input, output) {
               #theme stuff
               defaultColDef = colDef(
                 align = "center",
-                minWidth = 100
+                minWidth = 80
               ),
               defaultSorted = list(INC_DATE = "desc"),
               minRows = 10,
-              defaultPageSize = 20,
-              pageSizeOptions = c(10,20,30),
+              defaultPageSize = 10,
+              pageSizeOptions = c(5,10,20,30),
               #column definitions
               columns = list(
                 INC_DATE = colDef(format = colFormat(date = TRUE),
                              name = "Date"),
-                LOC_FULL = colDef(name = "Place", width = 110),
-                RESPONSIBLE_COMPANY = colDef(name = "Operator"),
+                LOC_FULL = colDef(name = "Place", minWidth = 120),
+                RESPONSIBLE_COMPANY = colDef(name = "Operator", minWidth = 120),
                 SEQNOS = colDef(show = F),
                 INCIDENT_DATE_TIME = colDef(name = "Time", show = F),
                 NAME_OF_MATERIAL = colDef(name = "Material"),
@@ -203,7 +218,7 @@ server <- function(input, output) {
                 ANY_INJURIES = colDef(name = "Injuries?"),
                 NUMBER_INJURED = colDef(name = "Injured", show = F),
                 NUMBER_HOSPITALIZED = colDef(name = "Hospitalized", show = F),
-                ANY_FATALITIES = colDef(name = "Fatalities?"),
+                ANY_FATALITIES = colDef(name = "Fatal?"),
                 NUMBER_FATALITIES = colDef(name = "Fatalities", show = F),
                 NUMBER_EVACUATED = colDef(name = "Evacuations", show = F),
                 lat = colDef(show = F),
@@ -231,6 +246,13 @@ server <- function(input, output) {
                           }")
               )
   })
+  
+  for(i in 1:10){
+    Sys.sleep(runif(1) / 2)
+    hostess$set(i * 10)
+  }
+  
+  waiter_hide()
   
 }# close server
 
