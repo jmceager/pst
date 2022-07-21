@@ -16,6 +16,7 @@ cols <- c("SEQNOS", "LOC_FULL", "RESPONSIBLE_COMPANY","INC_DATE", "INCIDENT_DATE
           "lat","lon", "SYS", "size", "DESCRIPTION_OF_INCIDENT")
 ## real time data 
 ## TODO: Set up conditional daily data cleaning (i.e. only geocode when maxdate is newer)
+## TODO: Bring in lubridate for hopefully better date formatting & handling 
 df <- nrcGeo("https://nrc.uscg.mil/FOIAFiles/Current.xlsx") %>%
    select(all_of(cols)) %>%
    mutate(DESCRIPTION_OF_INCIDENT = gsub('[\r\n]', '', DESCRIPTION_OF_INCIDENT))
