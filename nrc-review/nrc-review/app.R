@@ -13,16 +13,16 @@ cols <- c("SEQNOS", "LOC_FULL", "RESPONSIBLE_COMPANY","INC_DATE", "INCIDENT_DATE
           "MEDIUM_DESC","ADDITIONAL_MEDIUM_INFO","ANY_DAMAGES","DAMAGE_AMOUNT",
           "FIRE_INVOLVED","ANY_INJURIES","NUMBER_INJURED","NUMBER_HOSPITALIZED",
           "ANY_FATALITIES","NUMBER_FATALITIES","NUMBER_EVACUATED",
-          "lat","lon", "SYS", "size")
+          "lat","lon", "SYS", "size", "DESCRIPTION_OF_INCIDENT")
 ## real time data 
-df <- nrcGeo("https://nrc.uscg.mil/FOIAFiles/Current.xlsx") %>%
-  select(all_of(cols))
+#df <- nrcGeo("https://nrc.uscg.mil/FOIAFiles/Current.xlsx") %>%
+#  select(all_of(cols))
 ## write to csv for testing 
 # write.csv(df, file = "testing.csv")
 ## reading testing data
-# df <- read_csv("testing.csv") 
-# df <- df[,2:length(df)] %>%
-#   mutate(INCIDENT_DATE_TIME = format(INCIDENT_DATE_TIME, format = "%H:%M:%S"))
+df <- read_csv("testing.csv")
+df <- df[,2:length(df)] %>%
+  mutate(INCIDENT_DATE_TIME = format(INCIDENT_DATE_TIME, format = "%H:%M:%S"))
 
 ds <- stamp("8 March, 2022")
 
@@ -172,12 +172,14 @@ server <- function(input, output) {
   output$table <- renderReactable({
     if(is.null(clickInc())){
       tdf <- rdf() %>%
-        mutate(details = NA)
+        mutate(description = NA,
+               details = NA)
     }
     else{
       tdf <- rdf() %>% 
         dplyr::filter(SEQNOS == clickInc()) %>%
-        mutate(details = NA)
+        mutate(description = NA,
+               details = NA)
     }
     reactable(tdf,
               #options
@@ -226,17 +228,27 @@ server <- function(input, output) {
                 SYS = colDef(show = F),
                 size = colDef(show = F),
                 selected = colDef(show = F),
-                details = colDef(name = "Details", sortable = FALSE, 
-                                 cell = function() htmltools::tags$button("Show details"))
+                details = colDef(name = "More",
+                                 details = JS("function(rowInfo) {
+                                                return `Details for row: ${rowInfo.index}` +
+                                                `<pre>${JSON.stringify(rowInfo.values['NUMBER_INJURED'], null, 2)}</pre>`
+                                              }"),
+                                 html = TRUE,
+                                 width = 60
+                                ),
+                DESCRIPTION_OF_INCIDENT = colDef(show = F),
+                description = colDef(name = "Narrative", 
+                                     cell = function() htmltools::tags$button("Narrative") )
                 ),
               onClick = JS("function(rowInfo, column) {
                             // Only handle click events on the 'details' column
-                            if (column.id !== 'details') {
+                            if (column.id !== 'description') {
                               return
                             }
                         
                             // Display an alert dialog with details for the row
-                            window.alert('Details for row ' + rowInfo.index + ':\\n' + JSON.stringify(rowInfo.values, null, 2))
+                            window.alert('Details for row ' + rowInfo.index + ':\\n' + JSON.stringify(rowInfo.values['DESCRIPTION_OF_INCIDENT'], null, 2))
+                            
                         
                             // Send the click event to Shiny, which will be available in input$show_details
                             // Note that the row index starts at 0 in JavaScript, so we add 1
