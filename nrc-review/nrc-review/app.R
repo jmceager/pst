@@ -5,30 +5,11 @@ library(leaflet.providers)
 library(reactable)
 library(waiter)
 
-source("nrc_geocode.R")
 
 # get cols
-cols <- c("SEQNOS", "LOC_FULL", "RESPONSIBLE_COMPANY","INC_DATE", "INCIDENT_DATE_TIME",
-          "INCIDENT_CAUSE","NAME_OF_MATERIAL", "AMOUNT_OF_MATERIAL","UNIT_OF_MEASURE",
-          "MEDIUM_DESC","ADDITIONAL_MEDIUM_INFO","ANY_DAMAGES","DAMAGE_AMOUNT",
-          "FIRE_INVOLVED","ANY_INJURIES","NUMBER_INJURED","NUMBER_HOSPITALIZED",
-          "ANY_FATALITIES","NUMBER_FATALITIES","NUMBER_EVACUATED",
-          "lat","lon", "SYS", "size", "DESCRIPTION_OF_INCIDENT")
 ## real time data 
-## TODO: Set up conditional daily data cleaning (i.e. only geocode when maxdate is newer)
 ## TODO: Bring in lubridate for hopefully better date formatting & handling 
-df <- nrcGeo("https://nrc.uscg.mil/FOIAFiles/Current.xlsx") %>%
-   select(all_of(cols)) %>%
-   mutate(DESCRIPTION_OF_INCIDENT = gsub('[\r\n]', '', DESCRIPTION_OF_INCIDENT))
-## write to csv for testing 
-# write.csv(df, file = "testing.csv")
-## reading testing data
-# df <- read_csv("testing.csv")
-# df <- df[,2:length(df)] %>%
-#   mutate(INCIDENT_DATE_TIME = format(INCIDENT_DATE_TIME, format = "%H:%M:%S"),
-#          DESCRIPTION_OF_INCIDENT = gsub('[\r\n]', '', DESCRIPTION_OF_INCIDENT))
-
-
+df <- read_csv("/Users/jameseager/Library/CloudStorage/OneDrive-pstrust.org/data/nrc/current.csv")
 
 ds <- stamp("8 March, 2022")
 
