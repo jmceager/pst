@@ -3,8 +3,6 @@ library(tidyverse)
 library(readxl)
 library(lubridate)
 
-source("key.R")
-
 #list of interested materials
 materials <- c("CRUDE", "GAS", "PETROLEUM","KEROSENE","ETHYLENE","DIESEL", "OIL")
 
