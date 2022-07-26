@@ -82,7 +82,7 @@ ops.simple <- ops %>%
 
 # gd big 
 gd.full <- read_xlsx("data/raw/gd2010toPresent.xlsx", sheet = 2) %>% 
-  mutate(SYSTEM_TYPE = "GD (Gas Distribution)", 
+  mutate(SYSTEM_TYPE = "Gas Distribution", 
          SYS = "GD",
          UNINTENTIONAL_RELEASE = replace_na(UNINTENTIONAL_RELEASE,0), 
          INTENTIONAL_RELEASE = replace_na(INTENTIONAL_RELEASE,0),
@@ -121,6 +121,9 @@ gt.full <- read_xlsx("./data/raw/gtggungs2010toPresent.xlsx", sheet = 2) %>%
          INJURE = replace_na(INJURE, 0),
          MDY = date(LOCAL_DATETIME),
          IMONTH = month(MDY),
+         SYSTEM_TYPE = gsub("[\\(\\)]", "", 
+                            regmatches(SYSTEM_TYPE, 
+                                       gregexpr("\\(.*?\\)", SYSTEM_TYPE))),
          MoYr = my(paste(IMONTH,IYEAR, sep = "-")),
          MSYS = "Gas",
          ILOC =  if_else(ON_OFF_SHORE == "ONSHORE", 
@@ -148,7 +151,7 @@ gt.full <- read_xlsx("./data/raw/gtggungs2010toPresent.xlsx", sheet = 2) %>%
 
 # hl big
 hl.full <- read_xlsx("./data/raw/hl2010toPresent.xlsx", sheet = 2)%>% 
-  mutate(SYSTEM_TYPE = "HL (Hazardous Liquids)",
+  mutate(SYSTEM_TYPE = "Hazardous Liquids",
          SYS = "HL")%>%
   rename( INTENTIONAL_RELEASE = INTENTIONAL_RELEASE_BBLS,
           UNINTENTIONAL_RELEASE = UNINTENTIONAL_RELEASE_BBLS)%>%
@@ -193,7 +196,7 @@ hl.full <- read_xlsx("./data/raw/hl2010toPresent.xlsx", sheet = 2)%>%
 #columns for abridged incidents
 short_cols <- c( "REPORT_NUMBER", "NAME","OPERATOR_ID",  #basic characteristics
                  "IYEAR","MDY","MoYr" ,"LOCAL_DATETIME" ,   #temporal char
-                 "LOCATION_LATITUDE","LOCATION_LONGITUDE", "cleanLoc", "STATE",#location
+                 "LOCATION_LATITUDE","LOCATION_LONGITUDE", "cleanLoc", "STATE", "ON_OFF_SHORE",#location
                  "SYS","MSYS" ,"SIGNIFICANT", "SERIOUS","COMMODITY_RELEASED_TYPE",#inc summary
                  "UNINTENTIONAL_RELEASE", "INTENTIONAL_RELEASE", "TOTAL_RELEASE","UNITS", #releases
                  "FATALITY_IND","FATAL", "INJURY_IND","INJURE", #human impact
