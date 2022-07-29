@@ -1,24 +1,24 @@
 #this is a shiny app 
 #it is not actually shiny, thats just the name of the app
-library(shiny)
-library(shinyWidgets)
-library(reactable)
-library(tidyverse)
-library(shinydashboard)
-library(lubridate)
-library(scales)
-library(leaflet)
-library(leaflet.providers)
-library(htmltools)
-library(htmlwidgets)
-library(waiter)
+# library(shiny)
+# library(shinyWidgets)
+# library(reactable)
+# library(tidyverse)
+# library(shinydashboard)
+# library(lubridate)
+# library(scales)
+# library(leaflet)
+# library(leaflet.providers)
+# library(htmltools)
+# library(htmlwidgets)
+# library(waiter)
+# 
+# #moved helper functions to separate script
+# source("helpfun.R")
 
-#moved helper functions to separate script
-source("helpfun.R")
-
-fargs <- formals(icon)
-fargs$verify_fa <- FALSE
-formals(icon) <- fargs
+# fargs <- formals(icon)
+# fargs$verify_fa <- FALSE
+# formals(icon) <- fargs
 
 # load data just for date 
 recentInc <- incs %>%
@@ -293,33 +293,32 @@ body <- dashboardBody(
                  offLabel = "Gas",
                  onStatus = "warning",
                  offStatus = "primary")
-               ),
-              ) # close control fluidRow
-            ),
+               )
+            ), # close control fluidRow
             br(),
         fluidRow(
           widht = 12,
             div(
               style = "position:relative",
               conditionalPanel(
-                condition = "input.system != 'all' || input.weight != 'TOTAL_RELEASE' || input.relSYS == FALSE ",
-                plotOutput("timePlot",
+                condition = "input.system != 'all' || input.weight != 'TOTAL_RELEASE' || input.relSys == false ",
+                plotOutput("timePlot", width = "90%",
                            hover = hoverOpts("plot_hover", delay = 100, delayType = "debounce")),
                 uiOutput("hover_info")
               ), #cond pan
               
               # HL Release Plot
               conditionalPanel(
-                condition = "input.system == 'all' && input.weight == 'TOTAL_RELEASE' && input.relSys == TRUE",
-                plotOutput("hlTimePlot",
+                condition = "input.system == 'all' && input.weight == 'TOTAL_RELEASE' && input.relSys == true",
+                plotOutput("hlTimePlot", width = "90%",
                            hover = hoverOpts("hl_hover", delay = 100, delayType = "debounce")),
                 uiOutput("hl_info")
-              ), #cond pan
+              ) #cond pan
             ) # div
         ) # fl row 2
             
        ) #box 
-      ) # row
+      ) # fl row 1
     ) #tab item
   ) # tab itemS
 )
