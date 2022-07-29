@@ -132,7 +132,7 @@ sidebar <- dashboardSidebar(
 
 #### body ####
 body <- dashboardBody(
-  tags$head(tags$title("Perp Walk"),
+  tags$head(tags$title("Culprit Call-Out"),
             tags$link(rel = "stylesheet", type = "text/css", href = "custom.css"),
             tags$head(includeHTML(("google-analytics.html"))),
             tags$script('
@@ -245,9 +245,10 @@ body <- dashboardBody(
         box(width = 12,
             useWaitress(color = "#61A893"),
             br(),
-            dropdown(
-              tags$h4("Controls"),
-              h6("Time Period"),
+            fluidRow(
+              width = 12,
+              #tags$h4("Controls"),
+              #h6("Time Period"),
               switchInput(
                 label = "<i class=\"fa-solid fa-calendar-days\"></i>",
                 inputId = "periodSwitch",
@@ -257,7 +258,7 @@ body <- dashboardBody(
                 onStatus = "info",
                 offStatus = "primary"
               ),
-              h6("Point Size"),
+              #h6("Point Size"),
               radioGroupButtons(
                  inputId = "sizeButton",
                  choiceNames = c("None",
@@ -275,39 +276,52 @@ body <- dashboardBody(
                  status = "primary",
                  direction = "vertical"
                ),
-              h6("Log Y-Axis"),
+             # h6("Log Y-Axis"),
               materialSwitch(
                  inputId = "logY",
                  value = FALSE,
                  status = "primary"
                ),
-              style = "jelly", icon = icon("gear"),
-              status = "primary", width = "300px",
-              animate = animateOptions(
-                enter = animations$fading_entrances$fadeInLeftBig,
-                exit = animations$fading_exits$fadeOutRightBig
-              )
+             #bring up switch for going between HL and NG release plots
+             conditionalPanel(
+               condition = "input.system == 'all' && input.weight == 'TOTAL_RELEASE'",
+               switchInput(
+                 label = "<i class=\"fa-solid fa-industry\"></i>",
+                 inputId = "relSys",
+                 value = F,
+                 onLabel = "HL",
+                 offLabel = "Gas",
+                 onStatus = "warning",
+                 offStatus = "primary")
+               ),
+              ) # close control fluidRow
             ),
             br(),
+        fluidRow(
+          widht = 12,
             div(
               style = "position:relative",
-              plotOutput("timePlot",
-                         hover = hoverOpts("plot_hover", delay = 100, delayType = "debounce")),
-              uiOutput("hover_info")
+              conditionalPanel(
+                condition = "input.system != 'all' || input.weight != 'TOTAL_RELEASE' || input.relSYS == FALSE ",
+                plotOutput("timePlot",
+                           hover = hoverOpts("plot_hover", delay = 100, delayType = "debounce")),
+                uiOutput("hover_info")
+              ), #cond pan
               
-            ),
-            br(),
-            conditionalPanel(
-              condition = "input.system == 'all' && input.weight == 'TOTAL_RELEASE'",
-              plotOutput("hlTimePlot",
-                         hover = hoverOpts("hl_hover", delay = 100, delayType = "debounce")),
-              uiOutput("hl_info")
-            ) #cond pan
+              # HL Release Plot
+              conditionalPanel(
+                condition = "input.system == 'all' && input.weight == 'TOTAL_RELEASE' && input.relSys == TRUE",
+                plotOutput("hlTimePlot",
+                           hover = hoverOpts("hl_hover", delay = 100, delayType = "debounce")),
+                uiOutput("hl_info")
+              ), #cond pan
+            ) # div
+        ) # fl row 2
+            
        ) #box 
       ) # row
     ) #tab item
   ) # tab itemS
-  
 )
 
 
