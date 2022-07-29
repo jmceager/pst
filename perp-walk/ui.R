@@ -11,7 +11,6 @@ library(leaflet)
 library(leaflet.providers)
 library(htmltools)
 library(htmlwidgets)
-library(plotly)
 library(waiter)
 
 #moved helper functions to separate script
@@ -95,11 +94,11 @@ header <- dashboardHeader(
 #### sidebar ####
 sidebar <- dashboardSidebar(
   sidebarMenu(id = "tabs",
-              menuItem("This Month", tabName="now", icon = icon("newspaper"),selected = TRUE),
-              menuItem("Incident Map", tabName = "leafs", icon = icon("map")),
-              menuItem("Repeat Offenders", tabName = "repeat", icon = icon("industry")),
+              menuItem("Latest Culprits", tabName="now", icon = icon("newspaper"),selected = TRUE),
+              menuItem("Repeat Culprits", tabName = "repeat", icon = icon("redo")),
+              menuItem("Monthly Map", tabName = "leafs", icon = icon("map")),
               menuItem("Timeline",  tabName = "timeline", icon = icon("timeline")),
-              menuItem("Perp Table", tabName = "hist", icon = icon("table"))
+              menuItem("Full Table", tabName = "hist", icon = icon("table"))
               
   ),
   
