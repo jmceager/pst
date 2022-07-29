@@ -162,7 +162,7 @@ Starting with content, navbar, logo
 }
 
 .value-name {
-  font-size:3vw;
+  font-size: 3vw;
   white-space: pre-line;
 }
 
@@ -221,14 +221,5 @@ according to system = olive/fuchsia/maroon
   .info {
     font-family: "Source Sans Pro", sans-serif;
   }
-  
-  /* some funky reactive stuff */
-  @media only screen and (max-width: 1200px) {
-
-   .value-name { 
-      font-size: 2.4vw; 
-   }
-
-}
   
   
