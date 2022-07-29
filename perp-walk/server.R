@@ -1525,7 +1525,7 @@ shinyServer( function(input, output, session) {
     
     # create style property for tooltip
     # transparent bg and z-index for placement
-    pos <- paste0("left:", left_px + 12, "px; top: calc(82vh + ", top_px + 10, "px);")
+    pos <- paste0("left:", left_px + 2, "px; top:", top_px + 2, "px;")
     
     # tooltip  as wellPanel
     wellPanel(
