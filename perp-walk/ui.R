@@ -20,6 +20,11 @@
 # fargs$verify_fa <- FALSE
 # formals(icon) <- fargs
 
+# TODO: Fix waiter auto load
+# TODO: center plot in timeline box, fix resizing issues
+# TODO: add overlay for educational purposes 
+# TODO: fix picker input issues
+
 # load data just for date 
 recentInc <- incs %>%
   filter(MDY == max(MDY))
@@ -242,11 +247,11 @@ body <- dashboardBody(
     tabItem(
       tabName = "timeline",
       fluidRow(
+        autoWaiter(),
         box(width = 12,
-            useWaitress(color = "#61A893"),
             br(),
-            fluidRow(
-              width = 12,
+            column(
+              3,
               #tags$h4("Controls"),
               #h6("Time Period"),
               switchInput(
@@ -257,31 +262,33 @@ body <- dashboardBody(
                 offLabel = "Month",
                 onStatus = "info",
                 offStatus = "primary"
-              ),
+                )
+            ), #period col
+            column(
+              6,
               #h6("Point Size"),
-              radioGroupButtons(
+              pickerInput(
                  inputId = "sizeButton",
-                 choiceNames = c("None",
-                                 "Cost",
-                                 "Deaths",
-                                 "Injured",
-                                 "Operator Mileage",
-                                 "Evacuations"),
-                 choiceValues = c("",
-                                  "TOTAL_COST_CURRENT",
-                                  "FATAL",
-                                  "INJURE",
-                                  "mileage",
-                                  "NUM_PUB_EVACUATED"),
-                 status = "primary",
-                 direction = "vertical"
-               ),
+                 choices = c("None" = "",
+                             "TOTAL_COST_CURRENT" = "Cost",
+                             "FATAL" = "Deaths",
+                             "INJURE" = "Injuries",
+                             "mileage" = "Operator Miles",
+                             "NUM_PUB_EVACUATED" = "Evacuations"),
+                 options = list(style = "btn-primary")
+                 )
+            ), # radio col
              # h6("Log Y-Axis"),
+            column(
+              1,
               materialSwitch(
                  inputId = "logY",
                  value = FALSE,
                  status = "primary"
-               ),
+               )
+            ), # log col
+            column(
+              2,
              #bring up switch for going between HL and NG release plots
              conditionalPanel(
                condition = "input.system == 'all' && input.weight == 'TOTAL_RELEASE'",
@@ -297,7 +304,7 @@ body <- dashboardBody(
             ), # close control fluidRow
             br(),
         fluidRow(
-          widht = 12,
+          width = 12,
             div(
               style = "position:relative",
               conditionalPanel(
