@@ -1360,15 +1360,10 @@ shinyServer( function(input, output, session) {
     }
   })
 
-  waitress <- Waitress$new("#timePlot") # call the waitress
-  
+
  #### create plots based on button behavior ####
   output$timePlot <- renderPlot({ 
-    for(i in 1:10){
-      waitress$inc(10) # increase by 10%
-      Sys.sleep(.1)
-    }
-    on.exit(waitress$close())
+    
     #for year
     if(input$system == "all" & input$weight == "TOTAL_RELEASE"){
       df <- plotData() %>%
