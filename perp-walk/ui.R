@@ -250,66 +250,67 @@ body <- dashboardBody(
         autoWaiter(),
         box(width = 12,
             br(),
-            column(
-              3,
-              #tags$h4("Controls"),
-              #h6("Time Period"),
-              switchInput(
-                label = "<i class=\"fa-solid fa-calendar-days\"></i>",
-                inputId = "periodSwitch",
-                value = F,
-                onLabel = "Year",
-                offLabel = "Month",
-                onStatus = "info",
-                offStatus = "primary"
-                )
-            ), #period col
-            column(
-              6,
-              #h6("Point Size"),
-              pickerInput(
-                 inputId = "sizeButton",
-                 choices = c("None" = "",
-                             "TOTAL_COST_CURRENT" = "Cost",
-                             "FATAL" = "Deaths",
-                             "INJURE" = "Injuries",
-                             "mileage" = "Operator Miles",
-                             "NUM_PUB_EVACUATED" = "Evacuations"),
-                 options = list(style = "btn-primary")
+            div(
+              id = "buttonBar",
+              column(
+                3,
+                h4("Controls"),
+                h6("Period"),
+                switchInput(
+                  label = "<i class=\"fa-solid fa-calendar-days\"></i>",
+                  inputId = "periodSwitch",
+                  value = F,
+                  onLabel = "Year",
+                  offLabel = "Month",
+                  onStatus = "info",
+                  offStatus = "primary"
+                  ),
+                h6("Size"),
+                radioGroupButtons(
+                  inputId = "sizeButton",
+                  choiceNames = c("None",
+                                  "Cost",
+                                  "Deaths",
+                                  "Injured",
+                                  "Operator Mileage",
+                                  "Evacuations"),
+                  choiceValues = c("",
+                                   "TOTAL_COST_CURRENT",
+                                   "FATAL",
+                                   "INJURE",
+                                   "mileage",
+                                   "NUM_PUB_EVACUATED"),
+                  status = "primary",
+                  direction = "vertical"
+                ),
+                h6("Log Y-Axis"),
+                materialSwitch(
+                   inputId = "logY",
+                   value = FALSE,
+                   status = "primary"
+                 ),
+               #bring up switch for going between HL and NG release plots
+               conditionalPanel(
+                 condition = "input.system == 'all' && input.weight == 'TOTAL_RELEASE'",
+                 h6("System"),
+                 switchInput(
+                   label = "<i class=\"fa-solid fa-industry\"></i>",
+                   inputId = "relSys",
+                   value = F,
+                   onLabel = "HL",
+                   offLabel = "Gas",
+                   onStatus = "warning",
+                   offStatus = "primary")
                  )
-            ), # radio col
-             # h6("Log Y-Axis"),
-            column(
-              1,
-              materialSwitch(
-                 inputId = "logY",
-                 value = FALSE,
-                 status = "primary"
-               )
-            ), # log col
-            column(
-              2,
-             #bring up switch for going between HL and NG release plots
-             conditionalPanel(
-               condition = "input.system == 'all' && input.weight == 'TOTAL_RELEASE'",
-               switchInput(
-                 label = "<i class=\"fa-solid fa-industry\"></i>",
-                 inputId = "relSys",
-                 value = F,
-                 onLabel = "HL",
-                 offLabel = "Gas",
-                 onStatus = "warning",
-                 offStatus = "primary")
-               )
-            ), # close control fluidRow
-            br(),
-        fluidRow(
-          width = 12,
+               ) # close col
+            ), # close control div
+        column(
+          width = 9,
             div(
               style = "position:relative",
               conditionalPanel(
                 condition = "input.system != 'all' || input.weight != 'TOTAL_RELEASE' || input.relSys == false ",
-                plotOutput("timePlot", width = "90%",
+                plotOutput("timePlot",width = "90%", height = "66vh",
                            hover = hoverOpts("plot_hover", delay = 100, delayType = "debounce")),
                 uiOutput("hover_info")
               ), #cond pan
@@ -317,7 +318,7 @@ body <- dashboardBody(
               # HL Release Plot
               conditionalPanel(
                 condition = "input.system == 'all' && input.weight == 'TOTAL_RELEASE' && input.relSys == true",
-                plotOutput("hlTimePlot", width = "90%",
+                plotOutput("hlTimePlot", width = "90%", height = "66vh",
                            hover = hoverOpts("hl_hover", delay = 100, delayType = "debounce")),
                 uiOutput("hl_info")
               ) #cond pan
