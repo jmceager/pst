@@ -173,11 +173,15 @@ body <- dashboardBody(
         )
       )
     ),
-    #map
+    #### maptab ####
     tabItem(
       tabName = "leafs",
       fluidPage(
-        leafletOutput("incMap", height = "89vh")
+        box(
+          height = "87vh",
+          width = 12,
+          leafletOutput("incMap", height = "87vh")
+        )
       )
     ),
     #### value boxes? landing page?  ####
@@ -249,12 +253,13 @@ body <- dashboardBody(
       fluidRow(
         autoWaiter(),
         box(width = 12,
+            height = "89vh",
             br(),
             div(
               id = "buttonBar",
               column(
-                3,
-                h4("Controls"),
+                2,
+                h4("Options"),
                 h6("Period"),
                 switchInput(
                   label = "<i class=\"fa-solid fa-calendar-days\"></i>",
@@ -291,6 +296,7 @@ body <- dashboardBody(
                  ),
                #bring up switch for going between HL and NG release plots
                conditionalPanel(
+                 id = "conditionButton",
                  condition = "input.system == 'all' && input.weight == 'TOTAL_RELEASE'",
                  h6("System"),
                  switchInput(
@@ -305,12 +311,12 @@ body <- dashboardBody(
                ) # close col
             ), # close control div
         column(
-          width = 9,
+          width = 10,
             div(
               style = "position:relative",
               conditionalPanel(
                 condition = "input.system != 'all' || input.weight != 'TOTAL_RELEASE' || input.relSys == false ",
-                plotOutput("timePlot",width = "90%", height = "66vh",
+                plotOutput("timePlot",width = "100%", 
                            hover = hoverOpts("plot_hover", delay = 100, delayType = "debounce")),
                 uiOutput("hover_info")
               ), #cond pan
@@ -318,7 +324,7 @@ body <- dashboardBody(
               # HL Release Plot
               conditionalPanel(
                 condition = "input.system == 'all' && input.weight == 'TOTAL_RELEASE' && input.relSys == true",
-                plotOutput("hlTimePlot", width = "90%", height = "66vh",
+                plotOutput("hlTimePlot", width = "100%", 
                            hover = hoverOpts("hl_hover", delay = 100, delayType = "debounce")),
                 uiOutput("hl_info")
               ) #cond pan
