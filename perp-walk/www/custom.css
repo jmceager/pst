@@ -176,6 +176,17 @@ Starting with content, navbar, logo
   color:#ffffff;
 }
 
+#buttonBar .col-sm-3 {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-items: center;
+}
+
+#buttonBar .col-sm-3 h4, h6 {
+  color: #ffffff;
+}
+
 #timePlot .text{
   font-family:  "Montserrat", sans-serif;;
 }
