@@ -177,8 +177,12 @@ Starting with content, navbar, logo
 }
 
 #tlBox {
+  border-radius: 12px;
+  border-top: 0px;
+  box-shadow: 4px 4px 16px rgba(0,0,0,.15);
   height: 89vh !important;
   overflow: hidden;
+  background: linear-gradient(to right, #314249 17%, #222d32 0%);
 }
 
 #buttonCol {
@@ -209,7 +213,7 @@ Starting with content, navbar, logo
    font-family: "Montserrat", sans-serif;
 }
 
-.bootstrap-switch {
+.bootstrap-switch .bootstrap-switch-label {
   font-size: 0.9em;
 }
 
