@@ -121,7 +121,7 @@ Starting with content, navbar, logo
 /*background gradient??? */
 .content-wrapper {
   min-height: 100vh !important;
-  overflow: auto;
+  overflow: scroll;
   background: rgb(15,32,39);
   background: -moz-linear-gradient(339deg, rgba(15,32,39,1) 0%, rgba(0,62,89,1) 33%, rgba(69,145,151,1) 66%, rgba(97,168,147,1) 100%);
   background: -webkit-linear-gradient(339deg, rgba(15,32,39,1) 0%, rgba(0,62,89,1) 33%, rgba(69,145,151,1) 66%, rgba(97,168,147,1) 100%);
@@ -176,14 +176,21 @@ Starting with content, navbar, logo
   color:#ffffff;
 }
 
-#buttonBar .col-sm-2 {
+#tlBox {
+  height: 89vh !important;
+  overflow: hidden;
+}
+
+#buttonCol {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-items: center;
+  max-height: 100%;
+  overflow-y: scroll;
 }
 
-#buttonBar .col-sm-2 h4, h6 {
+#buttonCol h4, h6 {
   color: #ffffff;
 }
 
@@ -202,9 +209,10 @@ Starting with content, navbar, logo
    font-family: "Montserrat", sans-serif;
 }
 
-.bootstrap-switch .tect{
-  font-size: 1em;
+.bootstrap-switch {
+  font-size: 0.9em;
 }
+
 
 /* styling valueboxes:
 according to yes/no values = yellow / red 
