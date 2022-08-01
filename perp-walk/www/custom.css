@@ -109,7 +109,7 @@ Starting with content, navbar, logo
 
 /* plot stuff */
 #timePlot, #hlTimePlot {
-  height: 66vh !important;
+  height: 80vh !important;
 }
 
 .ggtip {
@@ -176,23 +176,34 @@ Starting with content, navbar, logo
   color:#ffffff;
 }
 
-#buttonBar .col-sm-3 {
+#buttonBar .col-sm-2 {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-items: center;
 }
 
-#buttonBar .col-sm-3 h4, h6 {
+#buttonBar .col-sm-2 h4, h6 {
   color: #ffffff;
 }
 
+#conditionButton {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-items: center;
+}
+
 #timePlot .text{
-  font-family:  "Montserrat", sans-serif;;
+  font-family:  "Montserrat", sans-serif;
 }
 
 #hlTimePlot .text{
    font-family: "Montserrat", sans-serif;
+}
+
+.bootstrap-switch .tect{
+  font-size: 1em;
 }
 
 /* styling valueboxes:
