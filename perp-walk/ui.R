@@ -253,11 +253,10 @@ body <- dashboardBody(
       fluidRow(
         autoWaiter(),
         box(width = 12,
-            height = "89vh",
+            id = "tlBox",
             br(),
-            div(
-              id = "buttonBar",
-              column(
+            column(
+                id = "buttonCol",
                 2,
                 h4("Options"),
                 h6("Period"),
@@ -308,8 +307,7 @@ body <- dashboardBody(
                    onStatus = "warning",
                    offStatus = "primary")
                  )
-               ) # close col
-            ), # close control div
+            ), # close col
         column(
           width = 10,
             div(
