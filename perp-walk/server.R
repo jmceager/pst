@@ -1410,7 +1410,7 @@ shinyServer( function(input, output, session) {
       theme_pst(font = pstFont)
   })
 
-
+##TODO: update tooltip so if its in bottom half it goes up, and left side goes right
   output$hlTimePlot <- renderPlot({
     # data 
     df <- filter(plotData(), grepl("HL", SYS))

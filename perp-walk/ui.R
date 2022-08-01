@@ -21,9 +21,7 @@
 # formals(icon) <- fargs
 
 # TODO: Fix waiter auto load
-# TODO: center plot in timeline box, fix resizing issues
 # TODO: add overlay for educational purposes 
-# TODO: fix picker input issues
 
 # load data just for date 
 recentInc <- incs %>%
