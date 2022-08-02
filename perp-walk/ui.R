@@ -178,7 +178,7 @@ body <- dashboardBody(
         box(
           height = "87vh",
           width = 12,
-          leafletOutput("incMap", height = "87vh")
+          leafletOutput("incMap", height = "84vh")
         )
       )
     ),
