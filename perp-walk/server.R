@@ -1,72 +1,13 @@
-#Perp Walk (name in progress) dashboard
-#    http://shiny.rstudio.com/
-# library(shiny)
-# library(shinyWidgets)
-# library(reactable)
-# library(tidyverse)
-# library(shinydashboard)
-# library(lubridate)
-# library(scales)
-# library(leaflet)
-# library(leaflet.providers)
-# library(htmltools)
-# library(htmlwidgets)
-# library(waiter)
-# library(showtext)
-# library(thematic)
-#> Loading required package: sysfonts
-#> Loading required package: showtextdb
+#worst incidents of month dashboard server side
+
 dir.create('~/.fonts')
 file.copy("www/Montserrat.ttf", "~/.fonts")
 system('fc-cache -f ~/.fonts')
 pstFont = "Montserrat"
-#moved helper functions to separate script
-#source("helpfun.R")
-
-#### themes ####
 
 #set ggplot theme to function 
 ggplot2::theme_set(theme_minimal())
-#thematic_shiny(font = "Montserrat")
-# sysCol <- c("GD Perp" = "#6a3d9a",
-#             "GD" = "#cab2d6",
-#             "GT Perp" = "#1f78b4",
-#             "GT" = "#a6cee3",
-#             "HL Perp" = "#ff7f00",
-#             "HL" = "#fdbf6f")
-# 
-# fargs <- formals(icon)
-# fargs$verify_fa <- FALSE
-# formals(icon) <- fargs
-#   
-# 
-# #### data load ####
-# #loading data
-# incs <- read_csv("https://raw.githubusercontent.com/jmceager/pst/main/phmsa-clean/data/clean/all_inc.csv") %>%
-#   mutate(COMMODITY_RELEASED_TYPE = if_else(
-#     COMMODITY_RELEASED_TYPE == "REFINED AND/OR PETROLEUM PRODUCT (NON-HVL) WHICH IS A LIQUID AT AMBIENT CONDITIONS",
-#     "NON-HVL REFINED AND/OR PETROL PRODUCT",
-#     if_else(COMMODITY_RELEASED_TYPE == "HVL OR OTHER FLAMMABLE OR TOXIC FLUID WHICH IS A GAS AT AMBIENT CONDITIONS",
-#             "HVL OR FLAMMABLE OR TOXIC FLUID",
-#             if_else(COMMODITY_RELEASED_TYPE == "BIOFUEL / ALTERNATIVE FUEL(INCLUDING ETHANOL BLENDS)",
-#                     "BIOFUEL / ALT FUEL", COMMODITY_RELEASED_TYPE)))
-#   )%>%
-#   dplyr::filter(!grepl("GG",SYS), !grepl("UNGS",SYS)) %>% # dont need gathering or ungs
-#   mutate(daytxt = as.character(MDY, format = "%b %d, %Y"), 
-#          NUM_PUB_EVACUATED = replace_na(NUM_PUB_EVACUATED, 0),
-#          humans = FATAL + INJURE,
-#          IMONTH = month(MDY)) 
-#   
-# tab_cols <- c("NAME", "MDY","cleanLoc",  "FATAL","INJURE",
-#               "NUM_PUB_EVACUATED","IGNITE_IND","EXPLODE_IND",
-#               "COMMODITY_RELEASED_TYPE", "STATE",
-#               "TOTAL_RELEASE","TOTAL_COST_CURRENT","CAUSE", "NARRATIVE")
-# 
-# all_cols <- c("NAME", "MDY", "cleanLoc", "SYS","FATAL","INJURE",
-#               "NUM_PUB_EVACUATED","IGNITE_IND","EXPLODE_IND",
-#               "TOTAL_RELEASE", "UNITS","COMMODITY_RELEASED_TYPE", 
-#               "TOTAL_COST_CURRENT","CAUSE", "NARRATIVE", "STATE")
-# 
+
 
 #### server start #####
 # Define server logic required to draw a histogram

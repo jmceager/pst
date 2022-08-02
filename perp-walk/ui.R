@@ -1,24 +1,5 @@
-#this is a shiny app 
-#it is not actually shiny, thats just the name of the app
-# library(shiny)
-# library(shinyWidgets)
-# library(reactable)
-# library(tidyverse)
-# library(shinydashboard)
-# library(lubridate)
-# library(scales)
-# library(leaflet)
-# library(leaflet.providers)
-# library(htmltools)
-# library(htmlwidgets)
-# library(waiter)
-# 
-# #moved helper functions to separate script
-# source("helpfun.R")
-
-# fargs <- formals(icon)
-# fargs$verify_fa <- FALSE
-# formals(icon) <- fargs
+#worst incidents of month dashboard server side
+# this is a shiny app that isnt very shiny at all
 
 # TODO: Fix waiter auto load
 # TODO: add overlay for educational purposes 
