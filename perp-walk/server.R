@@ -464,15 +464,15 @@ shinyServer( function(input, output, session) {
               if(galRel > 0 && mscfRel > 0){
                 galRel = galRel.toLocaleString('en-US').split('.')[0]
                 mscfRel = mscfRel.toLocaleString('en-US').split('.')[0]
-                return [galRel, ' Gal; ', mscfRel, ' mscf']
+                return [galRel + ' Gal; '+ mscfRel + ' mscf']
               }
               else if(galRel >0 && mscfRel == 0){
                 galRel = galRel.toLocaleString('en-US').split('.')[0]
-                return [galRel, ' Gal']
+                return [galRel + ' Gal']
               }
               else{
                 mscfRel = mscfRel.toLocaleString('en-US').split('.')[0]
-                return [mscfRel, ' mscf']
+                return [mscfRel + ' mscf']
               }
               }"
             ),
