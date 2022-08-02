@@ -33,7 +33,8 @@ miles <- read.csv("data/raw/GD_MilesDecadeAge.csv") %>%
          IYEAR = Calendar.Year)%>%
   #give snapshots of operator's yearly mileage to match incident years
   group_by(OPERATOR_ID, SYSTEM_TYPE, STATE, IYEAR)%>% 
-  summarise(mileage = sum(mileage, na.rm = T))
+  summarise(mileage = sum(mileage, na.rm = T))%>%
+  mutate(SYS = str_sub(SYSTEM_TYPE, 1,2))
 
 ## note: possible to add mileage for install_decade? 
 ## note: possible handling of on/offshore mileage 
@@ -101,7 +102,7 @@ gd.full <- read_xlsx("data/raw/gd2010toPresent.xlsx", sheet = 2) %>%
          ILOC = paste(str_to_title(LOCATION_CITY_NAME),LOCATION_STATE_ABBREVIATION, sep = ", "),
          STATE = LOCATION_STATE_ABBREVIATION) %>%
   locCleaner(., "ILOC", lat= "LOCATION_LATITUDE", lon = "LOCATION_LONGITUDE")%>%
-  left_join(miles, by = c("OPERATOR_ID", "SYSTEM_TYPE", "STATE","IYEAR"))%>%
+  left_join(miles, by = c("OPERATOR_ID", "SYS", "STATE","IYEAR"))%>%
   mutate(mileage = replace_na(mileage, 0)) %>%
   left_join(ops.simple, by = c("OPERATOR_ID" = "sub.id"))%>% 
   distinct(NARRATIVE, .keep_all = T)
@@ -143,7 +144,7 @@ gt.full <- read_xlsx("./data/raw/gtggungs2010toPresent.xlsx", sheet = 2) %>%
          STATE = if_else(is.na(STATE),locState(LOCATION_LATITUDE, LOCATION_LONGITUDE),STATE)  
     )%>%
   locCleaner(.,"ILOC","LOCATION_LATITUDE","LOCATION_LONGITUDE", "OFF_ACCIDENT_ORIGIN")%>%
-  left_join(miles, by = c("OPERATOR_ID", "SYSTEM_TYPE", "STATE","IYEAR"))%>%
+  left_join(miles, by = c("OPERATOR_ID", "SYS", "STATE","IYEAR"))%>%
   mutate(mileage = replace_na(mileage, 0))%>%
   left_join(ops.simple, by = c("OPERATOR_ID" = "sub.id"))%>% 
   distinct(NARRATIVE, .keep_all = T)
@@ -185,7 +186,7 @@ hl.full <- read_xlsx("./data/raw/hl2010toPresent.xlsx", sheet = 2)%>%
          STATE = if_else(is.na(STATE),locState(LOCATION_LATITUDE, LOCATION_LONGITUDE),STATE) 
         )%>%
   locCleaner(.,"ILOC","LOCATION_LATITUDE","LOCATION_LONGITUDE", "OFF_ACCIDENT_ORIGIN")%>%
-  left_join(miles, by = c("OPERATOR_ID", "SYSTEM_TYPE", "STATE","IYEAR"))%>%
+  left_join(miles, by = c("OPERATOR_ID", "SYS", "STATE","IYEAR"))%>%
   mutate(mileage = replace_na(mileage, 0))%>%
   left_join(ops.simple, by = c("OPERATOR_ID" = "sub.id"))%>% 
   distinct(NARRATIVE, .keep_all = T)
