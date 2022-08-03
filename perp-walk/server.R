@@ -13,6 +13,9 @@ ggplot2::theme_set(theme_minimal())
 # Define server logic required to draw a histogram
 shinyServer( function(input, output, session) {
   
+  #### waiter ####
+  w <- Waiter$new(id = c("timePlot","hlTimePlot"))
+  
   #### header stuff ####
   helpMessage <- reactive({
     if(input$tabs == "now"){
@@ -260,7 +263,8 @@ shinyServer( function(input, output, session) {
   
   #### Reactable frequent offenders####
   #count number of instances per subsidiary operator 
-  output$repeatPerps <- renderReactable(
+  output$repeatPerps <- renderReactable({
+    
     if(input$system == "all"){
       #setup reactable data
       iR <- incidentReact()%>%
@@ -695,7 +699,7 @@ shinyServer( function(input, output, session) {
           )
         )
     }
-  )
+  })
   
   
   
@@ -1300,7 +1304,7 @@ shinyServer( function(input, output, session) {
 
  #### create plots based on button behavior ####
   output$timePlot <- renderPlot({ 
-    
+    w$show()
     #for year
     if(input$system == "all" & input$weight == "TOTAL_RELEASE"){
       df <- plotData() %>%
@@ -1353,6 +1357,7 @@ shinyServer( function(input, output, session) {
 
 ##TODO: update tooltip so if its in bottom half it goes up, and left side goes right
   output$hlTimePlot <- renderPlot({
+    w$show()
     # data 
     df <- filter(plotData(), grepl("HL", SYS))
     #the actual plot
@@ -1391,8 +1396,7 @@ shinyServer( function(input, output, session) {
       theme_pst(font = pstFont)
   })
   
-  waiter_hide()
-  
+
   #### GGPlot Tooltips ####
   output$hover_info <- renderUI({
     ## get relevant data 
