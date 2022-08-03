@@ -2,7 +2,9 @@
 # this is a shiny app that isnt very shiny at all
 
 # TODO: Fix waiter auto load
-# TODO: add overlay for educational purposes 
+# TODO: add overlay for educational purposes - intro.js
+# TODO: some locations in allinc not quite figuring their stuff out
+# TODO: reformat and style code to be consistent with standards 
 
 # load data just for date 
 recentInc <- incs %>%
@@ -167,7 +169,7 @@ body <- dashboardBody(
     tabItem(
       tabName = "now",
       useWaiter(), 
-      waiterShowOnLoad(html = spin_ripple()),
+      waiterPreloader(html = spin_ripple()),
       fluidRow(
         conditionalPanel(
           condition = "input.system == 'all' || input.system == 'GD'",
@@ -230,7 +232,6 @@ body <- dashboardBody(
     tabItem(
       tabName = "timeline",
       fluidRow(
-        autoWaiter(),
         box(width = 12,
             id = "tlBox",
             br(),
