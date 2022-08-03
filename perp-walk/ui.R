@@ -120,6 +120,7 @@ sidebar <- dashboardSidebar(
 body <- dashboardBody(
   tags$head(tags$title("Culprit Call-Out"),
             tags$link(rel = "stylesheet", type = "text/css", href = "custom.css"),
+            tags$link(rel = "icon", href = "www/favicon.ico"),
             tags$head(includeHTML(("google-analytics.html"))),
             tags$script('
                         var width = 0;
