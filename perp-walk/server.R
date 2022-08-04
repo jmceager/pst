@@ -1341,7 +1341,10 @@ shinyServer( function(input, output, session) {
                    name = ""
                    )+
       scale_size(name = str_wrap(prettysize(),15),
-                 limits = c(0, max(df[[input$sizeButton]])))+
+                 limits = c(0, max(df[[input$sizeButton]])),
+                 labels = ifelse(input$sizeButton == "TOTAL_COST_CURRENT",
+                                  scales::dollar_format(scale = .001, suffix = " K"),
+                                  scales::comma_format())  )+
       scale_y_continuous(name = prettyweight(),
                          trans = if_else(input$logY == T, "pseudo_log","identity"),
                          breaks = yBreak(df[[input$weight]], input$logY,"b"),
@@ -1383,7 +1386,10 @@ shinyServer( function(input, output, session) {
                    name = ""
                    )+
       scale_size(name = str_wrap(prettysize(),15),
-                 limits = c(0, max(df[[input$sizeButton]])))+
+                 limits = c(0, max(df[[input$sizeButton]])),
+                 labels = ifelse(input$sizeButton == "TOTAL_COST_CURRENT",
+                                 scales::dollar_format(scale = .001, suffix = " K"),
+                                 scales::comma_format()))+
       scale_y_continuous(name = prettyweight(),
                          trans = if_else(input$logY == T, "pseudo_log","identity"),
                          breaks = yBreak(filter(plotData(),grepl("HL", SYS))[[input$weight]],
