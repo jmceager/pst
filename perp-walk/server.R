@@ -1305,6 +1305,9 @@ shinyServer( function(input, output, session) {
  #### create plots based on button behavior ####
   output$timePlot <- renderPlot({ 
     w$show()
+    on.exit({
+      w$hide()
+    })
     #for year
     if(input$system == "all" & input$weight == "TOTAL_RELEASE"){
       df <- plotData() %>%
@@ -1358,6 +1361,9 @@ shinyServer( function(input, output, session) {
 ##TODO: update tooltip so if its in bottom half it goes up, and left side goes right
   output$hlTimePlot <- renderPlot({
     w$show()
+    on.exit({
+      w$hide()
+    })
     # data 
     df <- filter(plotData(), grepl("HL", SYS))
     #the actual plot
