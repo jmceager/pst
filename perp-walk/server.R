@@ -320,8 +320,38 @@ shinyServer( function(input, output, session) {
                          show = F),
             STATE = colDef(aggregate = "unique",
                            name = "States"),
-            SYS = colDef(aggregate = "unique",
-                            name = "System"),
+            SYS = colDef(aggregate = JS(
+              "function(values, rows){
+              let systems = []
+              rows.forEach(function(row){
+                if (!systems.includes(row['SYS'])){
+                  systems.push(row['SYS'])
+                }
+              })
+              
+              const hlCol = '#ff7f00'
+              const gdCol = '#6a3d9a'
+              const gtCol = '#1f78b4'
+              
+              systems.forEach(function(sys, i){
+                if (sys === 'HL'){
+                  systems[i] = '<span style = \"color:#ff7f00;  \">' + sys + '</span>'
+                }
+                else if (sys === 'GD'){
+                  systems[i] = '<span style = \"color:#6a3d9a; \">' +  sys + '</span>'
+                }
+                else {
+                  systems[i] = '<span style = \"color:#1f78b4; \">' +  sys + '</span>'
+                }
+              })
+              
+              let styledList = '<div style = \"font-weight:600; font-size: 1.1em;\">' +
+                               systems.join(', ') + '</div>'
+              return styledList
+              }"
+            ),
+                         name = "System",
+                         html = T),
             FATAL = colDef(name = "Deaths",
                            html = T,
                            align = "center",
@@ -340,7 +370,7 @@ shinyServer( function(input, output, session) {
                              )
                                
                              const label = '<div style=\"position: absolute; top: 50%; left: 50%; ' +
-                                   'color:black; font-size:1.1vw; font-weight:600;'+
+                                   'color:black; font-size:1.1em; font-weight:600;'+
                                    'transform: translate(-50%, -50%); \">' + fatal + '</div>'
                                
                              return '<div style=\"display: inline-flex; position: relative\">' + gradCircle + label + '</div>'
@@ -364,7 +394,7 @@ shinyServer( function(input, output, session) {
                                )
                                  
                                const label = '<div style=\"position: absolute; top: 50%; left: 50%; ' +
-                                     'color:black; font-size:1.1vw;font-weight:600; '+
+                                     'color:black; font-size:1.1em;font-weight:600; '+
                                      'transform: translate(-50%, -50%); \">' + injure + '</div>'
                                  
                                return '<div style=\"display: inline-flex; position: relative\">' + gradCircle + label + '</div>'
@@ -388,7 +418,7 @@ shinyServer( function(input, output, session) {
                                          )
                                            
                                          const label = '<div style=\"position: absolute; top: 50%; left: 50%; ' +
-                                               'color:black; font-size:1.1vw; font-weight:600;'+
+                                               'color:black; font-size:1.1em; font-weight:600;'+
                                                'transform: translate(-50%, -50%); \">' + evac + '</div>'
                                            
                                          return '<div style=\"display: inline-flex; position: relative\">' + gradCircle + label + '</div>'
