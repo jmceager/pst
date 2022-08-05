@@ -567,7 +567,10 @@ shinyServer( function(input, output, session) {
                                              )),
             CAUSE = colDef(name = "Cause"),
             cleanLoc = colDef(name = "Place"),
-            MDY = colDef(name = "Date"),
+            MDY = colDef(name = "Date",
+                         style = function(value, index, name){
+                           formDate(value)
+                         }),
             IGIN = colDef(show = F),
             EXIN = colDef(show = F),
             FS = colDef(show = F),
