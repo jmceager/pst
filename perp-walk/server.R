@@ -366,6 +366,13 @@ shinyServer( function(input, output, session) {
             FATAL = colDef(name = "Deaths",
                            html = T,
                            align = "center",
+                           cell = function(value, index){
+                             valStyle = if_else(value > 0, 
+                                                "font-weight:600;",
+                                                "font-weight:300;")
+                             div(style = valStyle,
+                                 value)
+                           },
                            aggregate = JS(
                              "function(values, rows){
                              let fatal = 0 
@@ -390,6 +397,13 @@ shinyServer( function(input, output, session) {
             INJURE = colDef(name = "Injuries",
                             html = T,
                             align = "center",
+                            cell = function(value, index){
+                              valStyle = if_else(value > 0, 
+                                                 "font-weight:600;",
+                                                 "font-weight:300;")
+                              div(style = valStyle,
+                                  value)
+                            },
                             aggregate = JS(
                               "function(values, rows){
                                let injure = 0 
@@ -414,6 +428,13 @@ shinyServer( function(input, output, session) {
             NUM_PUB_EVACUATED = colDef(name = "Public Evacuated",
                                        html = T,
                                        align = "center",
+                                       cell = function(value, index){
+                                         valStyle = if_else(value > 0, 
+                                                            "font-weight:600;",
+                                                            "font-weight:300;")
+                                         div(style = valStyle,
+                                             value)
+                                       },
                                        aggregate = JS(
                                          "function(values, rows){
                                          let evac = 0 
