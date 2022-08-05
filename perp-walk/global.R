@@ -337,5 +337,5 @@ all_cols <- c("NAME", "MDY", "cleanLoc", "SYS","FATAL","INJURE",
               "TOTAL_RELEASE", "UNITS","COMMODITY_RELEASED_TYPE", 
               "TOTAL_COST_CURRENT","CAUSE", "NARRATIVE", "STATE")
 
-
+formDate <- stamp("31 March, 2022", orders = "dmy")
 
