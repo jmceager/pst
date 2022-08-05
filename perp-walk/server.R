@@ -297,10 +297,10 @@ shinyServer( function(input, output, session) {
         select(NAME)
       
       #filter
-      iR%>%
-        filter(NAME %in% iList$NAME)%>%
+      iR <- filter(iR, NAME %in% iList$NAME)
         ## reactable starts here
         reactable(
+          data = iR,
           groupBy = "NAME",
           striped = TRUE,
           highlight = TRUE,
@@ -463,8 +463,17 @@ shinyServer( function(input, output, session) {
               }"
             ),
                                    name = "Release Size",
-                                   format = colFormat(digits = 0,
-                                                      separators = T)),
+                                   cell = function(value, index){
+                                     unit <- iR$UNITS[index]
+                                     valForm <- comma(value, accuracy = 1)
+                                     div(
+                                       div(style = "font-weight:500; font-size: 1em;",
+                                           valForm),
+                                       div(style = "font-weight:300; font-size:.85em;",
+                                           unit)
+                                     )
+                                     
+                                   }),
             IGNITE_IND = colDef(name = "Fire",
                                 html = T,
                                 align = "center",
