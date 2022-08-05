@@ -477,6 +477,12 @@ shinyServer( function(input, output, session) {
             IGNITE_IND = colDef(name = "Fire",
                                 html = T,
                                 align = "center",
+                                cell = function(value, index){
+                                  div(style = if_else(value == "YES",
+                                                      "font-weight:600;",
+                                                      "font:weight:300;"),
+                                      value)
+                                },
                                 aggregate = JS(
                                 "function(values,rows){
                                  let totalFire = 0
@@ -507,6 +513,12 @@ shinyServer( function(input, output, session) {
             EXPLODE_IND = colDef(name = "Explosion",
                                  html = T,
                                  align = "center",
+                                 cell = function(value, index){
+                                   div(style = if_else(value == "YES",
+                                                       "font-weight:600;",
+                                                       "font:weight:300;"),
+                                       value)
+                                 },
                                  aggregate = JS(
                                    "function(values,rows){
                                     let totalExp = 0
