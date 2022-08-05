@@ -281,8 +281,7 @@ shinyServer( function(input, output, session) {
         filter(inc >= 2)%>%
         ungroup()%>%
         select(!NARRATIVE)%>%
-        mutate(STATE = replace_na(STATE, "Offshore"),
-               igCol = colorScale(IGIN, pal = "YlOrRd", scale = "P"),
+        mutate(igCol = colorScale(IGIN, pal = "YlOrRd", scale = "P"),
                exCol = colorScale(EXIN, pal = "YlOrRd", scale = "P"),
                fCol = colorScale(FS, pal = "OrRd", scale = "N"),
                iCol = colorScale(IS, pal = "OrRd", scale = "N"),
@@ -584,7 +583,9 @@ shinyServer( function(input, output, session) {
                                           rows.forEach(function(row) {
                                             dCost += row['TOTAL_COST_CURRENT']
                                           })
+                                          
                                           let finalCost = '$' + numFormatter(dCost) 
+                                          
                                           return finalCost
                                           }"
                                         ),
@@ -642,12 +643,23 @@ shinyServer( function(input, output, session) {
       #setup reactable data
       iR <- incidentReact()%>%
         ungroup()%>%
+        mutate(IGIN = if_else(IGNITE_IND == "YES", 1, 0),
+               EXIN = if_else(EXPLODE_IND == "YES", 1, 0))%>%
         group_by(NAME)%>%
-        mutate(inc = n())%>%
+        mutate(inc = n(),
+               IGIN = sum(IGIN)/inc,
+               EXIN = sum(EXIN)/inc,
+               FS = sum(FATAL),
+               IS = sum(INJURE),
+               ES = sum(NUM_PUB_EVACUATED))%>%
         filter(inc >= 2)%>%
         ungroup()%>%
         select(!NARRATIVE)%>%
-        mutate(STATE = replace_na(STATE, "Offshore"))
+        mutate(igCol = colorScale(IGIN, pal = "YlOrRd", scale = "P"),
+               exCol = colorScale(EXIN, pal = "YlOrRd", scale = "P"),
+               fCol = colorScale(FS, pal = "OrRd", scale = "N"),
+               iCol = colorScale(IS, pal = "OrRd", scale = "N"),
+               eCol = colorScale(ES, pal = "Oranges", scale = "N", begin = .4))
       
       #get top 10 names including ties
       iList <- iR %>%
@@ -658,36 +670,167 @@ shinyServer( function(input, output, session) {
         select(NAME)
       
       #filter
-      iR%>%
-        filter(NAME %in% iList$NAME)%>%
-        reactable(
-          groupBy = "NAME",
-          striped = TRUE,
-          highlight = TRUE,
-          sortable = TRUE,
-          showPageSizeOptions = TRUE,
-          showSortable = TRUE,
-          defaultColDef = colDef(
-            align = "center"
+      iR <- filter(iR, NAME %in% iList$NAME)
+      ## reactable starts here
+      reactable(
+        data = iR,
+        groupBy = "NAME",
+        striped = TRUE,
+        highlight = TRUE,
+        sortable = TRUE,
+        showPageSizeOptions = TRUE,
+        showSortable = TRUE,
+        defaultColDef = colDef(
+          align = "center"
+        ),
+        #    defaultSorted = list(inc = "desc"),
+        columns = list(
+          NAME = colDef(width = 150, 
+                        align = "left",
+                        name = "Operator"),
+          inc = colDef(name = "Perp Count", 
+                       defaultSortOrder = "desc",
+                       show = F),
+          STATE = colDef(aggregate = "unique",
+                         name = "States"),
+          SYS = colDef(aggregate = JS(
+            "function(values, rows){
+              let systems = []
+              rows.forEach(function(row){
+                if (!systems.includes(row['SYS'])){
+                  systems.push(row['SYS'])
+                }
+              })
+              
+              const hlCol = '#ff7f00'
+              const gdCol = '#6a3d9a'
+              const gtCol = '#1f78b4'
+              
+              systems.forEach(function(sys, i){
+                if (sys === 'HL'){
+                  systems[i] = '<span style = \"color:#ff7f00;  \">' + sys + '</span>'
+                }
+                else if (sys === 'GD'){
+                  systems[i] = '<span style = \"color:#6a3d9a; \">' +  sys + '</span>'
+                }
+                else {
+                  systems[i] = '<span style = \"color:#1f78b4; \">' +  sys + '</span>'
+                }
+              })
+              
+              let styledList = '<div style = \"font-weight:600; font-size: 1.1em; \">' +
+                               systems.join('<span style = \"color:#ffffff; \">, </span>') + '</div>'
+              return styledList
+              }"
           ),
-          #    defaultSorted = list(inc = "desc"),
-          columns = list(
-            NAME = colDef(width = 150, 
-                          align = "left",
-                          name = "Operator"),
-            inc = colDef(name = "Perp Count", show = F),
-            STATE = colDef(aggregate = "unique",
-                           name = "States"),
-            SYS = colDef(aggregate = "unique",
-                            name = "System"),
-            FATAL = colDef(aggregate = "sum",
-                           name = "Deaths"),
-            INJURE = colDef(aggregate = "sum",
-                            name = "Injuries"),
-            NUM_PUB_EVACUATED = colDef(aggregate = "sum",
-                                       name = "Public Evacuated"),
-            TOTAL_RELEASE = colDef(aggregate = JS(
-              "function(values,rows){
+          name = "System",
+          html = T,
+          style = function(value, index, name) {
+            if (value == "HL") {
+              list(fontWeight = 500, color = "#ff7f00")
+            }
+            else if (value == "GD") {
+              list(fontWeight = 500, color = "#6a3d9a")
+            }
+            else {
+              list(fontWeight = 500, color = "#1f78b4")
+            }
+          }),
+          FATAL = colDef(name = "Deaths",
+                         html = T,
+                         align = "center",
+                         cell = function(value, index){
+                           valStyle = if_else(value > 0, 
+                                              "font-weight:600;",
+                                              "font-weight:300;")
+                           div(style = valStyle,
+                               value)
+                         },
+                         aggregate = JS(
+                           "function(values, rows){
+                             let fatal = 0 
+                             rows.forEach(function(row){
+                              fatal += row['FATAL']
+                              })
+                             const preCol = \"%23\"
+                             const circleColor = rows[0]['fCol']
+                             const gradCircle = (
+                               '<svg width=45 height=45 focusable=false>' +
+                                '<circle cx=22.5 cy=22.5 r=18 fill='+ circleColor + ' stroke-width=2 stroke=rgba(170,170,170,0.03)></circle>' +
+                               '</svg>'
+                             )
+                               
+                             const label = '<div style=\"position: absolute; top: 50%; left: 50%; ' +
+                                   'color:black; font-size:1.1em; font-weight:600;'+
+                                   'transform: translate(-50%, -50%); \">' + fatal + '</div>'
+                               
+                             return '<div style=\"display: inline-flex; position: relative\">' + gradCircle + label + '</div>'
+                             }"
+                         )),
+          INJURE = colDef(name = "Injuries",
+                          html = T,
+                          align = "center",
+                          cell = function(value, index){
+                            valStyle = if_else(value > 0, 
+                                               "font-weight:600;",
+                                               "font-weight:300;")
+                            div(style = valStyle,
+                                value)
+                          },
+                          aggregate = JS(
+                            "function(values, rows){
+                               let injure = 0 
+                               rows.forEach(function(row){
+                                injure += row['INJURE']
+                                })
+                               const preCol = \"%23\"
+                               const circleColor = rows[0]['iCol']
+                               const gradCircle = (
+                                 '<svg width=45 height=45 focusable=false>' +
+                                  '<circle cx=22.5 cy=22.5 r=18 fill='+ circleColor + ' stroke-width=2 stroke=rgba(170,170,170,0.03)></circle>' +
+                                 '</svg>'
+                               )
+                                 
+                               const label = '<div style=\"position: absolute; top: 50%; left: 50%; ' +
+                                     'color:black; font-size:1.1em;font-weight:600; '+
+                                     'transform: translate(-50%, -50%); \">' + injure + '</div>'
+                                 
+                               return '<div style=\"display: inline-flex; position: relative\">' + gradCircle + label + '</div>'
+                               }"
+                          )),
+          NUM_PUB_EVACUATED = colDef(name = "Public Evacuated",
+                                     html = T,
+                                     align = "center",
+                                     cell = function(value, index){
+                                       valStyle = if_else(value > 0, 
+                                                          "font-weight:600;",
+                                                          "font-weight:300;")
+                                       div(style = valStyle,
+                                           value)
+                                     },
+                                     aggregate = JS(
+                                       "function(values, rows){
+                                         let evac = 0 
+                                         rows.forEach(function(row){
+                                          evac += row['NUM_PUB_EVACUATED']
+                                          })
+                                         const preCol = \"%23\"
+                                         const circleColor = rows[0]['eCol']
+                                         const gradCircle = (
+                                           '<svg width=45 height=45 focusable=false>' +
+                                            '<circle cx=22.5 cy=22.5 r=18 fill='+ circleColor + ' stroke-width=2 stroke=rgba(170,170,170,0.03)></circle>' +
+                                           '</svg>'
+                                         )
+                                           
+                                         const label = '<div style=\"position: absolute; top: 50%; left: 50%; ' +
+                                               'color:black; font-size:1.1em; font-weight:600;'+
+                                               'transform: translate(-50%, -50%); \">' + evac + '</div>'
+                                           
+                                         return '<div style=\"display: inline-flex; position: relative\">' + gradCircle + label + '</div>'
+                                         }"
+                                     )),
+          TOTAL_RELEASE = colDef(aggregate = JS(
+            "function(values,rows){
               let mscfRel = 0
               let galRel = 0
               rows.forEach(function(row){
@@ -699,61 +842,133 @@ shinyServer( function(input, output, session) {
                 }
               })
               if(galRel > 0 && mscfRel > 0){
-                galRel = galRel.toString().split('.')
-                galRel = galRel[0].replace(/\\B(?=(\\d{3})+(?!\\d))/g, ',')
-                mscfRel = mscfRel.toString().split('.')
-                mscfRel = mscfRel[0].replace(/\\B(?=(\\d{3})+(?!\\d))/g, ',')
-                return [galRel, ' Gal; ', mscfRel, ' mscf']
+                galRel = galRel.toLocaleString('en-US').split('.')[0]
+                mscfRel = mscfRel.toLocaleString('en-US').split('.')[0]
+                return [galRel + ' Gal; '+ mscfRel + ' mscf']
               }
               else if(galRel >0 && mscfRel == 0){
-                galRel = galRel.toString().split('.')
-                galRel = galRel[0].replace(/\\B(?=(\\d{3})+(?!\\d))/g, ',')
-                return [galRel, ' Gal']
+                galRel = galRel.toLocaleString('en-US').split('.')[0]
+                return [galRel + ' Gal']
               }
               else{
-                mscfRel = mscfRel.toString().split('.')
-                mscfRel = mscfRel[0].replace(/\\B(?=(\\d{3})+(?!\\d))/g, ',')
-                return [mscfRel, ' mscf']
+                mscfRel = mscfRel.toLocaleString('en-US').split('.')[0]
+                return [mscfRel + ' mscf']
               }
               }"
-            ),
-            name = "Release Size",
-            format = colFormat(digits = 0,
-                               separators = T)),
-            IGNITE_IND = colDef(name = "Fire",
-                                aggregate = JS(
-                                  "function(values,rows){
+          ),
+          name = "Release Size",
+          cell = function(value, index){
+            unit <- iR$UNITS[index]
+            valForm <- comma(value, accuracy = 1)
+            div(
+              div(style = "font-weight:500; font-size: 1em;",
+                  valForm),
+              div(style = "font-weight:300; font-size:.85em;",
+                  unit)
+            )
+            
+          }),
+          IGNITE_IND = colDef(name = "Fire",
+                              html = T,
+                              align = "center",
+                              cell = function(value, index){
+                                div(style = if_else(value == "YES",
+                                                    "font-weight:600;",
+                                                    "font:weight:300;"),
+                                    value)
+                              },
+                              aggregate = JS(
+                                "function(values,rows){
                                  let totalFire = 0
+                                 let nrow = 0
                                  rows.forEach(function(row) {
                                    if(row['IGNITE_IND'] == 'YES'){
                                    totalFire += 1
                                    }
+                                   nrow += 1
                                  })
-                                 return totalFire
+                                 let perFire = Math.round(rows[0]['IGIN'] * 100 )
+                                 
+                                 const sliceColor = rows[0]['igCol']
+                                 const sliceLength = 2 * Math.PI * 24
+                                 const sliceOffset = sliceLength * (1 - perFire / 100)
+                                 const donutChart = (
+                                   '<svg width=50 height=50 style=\"transform: rotate(-90deg)\" focusable=false>' +
+                                     '<circle cx=25 cy=25 r=21 fill=none stroke-width=4 stroke=rgba(0,0,0,0.1)></circle>' +
+                                     '<circle cx=25 cy=25 r=21 fill=none stroke-width=4 stroke=' + sliceColor +
+                                     ' stroke-dasharray=' + sliceLength + ' stroke-dashoffset=' + sliceOffset + '></circle>' +
+                                   '</svg>'
+                                 )
+                                 const label = '<div style=\"position: absolute; top: 50%; left: 50%; ' +
+                                   'font-weight:600;transform: translate(-50%, -50%)\">' + (perFire) + '%' + '</div>'
+                                 return '<div style=\"display: inline-flex; position: relative\">' + donutChart + label + '</div>'
                                  }"
-                                )),
-            EXPLODE_IND = colDef(name = "Explosion",
-                                 aggregate = JS(
-                                   "function(values,rows){
-                                    let totalFire = 0
+                              )),
+          EXPLODE_IND = colDef(name = "Explosion",
+                               html = T,
+                               align = "center",
+                               cell = function(value, index){
+                                 div(style = if_else(value == "YES",
+                                                     "font-weight:600;",
+                                                     "font:weight:300;"),
+                                     value)
+                               },
+                               aggregate = JS(
+                                 "function(values,rows){
+                                    let totalExp = 0
                                     rows.forEach(function(row) {
-                                      if(row['IGNITE_IND'] == 'YES'){
-                                      totalFire += 1
+                                      if(row['EXPLODE_IND'] == 'YES'){
+                                      totalExp += 1
                                       }
                                     })
-                                    return totalFire
+                                    let perExp = Math.round( rows[0]['EXIN'] * 100)
+                                 
+                                    const sliceColor = rows[0]['exCol']
+                                    const sliceLength = 2 * Math.PI * 24
+                                    const sliceOffset = sliceLength * (1- perExp /100)
+                                    const donutChart = (
+                                      '<svg width=50 height=50 style=\"transform: rotate(-90deg)\" focusable=false>' +
+                                        '<circle cx=25 cy=25 r=21 fill=none stroke-width=4 stroke=rgba(0,0,0,0.1)></circle>' +
+                                        '<circle cx=25 cy=25 r=21 fill=none stroke-width=4 stroke=' + sliceColor +
+                                        ' stroke-dasharray=' + sliceLength + ' stroke-dashoffset=' + sliceOffset + '></circle>' +
+                                      '</svg>'
+                                    )
+                                    const label = '<div style=\"position: absolute; top: 50%; left: 50%; ' +
+                                      'font-weight:600;transform: translate(-50%, -50%)\">' + (perExp) + '%' + '</div>'
+                                    return '<div style=\"display: inline-flex; position: relative\">' + donutChart + label + '</div>'
                                     }"  
-                                 )),
-            MoYr = colDef(show = F),
-            UNITS = colDef(name = "Units", show = F),
-            TOTAL_COST_CURRENT = colDef(name = "Cost of Damage", 
-                                        aggregate = "sum",
-                                        minWidth = 100,
-                                        format = colFormat(currency = "USD",
-                                                           separators = TRUE)),
-            COMMODITY_RELEASED_TYPE = colDef(name = "Material Released",
-                                             aggregate = JS(
-                                               "function(values,rows){
+                               )),
+          MoYr = colDef(show = F),
+          UNITS = colDef(name = "Units", show = F),
+          TOTAL_COST_CURRENT = colDef(name = "Cost of Damage", 
+                                      minWidth = 100,
+                                      aggregate = JS(
+                                        "function(values, rows){ 
+                                          function numFormatter(num) {
+                                            if(num > 999 && num < 1000000){
+                                                return (num/1000).toFixed(1) + 'K'; // convert to K for number from > 1000 < 1 million 
+                                            }else if(num > 1000000){
+                                                return (num/1000000).toFixed(1) + 'M'; // convert to M for number from > 1 million 
+                                            }else if(num < 900){
+                                                return num; // if value < 1000, nothing to do
+                                            }
+                                          }
+                                          let dCost = 0
+                                          rows.forEach(function(row) {
+                                            dCost += row['TOTAL_COST_CURRENT']
+                                          })
+                                          
+                                          let finalCost = '$' + numFormatter(dCost) 
+                                          
+                                          return finalCost
+                                          }"
+                                      ),
+                                      format = colFormat(currency = "USD",
+                                                         separators = TRUE,
+                                                         digits = 0)),
+          COMMODITY_RELEASED_TYPE = colDef(name = "Material Released",
+                                           aggregate = JS(
+                                             "function(values,rows){
                                                var items = []
                                                rows.forEach(function(row){
                                                 items.push(row['COMMODITY_RELEASED_TYPE'])
@@ -766,24 +981,37 @@ shinyServer( function(input, output, session) {
                                                 return uniqueItems
                                                }
                                                }"
-                                             )),
-            CAUSE = colDef(name = "Cause"),
-            cleanLoc = colDef(name = "Place"),
-            MDY = colDef(name = "Date")
-          ),
-          theme = reactableTheme(
-            searchInputStyle = list(width = "100%"),
-            color = "hsl(233, 9%, 87%)",
-            backgroundColor = "hsl(233, 9%, 19%)",
-            borderColor = "hsl(233, 9%, 22%)",
-            stripedColor = "hsl(233, 12%, 22%)",
-            highlightColor = "hsl(162, 12%, 24%)",
-            inputStyle = list(backgroundColor = "hsl(233, 9%, 25%)"),
-            selectStyle = list(backgroundColor = "hsl(233, 9%, 25%)"),
-            pageButtonHoverStyle = list(backgroundColor = "hsl(233, 9%, 25%)"),
-            pageButtonActiveStyle = list(backgroundColor = "hsl(233, 9%, 28%)")
-          )
+                                           )),
+          CAUSE = colDef(name = "Cause"),
+          cleanLoc = colDef(name = "Place"),
+          MDY = colDef(name = "Date",
+                       style = function(value, index, name){
+                         formDate(value)
+                       }),
+          IGIN = colDef(show = F),
+          EXIN = colDef(show = F),
+          FS = colDef(show = F),
+          IS = colDef(show = F),
+          ES = colDef(show = F),
+          igCol = colDef(show = F),
+          exCol = colDef(show = F),
+          eCol = colDef(show = F),
+          iCol = colDef(show = F),
+          fCol = colDef(show = F)
+        ),
+        theme = reactableTheme(
+          searchInputStyle = list(width = "100%"),
+          color = "hsl(233, 9%, 87%)",
+          backgroundColor = "hsl(233, 9%, 19%)",
+          borderColor = "hsl(233, 9%, 22%)",
+          stripedColor = "hsl(233, 12%, 22%)",
+          highlightColor = "hsl(162, 12%, 24%)",
+          inputStyle = list(backgroundColor = "hsl(233, 9%, 25%)"),
+          selectStyle = list(backgroundColor = "hsl(233, 9%, 25%)"),
+          pageButtonHoverStyle = list(backgroundColor = "hsl(233, 9%, 25%)"),
+          pageButtonActiveStyle = list(backgroundColor = "hsl(233, 9%, 28%)")
         )
+      )
     }
   })
   
