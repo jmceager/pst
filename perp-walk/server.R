@@ -345,13 +345,24 @@ shinyServer( function(input, output, session) {
                 }
               })
               
-              let styledList = '<div style = \"font-weight:600; font-size: 1.1em;\">' +
-                               systems.join(', ') + '</div>'
+              let styledList = '<div style = \"font-weight:600; font-size: 1.1em; \">' +
+                               systems.join('<span style = \"color:#ffffff; \">, </span>') + '</div>'
               return styledList
               }"
             ),
                          name = "System",
-                         html = T),
+                         html = T,
+                         style = function(value, index, name) {
+                           if (value == "HL") {
+                             list(fontWeight = 500, color = "#ff7f00")
+                           }
+                           else if (value == "GD") {
+                             list(fontWeight = 500, color = "#6a3d9a")
+                           }
+                           else {
+                             list(fontWeight = 500, color = "#1f78b4")
+                           }
+                         }),
             FATAL = colDef(name = "Deaths",
                            html = T,
                            align = "center",
