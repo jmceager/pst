@@ -23,57 +23,60 @@ header <- dashboardHeader(
                           height='85%',
                           alt = "Pipeline Safety Trust")
   ),
-  tags$li(class = "dropdown",
-          id="info-down",
-          dropMenu(
-            dropdownButton("Info", 
-                           status = 'success', 
-                           icon = icon('info'), 
-                           circle = T),
-            h5(strong('Information')),
-            hr(),
-            textOutput("infoText"),
-            placement = "bottom",
-            arrow = TRUE,
-            theme = "material")
-  ),
-  tags$li(class = "dropdown",
-          id = "info-down",
-          dropMenu(
-            dropdownButton("Sources", 
-                           status = 'success', 
-                           icon = icon('database'), 
-                           circle = T),
-            h5(strong('Sources')),
-            hr(),
-            tags$p("All data is sourced from the U.S. Department of Transportation's Pipeline 
-                   and Hazardous Materials Safety Administration data. This includes their 
-                   incident flagged files and their pipeline mileage data. Both can be accessed 
-                   through their website at the link below."),
-            br(),
-            tags$a("PHMSA Data Overview", href = "https://www.phmsa.dot.gov/data-and-statistics/pipeline/data-and-statistics-overview", target="_blank", class = "source-link"),
-            placement = "bottom",
-            arrow = T,
-            theme = "material")
-  ),
-  tags$li(class = "dropdown",
-          dropMenu(
-            dropdownButton("Share", 
-                           status = 'success', 
-                           icon = icon('share-alt'), 
-                           circle = T),
-            h5(strong('Sharing')),
-            hr(),
-            tags$a(icon("facebook"), href = "https://www.facebook.com/sharer/sharer.php?u=https%3A//jamespst.shinyapps.io/testing/", class = "share-icon"),
-            br(),
-            tags$a(icon("twitter"), href = "https://twitter.com/intent/tweet?text=Check%20this%20out%3A%20https%3A//jamespst.shinyapps.io/testing/", class = "share-icon"),
-            br(),
-            tags$a(icon("linkedin"), href = "https://www.linkedin.com/shareArticle?mini=true&url=https%3A//jamespst.shinyapps.io/testing/&title=&summary=&source=", class = "share-icon"),
-            br(),
-            tags$a(icon("envelope"), href = "mailto:?body=https%3A//jamespst.shinyapps.io/testing/", class = "share-icon"),
-            placement = "bottom",
-            arrow = T,
-            theme = "material")
+  div(
+    id = "headerHelp",
+    tags$li(class = "dropdown",
+            id="info-down",
+            dropMenu(
+              dropdownButton("Info", 
+                             status = 'success', 
+                             icon = icon('info'), 
+                             circle = T),
+              h5(strong('Information')),
+              hr(),
+              textOutput("infoText"),
+              placement = "bottom",
+              arrow = TRUE,
+              theme = "material")
+    ),
+    tags$li(class = "dropdown",
+            id = "info-down",
+            dropMenu(
+              dropdownButton("Sources", 
+                             status = 'success', 
+                             icon = icon('database'), 
+                             circle = T),
+              h5(strong('Sources')),
+              hr(),
+              tags$p("All data is sourced from the U.S. Department of Transportation's Pipeline 
+                     and Hazardous Materials Safety Administration data. This includes their 
+                     incident flagged files and their pipeline mileage data. Both can be accessed 
+                     through their website at the link below."),
+              br(),
+              tags$a("PHMSA Data Overview", href = "https://www.phmsa.dot.gov/data-and-statistics/pipeline/data-and-statistics-overview", target="_blank", class = "source-link"),
+              placement = "bottom",
+              arrow = T,
+              theme = "material")
+    ),
+    tags$li(class = "dropdown",
+            dropMenu(
+              dropdownButton("Share", 
+                             status = 'success', 
+                             icon = icon('share-alt'), 
+                             circle = T),
+              h5(strong('Sharing')),
+              hr(),
+              tags$a(icon("facebook"), href = "https://www.facebook.com/sharer/sharer.php?u=https%3A//jamespst.shinyapps.io/testing/", class = "share-icon"),
+              br(),
+              tags$a(icon("twitter"), href = "https://twitter.com/intent/tweet?text=Check%20this%20out%3A%20https%3A//jamespst.shinyapps.io/testing/", class = "share-icon"),
+              br(),
+              tags$a(icon("linkedin"), href = "https://www.linkedin.com/shareArticle?mini=true&url=https%3A//jamespst.shinyapps.io/testing/&title=&summary=&source=", class = "share-icon"),
+              br(),
+              tags$a(icon("envelope"), href = "mailto:?body=https%3A//jamespst.shinyapps.io/testing/", class = "share-icon"),
+              placement = "bottom",
+              arrow = T,
+              theme = "material")
+    )
   )
 )
 
@@ -90,28 +93,31 @@ sidebar <- dashboardSidebar(
   
   column(10,
          hr(),
-         dateInput2("thisMonth", 
-                    "Month/Year", 
-                    startview = "year", 
-                    minview = "months", 
-                    maxview = "decades",
-                    value = newDate,
-                    max = newDate,
-                    min = min(incs$MDY),
-                    format = "mm/yyyy"
-         ),
-         radioButtons("system", "Pipeline System:",
-                      c("All" = "all",
-                        "Gas Transmission" = "GT",
-                        "Gas Distribution" = "GD",
-                        "Hazardous Liquid" = "HL"),
-                      selected = "all"),
-         radioButtons("weight", "Determinant:",
-                      c("Release Size" = "TOTAL_RELEASE",
-                        "Cost of Damage" = "TOTAL_COST_CURRENT",
-                        "Deaths" = "FATAL",
-                        "Deaths + Injuries" = "humans"),
-                      selected = "TOTAL_RELEASE")
+         div(
+           id = "controls",
+           dateInput2("thisMonth", 
+                      "Month/Year", 
+                      startview = "year", 
+                      minview = "months", 
+                      maxview = "decades",
+                      value = newDate,
+                      max = newDate,
+                      min = min(incs$MDY),
+                      format = "mm/yyyy"
+           ),
+           radioButtons("system", "Pipeline System:",
+                        c("All" = "all",
+                          "Gas Transmission" = "GT",
+                          "Gas Distribution" = "GD",
+                          "Hazardous Liquid" = "HL"),
+                        selected = "all"),
+           radioButtons("weight", "Determinant:",
+                        c("Release Size" = "TOTAL_RELEASE",
+                          "Cost of Damage" = "TOTAL_COST_CURRENT",
+                          "Deaths" = "FATAL",
+                          "Deaths + Injuries" = "humans"),
+                        selected = "TOTAL_RELEASE")
+         )
   )
   
 )
@@ -174,6 +180,7 @@ body <- dashboardBody(
       fluidRow(
         conditionalPanel(
           condition = "input.system == 'all' || input.system == 'GD'",
+          id = "gdBox",
           box(
             title = "Gas Distribution",
             width = 12,
