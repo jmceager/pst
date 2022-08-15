@@ -23,8 +23,6 @@ header <- dashboardHeader(
                           height='85%',
                           alt = "Pipeline Safety Trust")
   ),
-  div(
-    id = "headerHelp",
     tags$li(class = "dropdown",
             id="info-down",
             dropMenu(
@@ -35,6 +33,7 @@ header <- dashboardHeader(
               h5(strong('Information')),
               hr(),
               textOutput("infoText"),
+              br(),
               placement = "bottom",
               arrow = TRUE,
               theme = "material")
@@ -77,7 +76,6 @@ header <- dashboardHeader(
               arrow = T,
               theme = "material")
     )
-  )
 )
 
 #### sidebar ####

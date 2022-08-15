@@ -16,6 +16,7 @@ library(ggthemes)
 library(showtext)
 library(jsonlite)
 library(viridis)
+library(rintrojs)
 #> Loading required package: sysfonts
 #> Loading required package: showtextdb
 sysCol <- c("GD Perp" = "#6a3d9a",
@@ -339,21 +340,4 @@ all_cols <- c("NAME", "MDY", "cleanLoc", "SYS","FATAL","INJURE",
               "TOTAL_COST_CURRENT","CAUSE", "NARRATIVE", "STATE")
 
 formDate <- stamp("31 March, 2022", orders = "dmy")
-
-
-#### intro js ####
-steps = seq(1,5,1)
-text = c("This is step one","two","three","four","five")
-els = c( "",
-         "#gdBox",
-         "#tabs",
-         "#controls",
-         "headerHelp")
-pos = rep("auto", length(steps))
-
-
-help <- tibble(steps = steps,
-               intro = text,
-               element = els,
-               position = pos)
 

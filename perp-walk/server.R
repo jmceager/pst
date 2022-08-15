@@ -16,16 +16,6 @@ shinyServer( function(input, output, session) {
   #### waiter ####
   w <- Waiter$new(id = c("timePlot","hlTimePlot"))
   
-  #### intro js stuff ####
-  session$sendCustomMessage(type = 'setHelpContent', message = list(steps = toJSON(steps)))
-
-  # listen to the action button
-  observeEvent(input$startHelp,{
-    
-    # on click, send custom message to start help
-    session$sendCustomMessage(type = 'startHelp', message = list(""))
-    
-  })
     
   #### header stuff ####
   helpMessage <- reactive({
