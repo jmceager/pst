@@ -16,6 +16,18 @@ shinyServer( function(input, output, session) {
   #### waiter ####
   w <- Waiter$new(id = c("timePlot","hlTimePlot"))
   
+  #### intro js ####
+  # initiate hints on startup with custom button and event
+  hintjs(session, options = list("hintButtonLabel"="Hope this hint was helpful"),
+         events = list("onhintclose"=I('alert("Wasn\'t that hint helpful")')))
+  
+  # start introjs when button is pressed with custom options and events
+  observeEvent(input$help,
+               introjs(session, options = list("nextLabel"="Next",
+                                               "prevLabel"="Previous",
+                                               "skipLabel"="Exit"),
+                       events = list("oncomplete"=I('alert("Glad that is over")')))
+  )
     
   #### header stuff ####
   helpMessage <- reactive({
