@@ -34,6 +34,7 @@ header <- dashboardHeader(
               hr(),
               textOutput("infoText"),
               br(),
+              actionButton("help", "Press for instructions"),
               placement = "bottom",
               arrow = TRUE,
               theme = "material")
@@ -85,8 +86,7 @@ sidebar <- dashboardSidebar(
               menuItem("Repeat Culprits", tabName = "repeat", icon = icon("redo")),
               menuItem("Monthly Map", tabName = "leafs", icon = icon("map")),
               menuItem("Timeline",  tabName = "timeline", icon = icon("timeline")),
-              menuItem("Full Table", tabName = "hist", icon = icon("table"))
-              
+              menuItem("Full Table", tabName = "hist", icon = icon("table"))            
   ),
   
   column(10,
@@ -123,6 +123,7 @@ sidebar <- dashboardSidebar(
 #### body ####
 body <- dashboardBody(
   tags$head(tags$title("Culprit Call-Out"),
+            introjsUI(),
             tags$link(rel = "stylesheet", type = "text/css", href = "custom.css"),
             tags$link(rel = "icon", href = "www/favicon.ico"),
             tags$head(includeHTML(("google-analytics.html"))),
@@ -179,20 +180,17 @@ body <- dashboardBody(
         conditionalPanel(
           condition = "input.system == 'all' || input.system == 'GD'",
           id = "gdBox",
-          box(
-            title = "Gas Distribution",
-            width = 12,
-            column(6,
-                   valueBoxOutput("gdNew", width = 12),          
-                   valueBoxOutput("gdFire", width = 3),
-                   valueBoxOutput("gdExplode", width = 3),
-                   valueBoxOutput("gdInjure", width = 3),
-                   valueBoxOutput("gdFatal", width = 3)),
-            column(6,
-                   valueBoxOutput("gdCost", width = 12),
-                   valueBoxOutput("gdSpill", width = 12)
-            )
-          )
+          column(6,
+                 valueBoxOutput("gdNew", width = 12),          
+                 valueBoxOutput("gdFire", width = 3),
+                 valueBoxOutput("gdExplode", width = 3),
+                 valueBoxOutput("gdInjure", width = 3),
+                 valueBoxOutput("gdFatal", width = 3)),
+          column(6,
+                 valueBoxOutput("gdCost", width = 12),
+                 valueBoxOutput("gdSpill", width = 12)
+                )
+              )
         )
       ),
       fluidRow(
