@@ -140,7 +140,7 @@ Starting with content, navbar, logo
   max-height: calc(100vh - 50px) !important;
 }
 
-.sidebar-menu > li { /* this does the sidebar menu text */
+.sidebar-menu>li { /* this does the sidebar menu text */
   font-family:"Montserrat", sans-serif;
   font-weight:500;
 }
