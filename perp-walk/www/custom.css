@@ -229,6 +229,11 @@ Starting with content, navbar, logo
 }
 
 
+.introjs-skipbutton {
+  font-size: 0.9em;
+  
+}
+
 /* styling valueboxes:
 according to yes/no values = yellow / red 
 according to system = olive/fuchsia/maroon
