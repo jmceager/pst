@@ -179,17 +179,20 @@ body <- dashboardBody(
       fluidRow(
         conditionalPanel(
           condition = "input.system == 'all' || input.system == 'GD'",
-          id = "gdBox",
-          column(6,
-                 valueBoxOutput("gdNew", width = 12),          
-                 valueBoxOutput("gdFire", width = 3),
-                 valueBoxOutput("gdExplode", width = 3),
-                 valueBoxOutput("gdInjure", width = 3),
-                 valueBoxOutput("gdFatal", width = 3)),
-          column(6,
-                 valueBoxOutput("gdCost", width = 12),
-                 valueBoxOutput("gdSpill", width = 12)
-                )
+          box(
+            title = "Gas Distribution",
+            id = "GDBox",
+            width = 12,
+            column(6,
+                   valueBoxOutput("gdNew", width = 12),          
+                   valueBoxOutput("gdFire", width = 3),
+                   valueBoxOutput("gdExplode", width = 3),
+                   valueBoxOutput("gdInjure", width = 3),
+                   valueBoxOutput("gdFatal", width = 3)),
+            column(6,
+                   valueBoxOutput("gdCost", width = 12),
+                   valueBoxOutput("gdSpill", width = 12)
+                  )
               )
         )
       ),
@@ -198,6 +201,7 @@ body <- dashboardBody(
           condition = "input.system == 'all' || input.system == 'GT'",
           box(
             title = "Gas Transmission",
+            id = "GTBox",
             width = 12,
             column(6,
                    valueBoxOutput("gtNew", width = 12),          
@@ -217,6 +221,7 @@ body <- dashboardBody(
           condition = "input.system == 'all' || input.system == 'HL'",
           box(
             title = "Hazardous Liquids",
+            id = "HLBox",
             width = 12,
             column(6,
                    valueBoxOutput("hlNew", width = 12),          
