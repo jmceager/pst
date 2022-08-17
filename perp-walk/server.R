@@ -21,13 +21,54 @@ shinyServer( function(input, output, session) {
   hintjs(session, options = list("hintButtonLabel"="Hope this hint was helpful"),
          events = list("onhintclose"=I('alert("Wasn\'t that hint helpful")')))
   
+  steps <- reactive(tibble(
+    element = c(
+      NA,
+      ifelse(input$system == "all", "#GDBox", paste0("#",input$system,"Box")),
+      ".sidebar-menu",
+      ".controls",
+      ".navbar-custom-menu",
+      NA
+    ),
+    intro = c(
+      #welcome
+      "Welcome! This dashboard is designed to show you which incidents 
+      were the worst in a given month & help shed light on who was responsible
+      for them. It also offers you, the user, a chance to define what really 
+      is the \"worst\" incident. Let's take a look at how it all works:",
+      #value box box
+      "Here is where you will find a high-level summary of the worst incident
+      in each system this month. These boxes give a quick glance at which operator
+      was responsible for the worst incident, and what kind of impact that incident had.",
+      #sidebar
+      "These buttons direct you to other tabs, where a similar guide can explore the features 
+      on those pages. Repeat Culprits shows a table of the most frequent culprits, 
+      the Monthly Map displays the worst incidents alongside all other incidents in a month, 
+      Timline offers an opportunity to graph these incidents by a host of variables, and 
+      the Full Table lists out the culprits and their incidents for the entire period of 
+      time covered by this set of PHMSA data (2010 to Present)",
+      #controls
+      "These controls allow you to select the month that you are interested in, the 
+      system that you are interested in, and how you would like to determine which 
+      incidents are the \"worst\". These controls work across tabs, so you can switch 
+      between all of them seamlessly. ",
+      #navbar 
+      "Finally, using these dropdown menus, you can access more information such as 
+      the link to the source data a brief description of each tab, and links for 
+      sharing this dashboard to social media and email.",
+      #finally
+      "Now it's time for you to call out these culprits!"
+    ),
+    position = rep("auto", length(element))
+  ))
+  
   # start introjs when button is pressed with custom options and events
-  observeEvent(input$help,
+  observeEvent(input$help, {
                introjs(session, options = list("nextLabel"="Next",
                                                "prevLabel"="Previous",
-                                               "skipLabel"="Exit"),
-                       events = list("oncomplete"=I('alert("Glad that is over")')))
-  )
+                                               "skipLabel"="Exit",
+                                               steps = steps()))
+  })
     
   #### header stuff ####
   helpMessage <- reactive({
