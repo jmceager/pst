@@ -572,18 +572,30 @@ df.state <- st_join(df.sp, st_transform(stateShape, crs = projcrs), join = st_wi
 
 bbox <- st_bbox(df.state, crs = 3857)
 
-pst_tiles <- get_static_tiles(location = stateShape,
-                              zoom = 5,
-                              style_id = "cl1pbimv7000114ouzmsb6obk",
-                              username = "jimeagah",
-                              buffer_dist = 1500000,
-                              crop = T)
+base_tiles <- get_static_tiles(location = stateShape,
+                               zoom = 5,
+                               style_id = "cl1pbimv7000114ouzmsb6obk",
+                               username = "jimeagah",
+                               buffer_dist = 1500000,
+                               scaling_factor = "1x",
+                               crop = T)
+
+place_tiles <- get_static_tiles(location = stateShape,
+                                zoom = 5,
+                                style_id = "cl6zaoczy004n14jqcivrkvb5",
+                                username = "jimeagah",
+                                buffer_dist = 1000,
+                                scaling_factor = "2x",
+                                crop = F)
+
+
 
 ##ggspatial
 df.state%>%
   ggplot()+
-  layer_spatial(pst_tiles)+
-  geom_sf(data = stateShape, fill = NA, color = "black")+
+  layer_spatial(base_tiles)+
+  geom_sf(data = stateShape, fill = NA, color = "gray50")+
+  layer_spatial(place_tiles)+
   geom_sf(aes(color = SYS, size = TOTAL_COST_CURRENT), alpha = .6)+
   scale_size(name = "Cost of Damage\n(Mil. USD)",
              breaks = seq(0,40000000, 10000000),
@@ -595,7 +607,7 @@ df.state%>%
            ylim = c(bbox[[2]] , bbox[[4]]+50000 ),
            expand = TRUE)+
   labs(title = paste0("Incident Locations in ", moStateL),
-       subtitle = "All Systems (2010 - Present)",
+       subtitle = "All Systems (2010 - 2021)",
        x = NULL,
        y = NULL,
        caption = capt,
@@ -605,13 +617,13 @@ df.state%>%
         text = element_text(pstFont),
         plot.margin = unit(c(0,0,0,0), "cm"),
         plot.tag.position = c(.96,0.95),
-        plot.tag = element_text(color = "gray 90", size = 8),
-        plot.title = element_text(face = "bold", colour = "#ffffff", hjust = .015),
-        plot.subtitle = element_text(colour = "#ffffff", hjust = .015),
-        plot.caption = element_text(colour = "gray 90"),
-        legend.title = element_text(colour = "gray 90", face = "bold"),
-        legend.text = element_text(colour = "gray90"),
-        plot.background = element_rect(fill = "#457969", colour = NA)) #fill is to match bg
+        plot.tag = element_text(color = "gray 30", size = 8),
+        plot.title = element_text(face = "bold", colour = "black", hjust = .015),
+        plot.subtitle = element_text(colour = "black", hjust = .015),
+        plot.caption = element_text(colour = "gray 30"),
+        legend.title = element_text(colour = "gray 10", face = "bold"),
+        legend.text = element_text(colour = "gray 10"),
+        plot.background = element_rect(fill = "#E8EBEA", colour = NA)) #fill is to match bg
 
 wdt = 2560
 hgt = wdt/1.62
@@ -622,18 +634,40 @@ ggsave("MN/map.png", width = wdt, height = hgt, units = "px")
 df %>% 
   rbind(df.all %>% filter(STATE != "MN") %>% mutate(STATE = "ROU"))%>%
   group_by(STATE)%>%
-  summarise(total = n(),
+  summarise(total = n()/12,
             significant = sum(SIGNIFICANT == "YES")/total,
             serious = sum(SERIOUS == "YES")/total,
             explode = sum(EXPLODE_IND == "YES")/total,
             fire = sum(IGNITE_IND == "YES")/total,
             cost = sum(TOTAL_COST_CURRENT)/total,
+            release = sum(TOTAL_RELEASE)/total,
             fatal = sum(FATAL)/total,
             injuries = sum(injure)/total,
             gd = sum(SYS == "GD")/total,
             gt = sum(SYS == "GT")/total,
-            hl = sum(SYS == "HL")/total)%>%
+            hl = sum(SYS == "HL")/total,
+            total = if_else(STATE != "MN", total/50, total))%>%
+  distinct(STATE, .keep_all = T)%>%
   view()
 ```
 
+```{r}
+df.all %>%
+  group_by(STATE)%>%
+  summarise(total = n(),
+            gd = sum(SYS == "GD")/total,
+            injuries = sum(injure)/total,
+            MN = if_else(STATE == "MN", "MN","NO"))%>%
+  ggplot(aes(x = gd, y = injuries, color = MN))+
+  geom_point()
+```
+
+```{r}
+df.all %>%
+  count(STATE) %>%
+  ggplot(aes(x = n/11))+
+  geom_histogram()+
+  geom_vline(xintercept = 11.3)
+  
+```
 
