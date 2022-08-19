@@ -148,15 +148,35 @@ df.adj <- read_csv(paste0(datadir, "clean/all_inc.csv"))%>%
 df.all <- read_csv(paste0(datadir, "clean/all_inc.csv"))
 ```
 
+
+From the rbind codebloack below, MN is most similar to the US average in terms of age of pipeline involved in incidents. The most common age of failed pipelines are unknown in both cases; while of known pipelines, the average age is in the mid-1980s and the median in the 1980s. The average yearly incidents for MN and the US is also similar: 136 to 146. 
 ```{r}
 read_csv(paste0(datadir, "clean/all_inc.csv")) %>%
+  group_by(STATE)%>%
   mutate(INSTALLATION_YEAR = parse_number(INSTALLATION_YEAR, na = "UNKNOWN"),
-         INSTALLATION_YEAR = replace_na(INSTALLATION_YEAR, 1900))%>%
+         mean = mean(INSTALLATION_YEAR, na.rm = T),
+         median = median(INSTALLATION_YEAR, na.rm = T))%>%
+  ungroup()%>%
+  mutate(INSTALLATION_YEAR = replace_na(INSTALLATION_YEAR, 1900))%>%
   group_by(STATE) %>%
-  summarise(mean = mean(INSTALLATION_YEAR),
+  summarise(mean = max(mean),
             mode = modeFind(INSTALLATION_YEAR),
-            median = median(INSTALLATION_YEAR),
-            n = n()) %>% view()
+            median = max(median),
+            n = n()) %>% 
+  distinct(STATE, .keep_all = T) %>%
+ # filter(STATE == "MN")%>%
+  rbind(read_csv(paste0(datadir, "clean/all_inc.csv")) %>%
+  mutate(INSTALLATION_YEAR = parse_number(INSTALLATION_YEAR, na = "UNKNOWN"),
+         mean = mean(INSTALLATION_YEAR, na.rm = T),
+         median = median(INSTALLATION_YEAR, na.rm = T),
+         INSTALLATION_YEAR = replace_na(INSTALLATION_YEAR, 1900))%>%
+  summarise(mode = modeFind(INSTALLATION_YEAR),
+            mean = max(mean),
+            median = max(median),
+            n = n()/52,
+            STATE = "U.S.A.") ) %>% view()
+
+
 
 read_csv(paste0(datadir, "clean/all_inc.csv")) %>%
   mutate(INSTALLATION_YEAR = parse_number(INSTALLATION_YEAR, na = c("UNKNOWN", "NA")),
