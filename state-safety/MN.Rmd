@@ -39,6 +39,7 @@ library(viridis)
 library(scales)
 library(readxl)
 library(kableExtra)
+library(lubridate)
 library(sp)
 library(sf)
 library(rgeos)
@@ -370,9 +371,9 @@ df %>%
                      breaks = c(moState, "Adjacent (avg.)", "Rest of U.S. (avg.)"),
                      labels = c(moStateL, "Adjacent (avg.)", "Rest of U.S. (avg.)"))+
   scale_x_continuous(labels = seq(2010,2021,2), breaks = seq(2010,2021,2))+
-  scale_y_continuous(limits = c(0,.75),
+  scale_y_continuous(limits = c(0,.6),
                      breaks = seq(0,.8,.2))+ 
-  theme(legend.position = c(.85, .95),
+  theme(legend.position = c(.85, .9),
         legend.box = "horizontal")+
   labs(title = paste(moStateL, "Pipeline Incident Rate"),
        subtitle = "All Systems, All Incidents per 1,000 Miles (2010-2021)",
@@ -384,7 +385,7 @@ df %>%
 
 wdt = 2560
 hgt = wdt/1.62
-ggsave("./ND/AllIncMile.png", width = wdt, height = hgt, units = "px")
+ggsave("./MN/AllIncMile.png", width = wdt, height = hgt, units = "px")
 
 ```
 
@@ -409,7 +410,7 @@ df %>%
                      breaks = c(moState, "Adjacent (avg.)", "Rest of U.S. (avg.)"),
                      labels = c(moStateL, "Adjacent (avg.)", "Rest of U.S. (avg.)"))+
   scale_x_continuous(labels = seq(2010,2021,2), breaks = seq(2010,2021,2))+
-  scale_y_continuous(limits = c(0, 1.5),breaks = seq(0,1.5,.5))+ 
+  scale_y_continuous(limits = c(0, .45),breaks = seq(0,.45,.15))+ 
   theme(legend.position = c(.8, .8),
         legend.box = "horizontal")+
   labs(title = paste(moStateL, "Significant Incident Rate"),
@@ -422,7 +423,7 @@ df %>%
 
 wdt = 2560
 hgt = wdt/1.62
-ggsave("./ND/SigIncMile.png", width = wdt, height = hgt, units = "px")
+ggsave("./MN/SigIncMile.png", width = wdt, height = hgt, units = "px")
 ```
 
 
@@ -459,31 +460,35 @@ df.t <- df %>%
 
 t.gd <- df.t %>%
   filter(SYS == "GD") %>%
-  mutate(pri.name = fct_lump(f=pri.name, 3, w=n, other_level = "Others (GD, avg.)"))%>%
+  mutate(pri.name = if_else(grepl("CENTERPOINT", pri.name), "Centerpoint (GD)", pri.name),
+         pri.name = fct_lump(f=pri.name, 4, w=n, other_level = "Others (GD, avg.)"))%>%
   group_by(pri.name)%>%
   summarise_at(vars(n:rpi), mean, na.rm = T) %>%
   arrange(desc(n))
 
 t.gt <- df.t %>%
   filter(SYS == "GT") %>%
-  mutate(pri.name = fct_lump(f=pri.name, 3, w=n, other_level = "Others (GT, avg.)"))%>%
+  mutate(pri.name = if_else(grepl("CENTERPOINT", pri.name), "Centerpoint (GT)", pri.name),
+         pri.name = fct_lump(f=pri.name, 4, w=n, other_level = "Others (GT, avg.)"))%>%
   group_by(pri.name)%>%
   summarise_at(vars(n:rpi), mean, na.rm = T) %>%
   arrange(desc(n))
 
 t.hl <- df.t %>%
   filter(SYS == "HL") %>%
-  mutate(pri.name = fct_lump(f=pri.name, 3, w=n, other_level = "Others (HL, avg.)"))%>%
+  mutate(pri.name = fct_lump(f=pri.name, 4, w=n, other_level = "Others (HL, avg.)"))%>%
   group_by(pri.name)%>%
   summarise_at(vars(n:rpi), mean, na.rm = T)%>%
   arrange(desc(n))
 
+df.k <- rbind(t.hl, t.gd, t.gt) 
+
 bigNames <- as.character(c(as.character(t.hl$pri.name), as.character(t.gd$pri.name), as.character(t.gt$pri.name)))
 bigNames <- bigNames[!grepl("Others",bigNames)]
 
-namesMatch <- tibble(pri.name = bigNames, SYS = c(rep("HL",3),
-                                                  rep("GD",3),
-                                                  rep("GT",3)))
+namesMatch <- tibble(pri.name = bigNames, SYS = c(rep("HL",4),
+                                                  rep("GD",4),
+                                                  rep("GT",5)))
 
 df.trend <- df %>%
   filter(IYEAR <2022,
@@ -494,9 +499,9 @@ df.trend <- df %>%
                               if_else(SYS.x == "GT", "Centerpoint (GT)", "Centerpoint (GD)"),
                               pri.name.y),
          pri.name.y = if_else(is.na(pri.name.y),
-                              if_else(SYS.x == "GT", "Others (GT Avg.)",
-                                      if_else(SYS.x == "GD", "Others (GD Avg.)", 
-                                              if_else(SYS.x == "HL", "Others (HL Avg.)",
+                              if_else(SYS.x == "GT", "Others (GT, avg.)",
+                                      if_else(SYS.x == "GD", "Others (GD, avg.)", 
+                                              if_else(SYS.x == "HL", "Others (HL, avg.)",
                                                       "N"))),
                               pri.name.y),
          SYS.y = coalesce(SYS.y, SYS.x))%>%
@@ -516,21 +521,18 @@ df.trend <- df %>%
   group_by(pri.name)%>%
   mutate(tot = sum(n),
          n = (n/tot)*100,
-         pri.name = if_else(is.na(pri.name), pri.name.x, pri.name))
+         pri.name = if_else(is.na(pri.name), pri.name.x, pri.name))%>%
+  ungroup()%>%
+  mutate(pri.name = factor(pri.name, levels = levels(df.k$pri.name)))
 
 df.lines <- split(df.trend$n, df.trend$pri.name)
 
-
-df.k <- rbind(t.hl, t.gd, t.gt)
 
 df.k %>%
   select(!c(fatal, injure,evac)) %>%
   mutate(trend = "")%>%
   mutate(n = round(n,0),
-         sig = paste0(round(sig*100, 0), "%"),
-         pri.name = if_else(grepl("CENTERPOINT",pri.name),
-                            if_else(n == 4, "Centerpoint (GT)", "Centerpoint (GD)"),
-                            as.character(pri.name)))%>%
+         sig = paste0(round(sig*100, 0), "%"))%>%
   mutate_at(vars(cost:rpi), round, 0)%>%
   kbl(col.names = c("Parent Operator", "Total", "Percent Significant",
                     "per 1K Miles", "Trend","Total","per Incident", "Total","per Incident"),
@@ -543,10 +545,10 @@ df.k %>%
   column_spec(4, color=spec_color(df.k$ipm, option = "B", end = .7), bold = T)%>%
   column_spec(7, color=spec_color(df.k$cpi, option = "B", end = .7), bold = T)%>%
   column_spec(9, color=spec_color(df.k$rpi, option = "B", end = .7), bold = T) %>%
-  group_rows(start_row = 1, end_row = 4, group_label = "Hazardous Liquids")%>%
-  group_rows(start_row = 5, end_row = 8, group_label = "Gas Distribution")%>%
-  group_rows(start_row = 9, end_row = 12, group_label = "Gas Transmission")
-  cat(., file = "./MN/table.html")
+  group_rows(start_row = 1, end_row = 5, group_label = "Hazardous Liquids")%>%
+  group_rows(start_row = 6, end_row = 10, group_label = "Gas Distribution")%>%
+  group_rows(start_row = 11, end_row = 15, group_label = "Gas Transmission") %>%
+  cat(., file = "./MN/table2.html")
 ```
 
 
@@ -632,23 +634,29 @@ ggsave("MN/map.png", width = wdt, height = hgt, units = "px")
 
 ```{r}
 df %>% 
-  rbind(df.all %>% filter(STATE != "MN") %>% mutate(STATE = "ROU"))%>%
+  rbind(df.all %>% filter(STATE != "MN") %>% mutate(STATE = "Rest of U.S."))%>%
   group_by(STATE)%>%
   summarise(total = n()/12,
-            significant = sum(SIGNIFICANT == "YES")/total,
-            serious = sum(SERIOUS == "YES")/total,
-            explode = sum(EXPLODE_IND == "YES")/total,
-            fire = sum(IGNITE_IND == "YES")/total,
-            cost = sum(TOTAL_COST_CURRENT)/total,
-            release = sum(TOTAL_RELEASE)/total,
-            fatal = sum(FATAL)/total,
-            injuries = sum(injure)/total,
+            significant = (sum(SIGNIFICANT == "YES")/total/12)*100,
+            serious = sum(SERIOUS == "YES")/total/12*100,
+            explode = sum(EXPLODE_IND == "YES")/total/12*100,
+            fire = sum(IGNITE_IND == "YES")/total/12*100,
+            cost = sum(TOTAL_COST_CURRENT/1000)/12,
+            fatal = sum(FATAL)/12,
+            injuries = sum(INJURE)/12,
             gd = sum(SYS == "GD")/total,
             gt = sum(SYS == "GT")/total,
             hl = sum(SYS == "HL")/total,
             total = if_else(STATE != "MN", total/50, total))%>%
   distinct(STATE, .keep_all = T)%>%
-  view()
+   kbl(col.names = c("Geography", "Annual Incidents", "Significant",
+                    "Serious", "Exploded","Fire","Cost (K)", "Dead","Injured",
+                    "GD", "GT", "HL"),
+      format.args = list(big.mark = ","), digits = 1, booktabs = TRUE,
+      caption = "Minnesota Incident Characteristics Compared to the Rest of the U.S. Average")%>%
+  kable_classic_2(lightable_options = c("striped","hover"))%>%
+  add_header_above(c(" "=2, "Percent" = 4, "per Year" = 3, "Annual Incidents" = 3))
+  cat(., file = "./MN/avg.html")
 ```
 
 ```{r}
@@ -663,11 +671,105 @@ df.all %>%
 ```
 
 ```{r}
-df.all %>%
-  count(STATE) %>%
-  ggplot(aes(x = n/11))+
-  geom_histogram()+
-  geom_vline(xintercept = 11.3)
-  
+df.z <- df.all %>%
+  group_by(STATE) %>%
+  summarise(total = n()/12,
+            significant = sum(SIGNIFICANT == "YES")/total,
+            serious = sum(SERIOUS == "YES")/total,
+            explode = sum(EXPLODE_IND == "YES")/total,
+            fire = sum(IGNITE_IND == "YES")/total,
+            cost = sum(TOTAL_COST_CURRENT)/total,
+            fatal = sum(FATAL)/total,
+            injuries = sum(injure)/total,
+            gd = sum(SYS == "GD")/total,
+            gt = sum(SYS == "GT")/total,
+            hl = sum(SYS == "HL")/total)%>%
+  mutate(across(where(is.numeric), scale))%>%
+  pivot_longer(!STATE)%>%
+  mutate(mn = if_else(STATE == "MN", T,F),
+         name = factor(name, levels = c("total","significant","serious",
+                                        "fire","explode","injuries","fatal", "cost",
+                                        "hl","gd","gt")))
+
+df.z %>%
+  ggplot(aes(y = value, x = name, label = STATE))+
+  geom_boxplot(outlier.shape = NA, color = midBlue, weight = 8)+
+  geom_jitter( data = filter(df.z, STATE != "MN"),
+               aes(color = mn), width =.2, alpha = .6)+
+  geom_point(data = filter(df.z, STATE == "MN"),
+             aes(y = value, x = name, color = mn), size = 2.5)+
+  scale_x_discrete(
+    labels = rev(c("Incidents","Significant","Serious",
+                              "Fire","Explosion", "Injuries", "Fatalities","Cost",
+                              "HL","GT","GT")),
+                   limits = rev(levels(df.z$name))
+                   )+
+  scale_color_manual(values = c(darkBlue, liteGreen), 
+                     labels = c("Other","Minnesota"),
+                     name = "State")+
+  theme_pst()+
+  theme(panel.grid.minor.x = element_line(linetype = "dotted", 
+                                          colour = "#C4C8C6"),
+        panel.grid.major.x = element_line(colour = "#394C56", 
+                                          linetype = "dotted"),
+        panel.grid.major.y = element_blank(),
+        panel.grid.minor.y = element_blank(),
+        legend.position = c(0.1,0.7))+
+  labs(title = "State Incident Characteristic Z-Scores",
+       subtitle = "All Systems from 2010-2021",
+       tag = tag,
+       caption = capt,
+       x = "Variable",
+       y = "Z-score")+
+  coord_flip()
+
+wdt = 2560
+hgt = wdt/1.62
+ggsave("MN/box.png", width = wdt, height = hgt, units = "px")
 ```
+
+```{r}
+df.release <- df %>%
+  filter(MSYS == "HL") %>%
+  mutate( TOTAL_RELEASE = scale(TOTAL_RELEASE) ) %>%
+  rbind(  
+    filter(df, MSYS == "Gas") %>% mutate(TOTAL_RELEASE = scale(TOTAL_RELEASE))
+    ) %>%
+  mutate(SIGSER = if_else(SIGNIFICANT == "YES", 
+                          if_else(SERIOUS == "YES", 2,1),
+                          0),
+         pri.name = if_else(grepl("CENTERPOINT", pri.name), 
+                            paste0("Centerpoint (", SYS, ")"),
+                            pri.name))
+
+df.release %>%
+  ggplot(aes(x = MDY, y = TOTAL_RELEASE, size = TOTAL_COST_CURRENT/1000000, color = as.factor(SIGSER)))+
+  geom_point(alpha = .9)+
+  geom_label_repel(data = filter(df.release, TOTAL_RELEASE > 3 | SIGSER > 1),
+                  aes(x = MDY, y = TOTAL_RELEASE, label = pri.name),
+                  size = 4, color = "gray 20",  parse = F,
+                  box.padding = .6, min.segment.length = .4, 
+                  nudge_y = -0.2, nudge_x = 15, seed = 2020,)+
+ # annotate("text", x = ymd("2010-12-30"), y = 8, label = "ok")+
+  theme_pst()+
+  theme(legend.position = c(.9,.6))+
+  scale_color_brewer(palette = "Purples", name = "Significance",
+                     labels = c("None", "Significant","Serious"))+
+  scale_y_continuous(limits = c(-1,8.5))+
+  scale_size(breaks = seq(0,50,10), 
+             labels =scales::unit_format(prefix = "$",
+                                         suffix = "M") ,
+             name = "Damage Cost (2022 USD)")+
+  labs(caption = paste0("Release Z-Scores are specific to unit of system measurement: MSCF for Natural Gas and BBLs for Liquids." ,"\n",capt),
+       tag = tag,
+       x = "Date",
+       y = "Release Z-Score",
+       title = "Minnesota Pipeline Incident Detail",
+       subtitle = "Total Release Z-Scores, Damage Cost, and Significance (2010-2021)")
+
+ggsave("MN/op.png", width = wdt, height = hgt, units = "px")
+```
+
+
+
 
