@@ -1,0 +1,598 @@
+---
+title: "Untitled Analysis"
+subtitle: "Specifics (Timeline)"
+runningheader: "Pipeline Safety Trust `r format(Sys.time(), '%m/%Y')`"
+author: "Pipeline Safety Trust"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  tufte::tufte_handout: default
+header-includes:
+  - \usepackage{titling}
+  - \pretitle{\begin{center}
+    \includegraphics[width=2in,height=2in]{img/PST_logo.png}\LARGE\\}
+  - \posttitle{\end{center}}
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r include = FALSE, echo = FALSE}
+rm(list = ls())
+```
+
+```{r setup, include=FALSE}
+library(tufte)
+# invalidate cache when the tufte version changes
+knitr::opts_chunk$set(cache.extra = packageVersion('tufte'))
+options(htmltools.dir.version = FALSE)
+
+library(tidyverse)
+library(ggrepel)
+library(RColorBrewer)
+library(ggthemes)
+library(viridis)
+library(scales)
+library(readxl)
+library(kableExtra)
+library(sp)
+library(rgeos)
+library(tufte)
+library(rgdal)
+library(ggspatial)
+library(mapboxapi)
+library(reactable)
+library(reactablefmtr)
+
+knitr::opts_chunk$set(echo = FALSE, include = FALSE, message = FALSE)
+options(knitr.table.format = "latex")
+wdt = 6
+hgt = wdt/1.62
+
+capt = "Source: PHMSA Incident and Mileage Data (2010-2021)"
+datadir = "https://raw.githubusercontent.com/jmceager/pst/main/phmsa-clean/data/"
+tag = paste("PST", lubridate::year(Sys.Date()))
+```
+
+```{r theme_pst}
+library(showtext)
+#> Loading required package: sysfonts
+#> Loading required package: showtextdb
+pstFont = "Montserrat"
+font_add_google(pstFont)
+showtext_auto()
+theme_pst <- function(baseSize=8) {
+  (theme(
+                       axis.line.x = element_line(
+                         colour = "#182125",
+                         size = 0.5,
+                         linetype = "solid"
+                       ),
+                       axis.line.y = element_line(
+                         colour = "#182125",
+                         size = 0.5,
+                         linetype = "solid"
+                       ),
+                       axis.ticks.y = element_line(
+                         colour = "#182125",
+                         size = 0.5,
+                         linetype = "solid"
+                       ),
+                       text = element_text(family = pstFont),
+                       axis.text = element_text(colour = "#8C9394",
+                                                size = baseSize * .8),
+                       axis.title = element_text(colour ="black"),
+                       panel.grid.minor.y = element_line(linetype = "dotted", 
+                                                         colour = "#C4C8C6"),
+                       panel.grid.major.y = element_line(colour = "#394C56", 
+                                                         linetype = "dotted"),
+                       panel.grid.major.x = element_blank(),
+                       panel.grid.minor.x = element_blank(),
+                       panel.background = element_blank(),
+                       panel.border = element_blank(),
+                       strip.background = element_rect(linetype = 0),
+                       strip.text = element_blank(),
+                       strip.text.x = element_blank(),
+                       strip.text.y = element_blank(),
+                       legend.text = element_text(colour = "black",
+                                                  size = baseSize * .8),
+                       legend.background = element_rect(fill = NULL, 
+                                                        color = "#182125"),
+                       legend.title = element_text( face = "bold", 
+                                                    colour = "black",
+                                                    size = baseSize),
+                       legend.position = "right",
+                       legend.key = element_blank(),
+                       #legend.background = element_blank(),
+                       plot.tag.position = c(.97,.97),
+                       plot.tag = element_text(size = baseSize *.66,
+                                               colour = "#8C9394"),
+                       plot.background = element_rect(fill = "#ffffff"),
+                       plot.title = element_text(face = "bold", 
+                                                 colour = "black",
+                                                 size = baseSize*1.2),
+                       plot.subtitle = element_text(colour = "#8C9394",
+                                                    size = baseSize)
+                     )
+  )
+}
+```
+
+```{r nice colors}
+#brewer pal
+col <- brewer.pal(6,"Set2")
+green <- col[1]
+orange <- col[2]
+purple <- col[3]
+pink <- col[4]
+lime <- col[5]
+yellow <- col[6]
+
+#pst 
+darkBlue <- "#003E59"
+midBlue <- "#00546F"
+bluGreen <- "#459197"
+liteGreen <- "#61A893"
+```
+
+```{r loading data}
+ocsp <- c("CA","WA","OR")
+ocsat <- c("")
+#all incident data + op mileage
+df <- read_csv(paste0(datadir, "clean/all_inc.csv") ) %>%
+  mutate(STATE = if_else(grepl("Outer Continental Shelf", cleanLoc), 
+                         if_else(STATE %in% ocsp, "OCSP", 
+                                 if_else(LOCATION_LONGITUDE < -81.32, "OCSAT",
+                                         "OCSG")),
+                         STATE))
+
+miles <- read_csv(paste0(datadir, "clean/sys_miles.csv")) 
+
+
+## getting mileage data 
+# hl
+hlMiles <- read.csv(paste0(datadir, "raw/HL_MilesDecadeAge.csv"))
+
+curHLM <- hlMiles %>% 
+  filter(Calendar.Year == max(Calendar.Year))
+
+sum(curHLM$Total.Miles.by.Decade, na.rm = T)
+
+# gt gg ungs
+gtguMiles <- read.csv(paste0(datadir, "raw/GT_MilesDecadeAge.csv"))
+
+curGT <- gtguMiles %>%
+  filter(Calendar.Year == max(Calendar.Year))
+
+sum(curGT$Total.By.Decade.Miles, na.rm = T)
+
+# gd
+gdMiles <- read.csv(paste0(datadir, "raw/GD_MilesDecadeAge.csv"))
+
+curGD <- gdMiles %>%
+  filter(Calendar.Year == max(Calendar.Year))
+
+sum(curGD$Total.Miles.by.Decade, na.rm = T)
+
+
+# all miles 
+miles <- read.csv(paste0(datadir, "clean/sys_miles.csv"))
+```
+
+## Briefing Paper 6
+
+```{r sig onshore}
+mainSYS <- c("HL","GT","GD")
+  
+df %>%
+  filter(SIGNIFICANT == "YES", SYS %in% mainSYS, IYEAR < 2022, ON_OFF_SHORE == "ONSHORE")%>%
+  count(SYS, IYEAR) %>%
+  ggplot(aes(x = IYEAR, y = n, group = SYS, color = SYS))+
+  geom_smooth(method = "glm", alpha = .3, size = .5, linetype = "dashed")+
+  geom_line(size = .75)+
+  scale_color_brewer(palette = "Set2", 
+                     name = "System",
+                     labels = c("Gas Distribution","Gas Transmission","Hazardous Liquids")
+                     )+
+  scale_x_continuous(name = "Year",
+                     breaks = seq(2010,2021,2))+
+  scale_y_continuous(limits = c(10,190),
+                     breaks = seq(20,180, 40),
+                     name = "Significant Incidents")+
+  theme_pst()+
+  theme(legend.direction = "horizontal",
+        legend.position = c(0.4,0.1))+
+  labs(title = "Significant Pipeline Incidents",
+        subtitle = "Onshore Pipeline Systems (2010-2021)",
+        tag = tag,
+        caption = capt)
+
+
+ggsave("plots/AllSig.png", width = wdt, height = hgt, units = "in")
+```
+
+```{r ser onshore}
+  
+df %>%
+  filter(SERIOUS == "YES", SYS %in% mainSYS, IYEAR < 2022, ON_OFF_SHORE == "ONSHORE")%>%
+  count(SYS, IYEAR) %>%
+  ggplot(aes(x = IYEAR, y = n, group = SYS, color = SYS))+
+  geom_smooth(method = "glm", alpha = .3, size = .5, linetype = "dashed")+
+  geom_line(size = .75)+
+  scale_color_brewer(palette = "Set2", 
+                     name = "System",
+                     labels = c("Gas Distribution","Gas Transmission","Hazardous Liquids"))+
+  scale_x_continuous(name = "Year",
+                     breaks = seq(2010,2021,2))+
+  scale_y_continuous(limits = c(0,37),
+                     expand = c(0,0),
+                     name = "Serious Incidents")+
+  theme_pst()+
+  theme(legend.direction = "horizontal",
+        legend.position = c(0.4,0.4))+
+  labs(title = "Serious Pipeline Incidents",
+       subtitle = "Onshore Pipeline Systems (2010-2021)",
+       tag = tag,
+       caption = capt)
+
+
+ggsave("plots/AllSer.png", width = wdt, height = hgt, units = "in")
+
+```
+
+```{r sig table}
+## TODO: redo with reactable and reactablefmtr
+
+tdf <- df %>%
+  filter(IYEAR <2022, SIGNIFICANT == "YES")%>%
+  group_by(IYEAR)%>%
+  summarize(sig = n(),
+            fatal = sum(FATAL, na.rm = T),
+            injuries = sum(INJURE, na.rm = T),
+            cost = sum(TOTAL_COST_CURRENT, na.rm = T))
+
+tdf%>%
+  #column_to_rownames(var = "IYEAR")%>%
+  reactable(theme = fivethirtyeight(),
+            showSortable = FALSE,
+            defaultPageSize = 12,
+            columns = list(
+              IYEAR = colDef(name = "Year"),
+              sig = colDef(name = "Significant Incidents", cell = color_tiles(.,colors = viridis(n = 7, end = .7, option = "B"))),
+              fatal = colDef(name = "Fatalities", cell = color_tiles(.,colors = viridis(n = 7, end = .7, option = "B"))),
+              injuries = colDef(name = "Injuries",  cell = color_tiles(.,colors = viridis(n = 7, end = .7, option = "B"))),
+              cost = colDef(name = "Total Cost (2022 USD)",
+                           style = color_scales(.,colors = viridis(n = 7, end = .7, option = "B")),
+                           cell = scales::dollar_format(scale = .000001, suffix = " M") ) 
+            ))
+
+```
+
+```{r sig incident causes}
+
+
+#### BY CAUSE
+## bars 
+df %>%
+  filter(ON_OFF_SHORE == "ONSHORE", SIGNIFICANT == "YES", SYS != "UNGS")%>%
+  mutate(CAUSE = fct_lump(CAUSE, n = 5))%>%
+  count(SYS, CAUSE) %>%
+  complete(SYS, CAUSE, fill = list(n = 0))%>%
+  group_by(SYS)%>%
+  mutate(total = sum(n))%>%
+  ungroup()%>%
+  mutate(prop = n/total,
+         CAUSE = str_wrap(CAUSE, width = 14))%>%
+  ggplot(aes(x = reorder(CAUSE, n), y = prop, fill = reorder(SYS,-total)))+
+  geom_bar(position = "dodge", stat = "identity")+
+  theme_pst()+
+  theme(panel.grid.minor.x = element_line(linetype = "dotted", 
+                                                         colour = "#C4C8C6"),
+        panel.grid.major.x = element_line(colour = "#394C56", 
+                                          linetype = "dotted"),
+        panel.grid.major.y = element_blank(),
+        panel.grid.minor.y = element_blank(),
+        legend.position = "bottom"
+        )+
+  scale_y_continuous(labels = scales::percent_format(), expand = c(0,0), limits = c(0,.45))+
+  scale_fill_brewer(palette = "Set2", name = "System", 
+                    labels = c("Hazardous Liquid", "Gas Distribution",
+                               "Gas Transmission","Gas Gathering"))+
+  coord_flip()+
+  labs(x = "Cause", y = NULL,
+       title = "Significant Incident Cause Breakdown",
+       subtitle = "Percent of Significant Incidents by Cause for Each System",
+       tag = tag, caption = capt)
+
+ggsave("plots/CausePropBar.png", width = wdt, height = hgt, units = "in")
+
+##dots
+df %>%
+  filter(ON_OFF_SHORE == "ONSHORE", SIGNIFICANT == "YES", SYS != "UNGS")%>%
+  mutate(CAUSE = fct_lump(CAUSE, n = 5))%>%
+  count(SYS, CAUSE) %>%
+  complete(SYS, CAUSE, fill = list(n = 0))%>%
+  group_by(SYS)%>%
+  mutate(total = sum(n))%>%
+  ungroup()%>%
+  mutate(prop = n/total,
+         CAUSE = str_wrap(CAUSE, width = 14))%>%
+  ggplot(aes(x = fct_rev(CAUSE), y = prop, color = reorder(SYS,-total)))+
+  geom_point(position = position_dodge(width = .5), stat = "identity")+
+  geom_linerange(aes(ymin = 0, ymax = prop, x = reorder(CAUSE, n)),
+               position = position_dodge(width = .5))+
+  theme_pst()+
+  theme(panel.grid.minor.x = element_line(linetype = "dotted", 
+                                                         colour = "#C4C8C6"),
+        panel.grid.major.x = element_line(colour = "#394C56", 
+                                          linetype = "dotted"),
+        panel.grid.major.y = element_blank(),
+        panel.grid.minor.y = element_blank(),
+        legend.position = "bottom"
+        )+
+  scale_y_continuous(labels = scales::percent_format(), expand = c(0,0), limits = c(0,.45))+
+  scale_color_brewer(palette = "Set2", name = "System", 
+                    labels = c("Hazardous Liquid", "Gas Distribution",
+                               "Gas Transmission","Gas Gathering"))+
+  coord_flip()+
+  labs(x = "Cause", y = NULL,
+       title = "Significant Incident Cause Breakdown",
+       subtitle = "Percent of Significant Incidents by Cause for Each System",
+       tag = tag, caption = capt)
+
+ggsave("plots/CausePropDot.png", width = wdt, height = hgt, units = "in")
+
+#### BY SYS
+##dots
+df %>%
+  filter(ON_OFF_SHORE == "ONSHORE", SIGNIFICANT == "YES", SYS != "UNGS")%>%
+  mutate(CAUSE = fct_lump(CAUSE, n = 5))%>%
+  count(SYS, CAUSE) %>%
+  complete(SYS, CAUSE, fill = list(n = 0))%>%
+  group_by(SYS)%>%
+  mutate(total = sum(n))%>%
+  ungroup()%>%
+  mutate(prop = n/total,
+         CAUSE = str_wrap(CAUSE, width = 14))%>%
+  ggplot(aes(color = fct_rev(CAUSE), y = prop, x = reorder(SYS,-total)))+
+  geom_point(position = position_dodge(width = .8), stat = "identity")+
+  geom_linerange(aes(ymin = 0, ymax = prop, x = reorder(SYS,-total)),
+               position = position_dodge(width = .8))+
+  theme_pst()+
+  theme(panel.grid.minor.x = element_line(linetype = "dotted", 
+                                                         colour = "#C4C8C6"),
+        panel.grid.major.x = element_line(colour = "#394C56", 
+                                          linetype = "dotted"),
+        panel.grid.major.y = element_blank(),
+        panel.grid.minor.y = element_blank(),
+        legend.position = "bottom"
+        )+
+  scale_y_continuous(labels = scales::percent_format(), expand = c(0,0), limits = c(0,.45))+
+  scale_color_brewer(palette = "Set2", name = "System")+
+  coord_flip()+
+  labs(x = "Cause", y = NULL,
+       title = "Significant Incident Cause Breakdown",
+       subtitle = "Percent of Significant Incidents by Cause for Each System",
+       tag = tag, 
+       caption = capt)
+
+ggsave("plots/CausePropDotSYS.png", width = wdt, height = hgt, units = "in")
+```
+
+
+```{r incidents by mile by sys}
+#### questions about parts
+
+unique(df$SYSTEM_PART_INVOLVED)
+df %>% count(SYS, SYSTEM_PART_INVOLVED) %>% view()
+
+parts <- c("ONSHORE PIPELINE, INCLUDING VALVE SITES",
+           "ONSHORE PUMP/METER STATION EQUIPMENT AND PIPING",
+           "OFFSHORE PIPELINE, INCLUDING RISER AND RISER BEND",
+           "ONSHORE COMPRESSOR STATION EQUIPMENT AND PIPING"  ,
+           "MAIN" ,
+           "SERVICE"  ,
+           "DISTRICT REGULATOR/METERING STATION")
+
+
+mileNorm <- miles %>%
+  filter(IYEAR >= 2010)%>%
+  group_by(IYEAR, SYSTEM_TYPE, STATE) %>%
+  summarise(mileage = sum(mileage, na.rm = T)) %>%
+  ungroup()%>%
+  group_by(IYEAR, SYSTEM_TYPE) %>%
+  mutate(allmiles = sum(mileage, na.rm = T),
+         SYS = str_sub(SYSTEM_TYPE, 1,2))%>%
+  ungroup()%>%
+  select(!SYSTEM_TYPE)
+
+
+ipm <- df %>% 
+  filter(SYS %in% mainSYS,
+         SYSTEM_PART_INVOLVED %in% parts,
+         SIGNIFICANT == "YES",
+         IYEAR < 2022)%>%
+  count(IYEAR, STATE, SYS)%>%
+  group_by(IYEAR, SYS)%>%
+  mutate(allN = sum(n))%>%
+  ungroup() %>%
+  full_join(mileNorm, by = c("IYEAR","STATE", "SYS")) %>%
+  mutate(ipm.s = n/(mileage/1000),
+         ipm.a = allN/(allmiles/1000),
+         ipm.s = replace_na(ipm.s, 0),
+         ipm.a = replace_na(ipm.a, 0))%>%
+  group_by(STATE, SYS)%>%
+  mutate(ipm.m = mean(ipm.s))%>%
+  ungroup()%>%
+  group_by(SYS)%>%
+  mutate(ipm.a = mean(ipm.a))%>%
+  ungroup()%>%
+  distinct(STATE, SYS, ipm.m,ipm.a)%>%
+  mutate(diff = ipm.m - ipm.a)
+
+ipmUS <- ipm %>% 
+  select(SYS, ipm.a) %>% 
+  distinct(SYS,ipm.a) %>%
+  mutate(STATE = "All")%>%
+  pivot_wider(names_from = SYS, values_from = ipm.a)
+
+ipmStates <- ipm %>% 
+  select(!c(ipm.a, diff) )%>% 
+  pivot_wider(names_from = SYS, values_from = ipm.m)
+
+ipmFixed <- rbind(ipmUS, ipmStates)
+
+
+## scatter of incident rates
+ipmStates %>%
+  filter(STATE %in% state.abb)%>%
+  ggplot(aes(x = GT, y = GD, color = HL))+
+  geom_hline(aes(yintercept = ipmUS$GD), color = pink, alpha = .6)+
+  geom_vline(aes(xintercept = ipmUS$GT), color = pink, alpha = .6)+
+  geom_point(alpha = .8) +
+  geom_text_repel(aes(label = STATE), max.overlaps = 3)+
+  scale_color_binned(type = "viridis", n.breaks = 7)+
+  theme_pst()+
+  theme(panel.grid.minor.x = element_line(linetype = "dotted", 
+                                                         colour = "#C4C8C6"),
+        panel.grid.major.x = element_line(colour = "#394C56", 
+                                          linetype = "dotted"),
+        legend.position = c(0.7,0.7),
+        legend.direction = "horizontal")+
+  labs(title = "State Significant Incident Rates",
+       subtitle = "Incidents per 1,000 Miles from 2010-2021",
+       caption= paste0("Pink lines denote nationwide rates, nationwide HL rate is .23 \n",capt),
+       tag = tag)
+
+ggsave("plots/StateRatesScatter.png", width = wdt, height = hgt, units = "in")
+
+
+##us incident rates 
+pos <- position_jitter(width = .25, seed = 2020)
+ipmStates %>%
+  filter(STATE %in% state.abb)%>%
+  pivot_longer(!STATE) %>%
+  ggplot(aes(x = name, y = value))+
+  geom_bar(data = pivot_longer(ipmUS, cols = !STATE),
+           aes(x= name, y = value), stat = "identity",
+           fill = darkBlue, alpha = .5)+
+  geom_point(color = liteGreen, alpha = .8, position = pos)+
+  geom_text_repel(aes(label = STATE), max.overlaps = 4,  position = pos)+
+  scale_y_continuous(expand = expansion(mult = c(0,0.1)))+
+  theme_pst()+
+  labs(title = "State Significant Incident Rates",
+       subtitle = "Incidents per 1,000 Miles from 2010-2021",
+       x = "System", y = "Incident Rate",
+       caption = paste0("Blue bars denote nationwide incident rates\n", capt), tag = tag)
+
+ggsave("plots/StateRatesJitter.png", width = wdt, height = hgt, units = "in")
+
+
+
+```
+
+```{r more about rates hexbin map}
+
+## Q: which states are above nationwide rate in all 3? 2? 
+
+hexState <- ipmStates %>%
+  filter(STATE %in% state.abb)%>%
+  mutate(GT = if_else(GT > ipmUS$GT[[1]], 1,0),
+         GD = if_else(GD > ipmUS$GD[[1]], 1,0),
+         HL = if_else(HL > ipmUS$HL[[1]], 1,0),
+         total = GT + GD + HL)
+
+library(here)
+library(sf)
+
+# download hexbin map from github
+# https://github.com/donmeltz/US-States---Hexbins
+map_path <- "https://raw.githubusercontent.com/donmeltz/US-States---Hexbins/master/GeoJSON/US_HexBinStates_EPSG4326.geojson"
+download.file(map_path, here("hexbinstate.geojson"))
+
+# read as sf map of hexbin
+sf_state <- 
+    read_sf("hexbinstate.geojson") %>% 
+    set_names(str_to_lower) %>% 
+    mutate(region = str_to_lower(name))
+    
+
+# find centroid
+centers <- 
+    st_centroid(sf_state) %>% 
+    st_coordinates() %>% 
+    as_tibble() %>% 
+    set_names(str_to_lower)
+df_center <- tibble(abbr = sf_state$code) %>% 
+    bind_cols(centers)
+
+hexState %>%
+  right_join(sf_state, by = c("STATE" = "code")) %>%
+  ggplot()+
+  geom_sf(aes(fill = total, geometry = geometry))+
+  geom_text(data = df_center, aes(x, y, label = abbr), color = "white") +
+  theme_void()+
+  scale_fill_fermenter(palette = "Reds",  n.breaks = 3, direction = 1)+
+  theme(legend.direction = "horizontal",
+        legend.position = "bottom",
+        plot.tag.position = c(.97,.97),
+        text = element_text(family = pstFont),
+                       plot.subtitle = element_text(colour = "#8C9394",
+                                                    size = 8),
+         legend.title = element_text( face = "bold", 
+                                                    colour = "black",
+                                                    size = 8),
+        plot.background = element_rect(fill = "#ffffff", colour = NA),
+        plot.margin = unit(c(0,0,0,0), "cm"),
+        plot.tag = element_text(color = "gray 20", size = 6),
+        plot.title = element_text(face = "bold", colour = "black", hjust = .015, size = 10),
+        plot.caption = element_text(colour = "gray 20"),
+        legend.text = element_text(colour = "gray20")
+        )+
+  labs(title = "State Incident Rate Aggregates",
+       subtitle = "Number of System Significant Incident Rates Above Nationwide Rate",
+       fill = "Rates Above U.S:",
+       caption = capt,
+       tag = tag)
+
+ggsave("plots/StateRatesHex.png", width = wdt, height = hgt, units = "in")
+
+
+```
+
+```{r excavation trends}
+## overall 
+df %>% filter(SIGNIFICANT == "YES", CAUSE == "EXCAVATION DAMAGE", IYEAR < 2022, SYS %in% mainSYS) %>% count(IYEAR) %>%
+  ggplot(aes(x = IYEAR, y = n))+
+  geom_smooth(color = midBlue, method = "glm",  alpha = .3, size = .5, linetype = "dashed")+
+  geom_line(color = midBlue, size = 1.2)+
+  theme_pst()+
+  labs(y = "Significant Incidents", x = "Year",
+       title = "Significant Excavation Incidents",
+       subtitle = "Major Pipeline Systems, 2010-2021",
+       tag = tag, caption = capt)
+
+ggsave("plots/ExcavationTotal.png", width = wdt, height = hgt, units = "in")
+
+
+## by system 
+df %>% filter(SIGNIFICANT == "YES", CAUSE == "EXCAVATION DAMAGE", IYEAR < 2022, SYS %in% mainSYS) %>% count(IYEAR, SYS) %>%
+  ggplot(aes(x = IYEAR, y = n, color = SYS, group = SYS))+
+  geom_smooth(method = "glm",  alpha = .3, size = .5, linetype = "dashed")+
+  geom_line(  size = 1.2)+
+  theme_pst()+
+  theme(legend.position = c(0.175,0.8))+
+  scale_color_brewer(palette = "Set2", name = "System", 
+                    labels = c( "Gas Distribution", "Gas Transmission","Hazardous Liquid")
+                    )+
+  labs(y = "Significant Incidents", x = "Year",
+       title = "Significant Excavation Incidents",
+       subtitle = "Per System, 2010-2021",
+       caption = capt, tag = tag)
+
+ggsave("plots/ExcavationSys.png", width = wdt, height = hgt, units = "in")
+
+```
+
+```{r hca trends}
+
+```
+
