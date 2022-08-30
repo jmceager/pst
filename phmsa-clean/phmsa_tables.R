@@ -8,7 +8,8 @@ source("offshorefinder.R")
 #### MILEAGE DATA ####
 
 ## getting mileage data 
-mileCols <- c("system", "Calendar.Year", "State.Abbreviation", "Operator.ID", 
+mileCols <- c("Operator.ID", "Operator.Business.Name",
+              "system", "Calendar.Year", "State.Abbreviation", 
               "Total.Miles.by.Decade", "Total.By.Decade.Miles")
 
 miles <- read.csv("data/raw/GD_MilesDecadeAge.csv") %>% 
@@ -30,9 +31,10 @@ miles <- read.csv("data/raw/GD_MilesDecadeAge.csv") %>%
          SYSTEM_TYPE = system,
          OPERATOR_ID = Operator.ID,
          STATE = State.Abbreviation,
-         IYEAR = Calendar.Year)%>%
+         IYEAR = Calendar.Year,
+         NAME = Operator.Business.Name)%>%
   #give snapshots of operator's yearly mileage to match incident years
-  group_by(OPERATOR_ID, SYSTEM_TYPE, STATE, IYEAR)%>% 
+  group_by(OPERATOR_ID, NAME, SYSTEM_TYPE, STATE, IYEAR)%>% 
   summarise(mileage = sum(mileage, na.rm = T))%>%
   mutate(SYS = str_sub(SYSTEM_TYPE, 1,2))
 
@@ -107,6 +109,9 @@ gd.full <- read_xlsx("data/raw/gd2010toPresent.xlsx", sheet = 2) %>%
   left_join(ops.simple, by = c("OPERATOR_ID" = "sub.id"))%>% 
   distinct(NARRATIVE, .keep_all = T)
 
+
+## add safety data to mileage for consistency 
+miles <- left_join(miles, ops.simple, by = c("OPERATOR_ID" = "sub.id")) 
 
 # gt big
 gt.full <- read_xlsx("./data/raw/gtggungs2010toPresent.xlsx", sheet = 2) %>%
