@@ -431,37 +431,65 @@ ggsave("./MN/SigIncMile.png", width = wdt, height = hgt, units = "px")
 
 ```{r op table}
 milesND <- milesFull %>%
-  filter(OPERATOR_ID %in% unique(df$OPERATOR_ID),
-         STATE == moState) %>%
-  group_by(OPERATOR_ID)%>%
-  summarise(mileage = mean(mileage))
+  filter(STATE == moState) %>%
+  group_by(OPERATOR_ID, IYEAR, SYS)%>%
+  summarise(mileage = mean(mileage),
+            NAME = NAME,
+            pri.name = pri.name,
+            pri.id = pri.id)
+
+df.noinc <- milesND %>%
+  filter(!OPERATOR_ID %in% df$OPERATOR_ID)%>%
+  select(OPERATOR_ID, pri.name, pri.id, SYS, mileage)%>%
+  mutate(SIGNIFICANT = 0,
+         EXPLODE_IND = 0,
+         IGNITE_IND = 0,
+         FATAL = 0, 
+         INJURE = 0,
+         NUM_PUB_EVACUATED = 0,
+         TOTAL_COST_CURRENT = 0,
+         TOTAL_RELEASE = 0,
+         mileage.j = mileage,
+         inc = 0) %>%
+  select(!mileage)
 
 
 #note: figure out how to more accurately rep ipm 
 df.t <- df %>%
-  left_join(milesND, by = "OPERATOR_ID")%>%
+  left_join(milesND, by = c("OPERATOR_ID", "IYEAR", "SYS"), 
+             suffix = c("",".j"), keep = T)%>%
+  distinct(NARRATIVE, .keep_all = T)%>%
   mutate(SIGNIFICANT = if_else(SIGNIFICANT == "YES", 1,0),
          EXPLODE_IND = if_else(EXPLODE_IND == "YES", 1,0),
-         IGNITE_IND = if_else(IGNITE_IND == "YES", 1,0)) %>%
-  group_by(pri.name, SYS)%>%
-  summarise(miles = mean(mileage.y),
-            n = n(),
-            sig = sum(SIGNIFICANT)/n,
+         IGNITE_IND = if_else(IGNITE_IND == "YES", 1,0),
+         inc = 1)%>%
+    select(OPERATOR_ID, pri.name, pri.id, IYEAR, SYS, SIGNIFICANT, 
+           EXPLODE_IND, IGNITE_IND, FATAL, INJURE, NUM_PUB_EVACUATED, 
+           TOTAL_COST_CURRENT, TOTAL_RELEASE, mileage.j, inc)%>%
+  rbind(df.noinc) %>%
+  group_by(pri.id, SYS)%>%
+  summarise(pri.name = pri.name,
+            miles = mean(mileage.j, na.rm = T),
+            n = sum(inc),
+            sig = sum(SIGNIFICANT, na.rm = T)/n,
             ipm = n/(miles/1000),
             trend = "",
-            fatal = sum(FATAL),
-            injure = sum(INJURE),
+            fatal = sum(FATAL, na.rm = T),
+            injure = sum(INJURE, na.rm = T),
             evac = sum(NUM_PUB_EVACUATED, na.rm = T),
-            cost = sum(TOTAL_COST_CURRENT)/1000,
+            cost = sum(TOTAL_COST_CURRENT, na.rm = T)/1000,
             cpi = cost/ n ,
-            rel = sum(TOTAL_RELEASE),
+            rel = sum(TOTAL_RELEASE, na.rm = T),
             rpi = rel/n )%>%
-  ungroup()
+  ungroup() %>% 
+  mutate(across(where(is.numeric) & !c(pri.id), ~ replace_na(.x, 0))) %>%
+  distinct(pri.name, pri.id, .keep_all = T) %>%
+  drop_na(pri.name)
 
 t.gd <- df.t %>%
-  filter(SYS == "GD") %>%
+  filter(SYS == "GD") %>% 
   mutate(pri.name = if_else(grepl("CENTERPOINT", pri.name), "Centerpoint (GD)", pri.name),
-         pri.name = fct_lump(f=pri.name, 4, w=n, other_level = "Others (GD, avg.)"))%>%
+         pri.name = fct_lump(f=pri.name, 4, w=n, other_level = "46 Others (GD, avg.)"))%>%
   group_by(pri.name)%>%
   summarise_at(vars(n:rpi), mean, na.rm = T) %>%
   arrange(desc(n))
@@ -469,14 +497,14 @@ t.gd <- df.t %>%
 t.gt <- df.t %>%
   filter(SYS == "GT") %>%
   mutate(pri.name = if_else(grepl("CENTERPOINT", pri.name), "Centerpoint (GT)", pri.name),
-         pri.name = fct_lump(f=pri.name, 4, w=n, other_level = "Others (GT, avg.)"))%>%
+         pri.name = fct_lump(f=pri.name, 3, w=n, other_level = "12 Others (GT, avg.)"))%>%
   group_by(pri.name)%>%
   summarise_at(vars(n:rpi), mean, na.rm = T) %>%
   arrange(desc(n))
 
 t.hl <- df.t %>%
-  filter(SYS == "HL") %>%
-  mutate(pri.name = fct_lump(f=pri.name, 4, w=n, other_level = "Others (HL, avg.)"))%>%
+  filter(SYS == "HL") %>% 
+  mutate(pri.name = fct_lump(f=pri.name, 4, w=n, other_level = "8 Others (HL, avg.)"))%>%
   group_by(pri.name)%>%
   summarise_at(vars(n:rpi), mean, na.rm = T)%>%
   arrange(desc(n))
@@ -488,7 +516,7 @@ bigNames <- bigNames[!grepl("Others",bigNames)]
 
 namesMatch <- tibble(pri.name = bigNames, SYS = c(rep("HL",4),
                                                   rep("GD",4),
-                                                  rep("GT",5)))
+                                                  rep("GT",3)))
 
 df.trend <- df %>%
   filter(IYEAR <2022,
@@ -499,9 +527,9 @@ df.trend <- df %>%
                               if_else(SYS.x == "GT", "Centerpoint (GT)", "Centerpoint (GD)"),
                               pri.name.y),
          pri.name.y = if_else(is.na(pri.name.y),
-                              if_else(SYS.x == "GT", "Others (GT, avg.)",
-                                      if_else(SYS.x == "GD", "Others (GD, avg.)", 
-                                              if_else(SYS.x == "HL", "Others (HL, avg.)",
+                              if_else(SYS.x == "GT", "12 Others (GT, avg.)",
+                                      if_else(SYS.x == "GD", "46 Others (GD, avg.)", 
+                                              if_else(SYS.x == "HL", "8 Others (HL, avg.)",
                                                       "N"))),
                               pri.name.y),
          SYS.y = coalesce(SYS.y, SYS.x))%>%
@@ -523,22 +551,24 @@ df.trend <- df %>%
          n = (n/tot)*100,
          pri.name = if_else(is.na(pri.name), pri.name.x, pri.name))%>%
   ungroup()%>%
-  mutate(pri.name = factor(pri.name, levels = levels(df.k$pri.name)))
+  mutate(pri.name = factor(pri.name, levels = levels(df.k$pri.name))) %>%
+  arrange(pri.name)
 
 df.lines <- split(df.trend$n, df.trend$pri.name)
 
+df.lines[order(df.k$pri.name, levels(df.k$pri.name))]
 
 df.k %>%
   select(!c(fatal, injure,evac)) %>%
   mutate(trend = "")%>%
-  mutate(n = round(n,0),
+  mutate(n = round(n,1),
          sig = paste0(round(sig*100, 0), "%"))%>%
-  mutate_at(vars(cost:rpi), round, 0)%>%
+  mutate_at(vars(cost:rpi), round, 0) %>%
   kbl(col.names = c("Parent Operator", "Total", "Percent Significant",
                     "per 1K Miles", "Trend","Total","per Incident", "Total","per Incident"),
-      format.args = list(big.mark = ","), digits = 2, booktabs = TRUE)%>%
+      format.args = list(big.mark = ","), digits = 2, booktabs = TRUE) %>%
   kable_classic_2(lightable_options = c("striped","hover"))%>%
-  add_header_above(c(" "=1, "Incidents" = 4, "Cost\n(K, USD)" =2, "Releases" = 2)) %>%
+  add_header_above(c(" "=1, "Incidents" = 4, "Cost\n(K, USD)" =2, "Releases" = 2)) %>% 
   column_spec(5, image = spec_plot(df.lines, same_lim = T, 
                                    min = list(col = orange, pch = 20, cex = .2),
                                    max = list(col = green, pch = 20, cex = .2)))%>%
@@ -547,7 +577,7 @@ df.k %>%
   column_spec(9, color=spec_color(df.k$rpi, option = "B", end = .7), bold = T) %>%
   group_rows(start_row = 1, end_row = 5, group_label = "Hazardous Liquids")%>%
   group_rows(start_row = 6, end_row = 10, group_label = "Gas Distribution")%>%
-  group_rows(start_row = 11, end_row = 15, group_label = "Gas Transmission") %>%
+  group_rows(start_row = 11, end_row = 14, group_label = "Gas Transmission")%>%
   cat(., file = "./MN/table2.html")
 ```
 
@@ -771,5 +801,54 @@ ggsave("MN/op.png", width = wdt, height = hgt, units = "px")
 ```
 
 
+```{r}
+df.c <- df %>%
+  filter(pri.name %in% bigNames | grepl("CENTERPOINT", pri.name)) %>%
+  mutate(pri.name = if_else(grepl("CENTERPOINT", pri.name),
+                            "Centerpoint",
+                            pri.name))%>%
+  group_by(pri.name)%>%
+  mutate(inc = n())%>%
+  ungroup()%>%
+  group_by(pri.name, CAUSE) %>%
+  summarise(cPer = n()/inc, 
+            inc = sum(unique(inc), na.rm=T))%>%
+  ungroup()%>%
+  complete(pri.name, CAUSE, fill = list(cPer = 0))%>%
+  arrange(inc) %>%
+  mutate(pri.name = factor(pri.name),
+         pri.name = fct_reorder(pri.name, desc(inc)))
+
+df.c%>%
+  ggplot(aes(y=str_wrap(pri.name, 15), x = str_wrap(str_to_sentence(CAUSE),15), fill = cPer))+
+  geom_tile(width = .8, height = .8)+
+  geom_text(aes(label = percent(cPer, accuracy = .1)), 
+            color = "gray80", size = 10, 
+            family = pstFont)+
+  scale_fill_viridis(name = "Percent\nof Incidents", labels = percent_format())+
+  scale_x_discrete(position = "top", name = "Cause")+
+  labs(y = NULL,
+       title = "Incident Cause Proportions by Operator",
+       subtitle = paste0("Selected Operators in ", moStateL, " (2010-2021)"),
+       tag = tag, 
+       caption = capt)+
+  theme_pst()+
+  theme(axis.text.x = element_text(angle = -36, hjust = 1, size = 24, lineheight = .25),
+        axis.text.y = element_text(size = 24, lineheight = .25),
+        panel.grid.major.y = element_blank(),
+        legend.text = element_text(size = 16),
+        legend.title = element_text(size = 20, lineheight = .25),
+        axis.title.x = element_text(size = 24),
+        legend.position = "bottom",
+        legend.direction = "horizontal",
+        plot.title = element_text(size = 32),
+        plot.subtitle = element_text(size = 28),
+        plot.tag = element_text(size = 16),
+        plot.caption = element_text(size = 16))
+
+ggsave("MN/cause.png", width = wdt, height = hgt, units = "px")
+
+
+```
 
 
