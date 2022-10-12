@@ -5,6 +5,12 @@ library(readxl)
 
 source("offshorefinder.R")
 
+#### Data Setup ####
+## TODO: download zip direct from PHMSA website
+## TODO: unpack zip to raw/ directory and continue cleaning 
+## TODO: replace 2022 miles with 2021 numbers 
+
+
 #### MILEAGE DATA ####
 
 ## getting mileage data 
@@ -152,7 +158,9 @@ gt.full <- read_xlsx("./data/raw/gtggungs2010toPresent.xlsx", sheet = 2) %>%
   left_join(miles, by = c("OPERATOR_ID", "SYS", "STATE","IYEAR"))%>%
   mutate(mileage = replace_na(mileage, 0))%>%
   left_join(ops.simple, by = c("OPERATOR_ID" = "sub.id"))%>% 
-  distinct(NARRATIVE, .keep_all = T)
+  distinct(NARRATIVE, .keep_all = T)%>%
+  rename(pri.id = pri.id.x,
+         pri.name = pri.name.x)
   
 
 # hl big
@@ -194,7 +202,9 @@ hl.full <- read_xlsx("./data/raw/hl2010toPresent.xlsx", sheet = 2)%>%
   left_join(miles, by = c("OPERATOR_ID", "SYS", "STATE","IYEAR"))%>%
   mutate(mileage = replace_na(mileage, 0))%>%
   left_join(ops.simple, by = c("OPERATOR_ID" = "sub.id"))%>% 
-  distinct(NARRATIVE, .keep_all = T)
+  distinct(NARRATIVE, .keep_all = T)%>%
+  rename(pri.id = pri.id.x,
+         pri.name = pri.name.x)
 
 
 #### JOINS, BINDS ####

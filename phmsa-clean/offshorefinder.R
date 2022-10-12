@@ -20,6 +20,7 @@ locCleaner <- function(df, col, lat, lon, org = NULL){
   #separate good locations
   goodLoc <- df %>%
     filter(!grepl("NA", .data[[col]]) 
+           & !grepl("N/A", .data[[col]]) 
            & !grepl("Municipality", .data[[col]]) 
            & !grepl(" Miles", .data[[col]])
            & !grepl("[[:digit:]]", .data[[col]])) %>%
@@ -29,6 +30,7 @@ locCleaner <- function(df, col, lat, lon, org = NULL){
   if(is.null(org)){
     badLoc <- df %>%
       filter(grepl("NA", .data[[col]]) 
+             | grepl("N/A", .data[[col]]) 
              | grepl("Municipality", .data[[col]]) 
              | grepl(" Miles", .data[[col]])
              | grepl("[[:digit:]]", .data[[col]])) %>%
@@ -37,6 +39,7 @@ locCleaner <- function(df, col, lat, lon, org = NULL){
   else{
     badLoc <- df %>%
       filter(grepl("NA", .data[[col]]) 
+             | grepl("N/A", .data[[col]]) 
              | grepl("Municipality", .data[[col]]) 
              | grepl(" Miles", .data[[col]])
              | grepl("[[:digit:]]", .data[[col]])) %>%

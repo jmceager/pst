@@ -1,0 +1,1229 @@
+---
+title: "Untitled Analysis"
+subtitle: "Specifics (Timeline)"
+runningheader: "Pipeline Safety Trust `r format(Sys.time(), '%m/%Y')`"
+author: "Pipeline Safety Trust"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  tufte::tufte_handout: default
+header-includes:
+  - \usepackage{titling}
+  - \pretitle{\begin{center}
+    \includegraphics[width=2in,height=2in]{img/PST_logo.png}\LARGE\\}
+  - \posttitle{\end{center}}
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r include = FALSE, echo = FALSE}
+rm(list = ls())
+```
+
+```{r setup, include=FALSE}
+library(tufte)
+# invalidate cache when the tufte version changes
+knitr::opts_chunk$set(cache.extra = packageVersion('tufte'))
+options(htmltools.dir.version = FALSE)
+
+library(tidyverse)
+library(ggrepel)
+library(RColorBrewer)
+library(ggthemes)
+library(viridis)
+library(scales)
+library(readxl)
+library(kableExtra)
+library(sp)
+library(sf)
+library(rgeos)
+library(tufte)
+library(rgdal)
+library(ggspatial)
+library(mapboxapi)
+
+wdt = 6
+hgt = wdt/1.62
+
+knitr::opts_chunk$set(echo = FALSE, include = FALSE, message = FALSE)
+options(knitr.table.format = "latex")
+capt = "Source: PST State Transparency Review Data"
+datadir = "https://raw.githubusercontent.com/jmceager/pst/main/phmsa-clean/data/"
+tag = paste("PST", lubridate::year(Sys.Date()))
+
+```
+
+```{r theme_pst}
+library(showtext)
+#> Loading required package: sysfonts
+#> Loading required package: showtextdb
+pstFont = "Montserrat"
+font_add_google(pstFont)
+showtext_auto()
+theme_pst <- function(baseSize=8) {
+  (theme(
+                       axis.line.x = element_line(
+                         colour = "#182125",
+                         size = 0.5,
+                         linetype = "solid"
+                       ),
+                       axis.line.y = element_line(
+                         colour = "#182125",
+                         size = 0.5,
+                         linetype = "solid"
+                       ),
+                       axis.ticks.y = element_line(
+                         colour = "#182125",
+                         size = 0.5,
+                         linetype = "solid"
+                       ),
+                       text = element_text(family = pstFont),
+                       axis.text = element_text(colour = "#8C9394",
+                                                size = baseSize * .8),
+                       axis.title = element_text(colour ="black", size= baseSize),
+                       panel.grid.minor.y = element_line(linetype = "dotted", 
+                                                         colour = "#C4C8C6"),
+                       panel.grid.major.y = element_line(colour = "#394C56", 
+                                                         linetype = "dotted"),
+                       panel.grid.major.x = element_blank(),
+                       panel.grid.minor.x = element_blank(),
+                       panel.background = element_blank(),
+                       panel.border = element_blank(),
+                       strip.background = element_rect(linetype = 0),
+                       strip.text = element_blank(),
+                       strip.text.x = element_blank(),
+                       strip.text.y = element_blank(),
+                       legend.text = element_text(colour = "black",
+                                                  size = baseSize * .8),
+                       legend.background = element_rect(fill = NULL, 
+                                                        color = "#182125"),
+                       legend.title = element_text( face = "bold", 
+                                                    colour = "black",
+                                                    size = baseSize),
+                       legend.position = "right",
+                       legend.key = element_blank(),
+                       legend.spacing.y = unit(.125, 'cm'),
+                       #legend.background = element_blank(),
+                       plot.tag.position = c(.97,.97),
+                       plot.tag = element_text(size = baseSize *.66,
+                                               colour = "#8C9394"),
+                       plot.background = element_rect(fill = "#ffffff"),
+                       plot.title = element_text(face = "bold", 
+                                                 colour = "black",
+                                                 size = baseSize*1.2),
+                       plot.subtitle = element_text(colour = "#8C9394",
+                                                    size = baseSize),
+                       plot.caption = element_text(size = baseSize *.8)
+                     )
+  )
+}
+
+theme_pst_map <- function(baseSize=8) {
+  (theme_void() + 
+     theme(
+       legend.direction = "horizontal",
+       legend.position = "bottom",
+       plot.tag.position = c(.97,.97),
+       text = element_text(family = pstFont),
+       legend.text = element_text(colour = "black",
+                                   size = baseSize * .8),
+       legend.background = element_rect(fill = NA, 
+                                        color = NA),
+       legend.title = element_text( face = "bold", 
+                                    colour = "black",
+                                    size = baseSize),
+       legend.key = element_blank(),
+       plot.background = element_rect(fill = "#ffffff", colour = NA),
+       plot.margin = unit(c(0,0,0,0), "cm"),
+       plot.tag = element_text(size = baseSize *.66,
+                               colour = "#8C9394"),
+       plot.title = element_text(face = "bold", 
+                                 colour = "black",
+                                 size = baseSize*1.2),
+       plot.subtitle = element_text(colour = "#8C9394",
+                                    size = baseSize),
+       plot.caption = element_text(size = baseSize *.8,
+                                   lineheight = .33)
+       )
+
+                    
+  )
+}
+
+```
+
+```{r nice colors}
+col <- brewer.pal(6,"Set2")
+green <- col[1]
+orange <- col[2]
+purple <- col[3]
+pink <- col[4]
+lime <- col[5]
+yellow <- col[6]
+
+#brewer pal
+col <- brewer.pal(6,"Set2")
+green <- col[1]
+orange <- col[2]
+purple <- col[3]
+pink <- col[4]
+lime <- col[5]
+yellow <- col[6]
+
+#pst 
+darkBlue <- "#003E59"
+midBlue <- "#00546F"
+bluGreen <- "#459197"
+liteGreen <- "#61A893"
+
+#pst contrast 
+#1
+honey <- "#FFAD05"
+lilac <- "#C297B8"
+crimson <- "#92140C"
+
+# 2
+hunterGrn <- "#315C2B"
+maize <- "#E7BB41"
+
+#pals 
+pst1 <- c(darkBlue, liteGreen, lilac, bluGreen, honey,  crimson)
+pst2 <- c(darkBlue, liteGreen, hunterGrn, bluGreen, maize, midBlue)
+```
+
+```{r}
+years <- excel_sheets("data/transparency-history.xlsx")
+
+
+dfRaw <- map_dfr(years, read_xlsx, 
+              path = "data/transparency-history.xlsx", .id = "sheet") %>%
+  mutate(year = years[as.numeric(sheet)],
+         average = coalesce(total, average))%>%
+  select(!c(total, sheet))%>%
+  rename(state = State)
+
+df <- dfRaw %>%
+  pivot_longer(!c(state, year)) %>%
+  drop_na(value)
+
+```
+
+```{r cleveland 10 yr}
+df %>%
+  filter(year == 2012 | year == 2022,
+         name == "average")%>%
+  pivot_wider(names_from = c("name", "year")) %>%
+  drop_na(average_2012, average_2022)%>%
+  ggplot()+
+  geom_segment(aes(x = reorder(state, average_2022), 
+                   xend = reorder(state, average_2022), 
+                   y=average_2012, yend = average_2022),
+               color = "gray30")+
+  geom_point(aes(x = state, y = average_2022, color = "2022"))+
+  geom_point(aes(x = state, y = average_2012, color = "2012"))+
+  scale_color_manual(values = c(darkBlue, liteGreen), name = "Year")+
+  scale_y_continuous(minor_breaks = seq(0,3,.25))+
+  coord_flip()+
+  theme_pst(baseSize = 20)+
+  theme(panel.grid.major.y = element_line(linetype = "dotted", 
+                                          colour = "gray90",
+                                          size = .33),
+        panel.grid.minor.x = element_line(linetype = "dotted", 
+                                          colour = "#C4C8C6",
+                                          size = .33),
+        panel.grid.major.x = element_line(colour = "#394C56", 
+                                          linetype = "dotted"),
+        panel.grid.minor.y = element_blank(),
+        legend.position = c(.7,.2)) +
+  labs(x = "State / Regulator",
+       y = "Average Score",
+       tag = tag,
+       title = "State Transparency 10-Year Change",
+       caption = capt)
+
+ggsave("plots/10yrChangeClev.png", width = wdt, height = hgt, units = "in")
+
+
+df %>%
+  filter(year == 2012 | year == 2022,
+         name == "average")%>%
+  pivot_wider(names_from = c("name", "year")) %>%
+  drop_na(average_2012, average_2022)%>%
+  ggplot()+
+  geom_segment(aes(x = reorder(state, average_2022), 
+                   xend = reorder(state, average_2022), 
+                   y=average_2012, yend = average_2022),
+               color = "gray30")+
+  geom_point(aes(x = state, y = average_2022, color = "2022"))+
+  geom_point(aes(x = state, y = average_2012, color = "2012"))+
+  scale_color_manual(values = c(darkBlue, liteGreen), name = "Year")+
+  scale_y_continuous(minor_breaks = seq(0,3,.25))+
+  coord_flip()+
+  theme_pst(baseSize = 24)+
+  theme(panel.grid.major.y = element_line(linetype = "dotted", 
+                                          colour = "gray90",
+                                          size = .33),
+        panel.grid.minor.x = element_line(linetype = "dotted", 
+                                          colour = "#C4C8C6",
+                                          size = .33),
+        panel.grid.major.x = element_line(colour = "#394C56", 
+                                          linetype = "dotted"),
+        panel.grid.minor.y = element_blank(),
+        legend.position = c(.7,.2)) +
+  labs(x = "State / Regulator",
+       y = "Average Score",
+       tag = tag,
+       title = "State Transparency 10-Year Change",
+       caption = capt)
+ggsave("plots/10yrChangeClevBig.png", width = 6, height = 6*1.62, units = "in")
+
+```
+
+```{r by state}
+diffcol <- df %>%
+  filter(name == "average")%>%
+  pivot_wider(names_from = c("name", "year"))%>%
+  mutate(average_2013 = average_2013*.75,
+    average_2012 = coalesce(average_2012, average_2013, average_2014,
+                                 average_2015, average_2016, average_2017,
+                                 average_2018))%>%
+  drop_na(average_2012, average_2022) %>%
+  mutate(diff = average_2022-average_2012) %>%
+  select(state, diff)
+
+
+#### all states ####
+df %>%
+  filter(name == "average")%>%
+  left_join(diffcol, by = "state") %>% 
+  drop_na(diff)%>%
+  ggplot(aes(x = year, y = value, group = state, color = diff))+
+  geom_line()+
+  #scale_color_viridis(option = "D", direction = -1)+
+  scale_color_distiller(palette = "RdYlBu", direction = 1,
+                         limits = c(-2.3,2.4)
+  )+
+  theme_pst()
+
+#### top and bottom 10's ####
+
+dfSelect <- df %>%
+  filter(name == "average")%>%
+  mutate(value = if_else(year == 2013, value*.75, value))%>%
+  left_join(diffcol, by = "state") %>% 
+  drop_na(diff)%>%
+  filter(diff > quantile(diff, .9) | diff < quantile(diff, .1))
+
+
+dfSelect%>%
+  ggplot()+
+  geom_line(aes(x = as.numeric(year), y = value, group = state, color = diff),
+            size = 1, alpha = .75)+
+  geom_label_repel(data = filter(dfSelect, year == 2022), 
+                  mapping = aes(label = state, x = as.numeric(year), 
+                                y = value, color = diff),
+                  nudge_x = 1.4,
+                  label.size = .33,
+                  size = 6,
+                  force = .5,
+                  direction = "y")+
+  scale_color_viridis_b(direction = -1, name = "Change")+
+  scale_x_continuous(expand = expansion(mult = c(0,.125)),
+                     breaks = seq(2012,2022,2))+
+  # scale_color_distiller(palette = "RdYlBu", direction = 1,
+  #                        limits = c(-2.3,2.4)
+  # )+
+  theme_pst(baseSize = 16)+
+  theme(legend.position = c(.16,.91),
+        legend.direction = "horizontal")+
+  labs(title = "Selected States Change in Transparency",
+       subtitle = "Best and Worst 5 State Regulators, 2012 to 2022",
+       x = "Year",
+       y = "Score",
+       caption = capt, 
+       tag = tag)
+
+ggsave("plots/TopBottom10Lines.png", width = wdt, height = hgt, units = "in")
+```
+
+
+```{r}
+
+```
+
+
+```{r by value}
+valueLabs <- c("findSite" = "Find Website",
+               "mapGT" = "Trans. Pipe Maps",
+               "regDescription" = "Desc. Regulation",
+               "regAccess" = "Access Stat+Regs",
+               "agencyCon" = "Agency Contacts",
+               "companyCon" = "Comp. Contacts",
+               "excavationData" = "Excav. Dmg. Data",
+               "average" = "Avg. Score",
+               "incData" = "Incident Data",
+               "enforceRecs" = "Enforcement Data",
+               "inpectRecs" = "Inspection Records",
+               "sitingRouting" = "Siting + Routing")
+
+####  bing bong ####
+df %>%
+  group_by(name, year)%>%
+  summarise(value = mean(value, na.rm = T))%>%
+  filter(year == first(year) | year == 2022) %>%
+  group_by(name)%>%
+  mutate(fyr = min(year),
+         year = if_else(year < 2022, 2012,2022))%>%
+  pivot_wider(names_from = c("year"))%>%
+  ggplot()+
+  geom_segment(aes(x = reorder(name, `2022`), 
+                   xend = reorder(name, `2022`), 
+                   y=`2012`, yend = `2022`),
+               color = "gray30")+
+  geom_point(aes(x = name, y = `2022`, color = "2022"))+
+  geom_point(aes(x = name, y = `2012`, color = fyr))+
+  scale_color_viridis(discrete = T, end = .6, name = "Year")+
+  scale_x_discrete(labels = valueLabs, name = NULL)+
+  scale_y_continuous(limits = c(0,3), minor_breaks = seq(0,3,.25), expand = expansion(0,0))+
+  coord_flip()+
+  labs(title = "Average Score Change by Category",
+       subtitle = "Mean of all Regulators, 2012-2022",
+       y = "Score",
+       caption = capt,
+       tag = tag)+
+  theme_pst(baseSize = 20)+
+  theme(panel.grid.major.y = element_line(linetype = "dotted", 
+                                          colour = "gray90",
+                                          size = .33),
+        panel.grid.minor.x = element_line(linetype = "dotted", 
+                                          colour = "#C4C8C6",
+                                          size = .33),
+        panel.grid.major.x = element_line(colour = "#394C56", 
+                                          linetype = "dotted"),
+        panel.grid.minor.y = element_blank(),
+        legend.position = c(.8,.25))
+
+ggsave("plots/CategoryClev.png", width = wdt, height = hgt, units = "in")
+
+```
+
+```{r by value lines}
+#### lines ####
+df %>%
+  mutate(value = if_else(year == 2013, value *.75, value))%>%
+  group_by(name, year)%>%
+  summarise(value = mean(value, na.rm = T))%>%
+  group_by(name)%>%
+  mutate(base = first(value, order_by = as.numeric(year)),
+         change = value - base)%>%
+  ggplot(aes(x = as.numeric(year), y = change, group = name, color = name))+
+  geom_hline(yintercept = 0)+
+  geom_line()+
+  geom_label_repel(data = df %>%
+                            group_by(name, year)%>%
+                            summarise(value = mean(value, na.rm = T))%>%
+                            group_by(name)%>%
+                            mutate(base = first(value, order_by = as.numeric(year)),
+                                   change = value - base)%>%
+                            filter(year == "2022"),
+                    aes(x = as.numeric(year), y = change, label = valueLabs[name]),
+                   min.segment.length = .1,
+                   nudge_x = .75)+
+  scale_color_viridis_d()+
+  scale_x_continuous(name = "Year", expand = expansion(add=c(0,1.5)),
+                     breaks = seq(2012,2022,2))+
+  scale_y_continuous(name = "Change in Mean Score")+
+  theme_pst(baseSize = 16)+
+  labs(title = "Change in Mean Score by Category",
+       subtitle = "All Regulators in Transparency Reviews, 2012 to 2022",
+       caption = capt,
+       tag = tag)+
+  theme(legend.position = "none")
+
+ggsave("plots/CatLines.png", width = wdt, height = hgt, units = "in")
+
+```
+
+```{r}
+valueAbbr <- unique(df$name)
+
+df %>%
+  filter(year == "2022", name != "average") %>%
+  group_by(name)%>%
+  mutate(low = value < quantile(value, .2) | value == 0)%>%
+  filter(low == T) %>%
+  group_by(state)%>%
+  summarise(name = list(name),
+            value = sum(low)) %>% view()
+```
+
+```{r map setup}
+
+# read as sf map of hexbin
+sf_state <- 
+    read_sf("/Users/jameseager/Documents/pst/phmsa-clean/data/gis/us_hexbin_extended.geojson", crs = 4326) %>% 
+    set_names(str_to_lower) %>% 
+    mutate(region = str_to_lower(name))
+    
+# hexbin df
+dfHex <- df %>%
+  filter(year == "2022", name != "average") %>%
+  group_by(name)%>%
+  mutate(low = value < quantile(value, .22) | value == 0)%>%
+  filter(low == T) %>%
+  group_by(state)%>%
+  summarise(name = list(name),
+            value = sum(low)) %>%
+  mutate(state = if_else(state == "DC", "District of Columbia", state))%>%
+  mutate(code = state.abb[match(state, state.name)],
+         abbrev = case_when(state %in% state.name ~ code,
+                            state == "California Gas" ~ "CA-G",
+                            state == "California Liquid" ~ "CA-L",
+                            state == "Arkansas OGC" ~ "AR-O",
+                            state == "District of Columbia" ~ "DC"
+                            ),
+         smolstates = str_to_lower(state))
+
+# find centroid
+centers <- 
+    st_centroid(dfHex) %>% 
+    st_coordinates() %>% 
+    as_tibble() %>% 
+    set_names(str_to_lower)
+
+df_center <- tibble(abbr = dfHex$abbrev) %>% 
+    bind_cols(centers)
+   
+
+```
+
+```{r map of low scores}
+library(rgdal)
+library(geojsonio)
+library(broom)
+
+spdf <- geojson_read("/Users/jameseager/Documents/pst/phmsa-clean/data/gis/us_hexbin_extended.geojson", what = "sp")
+
+spdf@data = spdf@data %>%
+  mutate(region = str_to_lower(Name))
+
+spdf_fortified <- tidy(spdf, region = "region") %>%
+  left_join(dfHex, by = c("id" = "smolstates"))
+
+library(rgeos)
+centers <- cbind.data.frame(data.frame(gCentroid(spdf, byid=TRUE), id=spdf@data$Name)) %>%
+  left_join(dfHex, by = c("id" = "state"))%>%
+  mutate(code = state.abb[match(id, state.name)],
+         abbrev = case_when(id %in% state.name ~ code,
+                            id == "California Gas" ~ "CA-G",
+                            id == "California Liquid" ~ "CA-L",
+                            id == "Arkansas OGC" ~ "AR-O",
+                            id == "District of Columbia" ~ "DC"
+                            ))
+
+ggplot()+
+  geom_polygon(data = spdf_fortified, 
+               aes(x = long, y = lat, fill = value, group = group),
+               color = "gray95")+
+  geom_text(data = centers, aes(x, y, label = abbrev), 
+            color = "white", size = 8, fontface = "bold")+
+  # scale_fill_fermenter(palette = "YlOrRd",direction = 1, 
+  #                      na.value = "gray80", n.breaks = 6)+
+  scale_fill_viridis_b(option = "C",na.value = "gray60", n.breaks = 6)+
+  theme_pst_map(baseSize = 20)+
+  coord_fixed(.8)+
+  theme(legend.direction = "horizontal",
+        legend.position = "bottom",
+        legend.title = element_text(vjust=.8),
+        legend.spacing.y = unit(.1, "cm"),
+        legend.key.height = unit(.25,"cm"),
+        legend.text = element_text(vjust = 1, lineheight = 0,
+                                   margin = margin(0,0,0,0,"cm")))+
+  labs(title = "Low-Scoring State Regulators",
+       subtitle = "Number of Categories per State with a Score either of 0 or in the Bottom 10 in 2022",
+       fill = "Number of Categories:",
+       caption = paste0("A fill of gray denotes states with no 0 or bottom-10 scores\n",capt),
+       tag = tag)
+  
+ggsave("plots/BadValsMap.png", width = wdt, height = hgt, units = "in")
+
+```
+
+```{r map of high scores}
+dfHex <- df %>%
+  filter(year == "2022", name != "average") %>%
+  group_by(name)%>%
+  mutate(low = value > quantile(value, .2) | value == 3)%>%
+  filter(low == T) %>%
+  group_by(state)%>%
+  summarise(name = list(name),
+            value = sum(low)) %>%
+  mutate(state = if_else(state == "DC", "District of Columbia", state))%>%
+  mutate(code = state.abb[match(state, state.name)],
+         abbrev = case_when(state %in% state.name ~ code,
+                            state == "California Gas" ~ "CA-G",
+                            state == "California Liquid" ~ "CA-L",
+                            state == "Arkansas OGC" ~ "AR-O",
+                            state == "District of Columbia" ~ "DC"
+                            ),
+         smolstates = str_to_lower(state))
+
+
+spdf_fortified <- tidy(spdf, region = "region") %>%
+  left_join(dfHex, by = c("id" = "smolstates"))
+
+centers <- cbind.data.frame(data.frame(gCentroid(spdf, byid=TRUE), id=spdf@data$Name)) %>%
+  left_join(dfHex, by = c("id" = "state"))%>%
+  mutate(code = state.abb[match(id, state.name)],
+         abbrev = case_when(id %in% state.name ~ code,
+                            id == "California Gas" ~ "CA-G",
+                            id == "California Liquid" ~ "CA-L",
+                            id == "Arkansas OGC" ~ "AR-O",
+                            id == "District of Columbia" ~ "DC"
+                            ))
+
+ggplot()+
+  geom_polygon(data = spdf_fortified, 
+               aes(x = long, y = lat, fill = value, group = group),
+               color = "gray95")+
+  geom_text(data = centers, aes(x, y, label = abbrev), 
+            color = "white", size = 8, fontface = "bold")+
+  # scale_fill_fermenter(palette = "YlOrRd",direction = 1, 
+  #                      na.value = "gray80", n.breaks = 6)+
+  scale_fill_viridis_b(option = "G",na.value = "gray60", n.breaks = 6, end = .8)+
+  theme_pst_map(baseSize = 20)+
+  coord_fixed(.8)+
+  theme(legend.direction = "horizontal",
+        legend.position = "bottom",
+        legend.title = element_text(vjust=.8),
+        legend.spacing.y = unit(.1, "cm"),
+        legend.key.height = unit(.25,"cm"),
+        legend.text = element_text(vjust = 1, lineheight = 0,
+                                   margin = margin(0,0,0,0,"cm")))+
+  labs(title = "High-Scoring State Regulators",
+       subtitle = "Number of Categories per State with Perfect or Top 10 scores in 2022",
+       fill = "Number of Categories:",
+       caption = paste0("A fill of gray denotes states with no Perfect or Top-10 scores\n",capt),
+       tag = tag)
+  
+ggsave("plots/GoodValsMap.png", width = wdt, height = hgt, units = "in")
+
+```
+
+```{r map of avg scores}
+library(rgdal)
+library(geojsonio)
+library(broom)
+
+dfAvg <- df %>%
+  filter(year == "2022", name == "average")%>%
+  mutate(state = if_else(state == "DC", "District of Columbia", state))%>%
+  mutate(code = state.abb[match(state, state.name)],
+         abbrev = case_when(state %in% state.name ~ code,
+                            state == "California Gas" ~ "CA-G",
+                            state == "California Liquid" ~ "CA-L",
+                            state == "Arkansas OGC" ~ "AR-O",
+                            state == "District of Columbia" ~ "DC"
+                            ),
+         smolstates = str_to_lower(state))
+
+
+spdf_fortified <- tidy(spdf, region = "region") %>%
+  left_join(dfAvg, by = c("id" = "smolstates"))
+
+ggplot()+
+  geom_polygon(data = spdf_fortified, 
+               aes(x = long, y = lat, fill = value, group = group),
+               color = "gray95")+
+  geom_text(data = centers, aes(x, y, label = abbrev), 
+            color = "white", size = 8, fontface = "bold")+
+  # scale_fill_fermenter(palette = "YlOrRd",direction = 1, 
+  #                      na.value = "gray80", n.breaks = 6)+
+   scale_fill_viridis(option = "G",na.value = "gray60", direction =1, end = .8,
+                      limits = c(0,3))+
+  # scale_fill_distiller(palette = "Blues",na.value = "gray60", direction =1, 
+  #                    limits = c(0,3))+
+  theme_pst_map(baseSize = 20)+
+  coord_fixed(.8)+
+  theme(legend.direction = "horizontal",
+        legend.position = "bottom",
+        legend.title = element_text(vjust=.8),
+        legend.spacing.y = unit(.1, "cm"),
+        legend.key.height = unit(.25,"cm"),
+        legend.text = element_text(vjust = 1, lineheight = 0,
+                                   margin = margin(0,0,0,0,"cm")))+
+  labs(title = "State Transparency Ratings",
+       subtitle = "Average Score (out of 3) for Each Site in 2022",
+       fill = "Average Score:",
+       caption = paste0("A fill of gray denotes states with no 2022 score\n",capt),
+       tag = tag)
+  
+ggsave("plots/AvgScoreMap.png", width = wdt, height = hgt, units = "in")
+
+```
+
+```{r map of avg scores}
+library(rgdal)
+library(geojsonio)
+library(broom)
+library(rgeos)
+
+dfPass <- df %>%
+  filter(year == "2022", name == "average")%>%
+  mutate(state = if_else(state == "DC", "District of Columbia", state))%>%
+  mutate(code = state.abb[match(state, state.name)],
+         abbrev = case_when(state %in% state.name ~ code,
+                            state == "California Gas" ~ "CA-G",
+                            state == "California Liquid" ~ "CA-L",
+                            state == "Arkansas OGC" ~ "AR-O",
+                            state == "District of Columbia" ~ "DC"
+                            ),
+         smolstates = str_to_lower(state),
+         pass = case_when(value == "3" ~ "Excellent",
+                          between(value, 25/11, 32/11) ~  "Good",
+                          between(value, 17/11, 24/11) ~  "Pass",
+                          value < 17/11 ~ "Fail"),
+         pass = factor(pass, levels = c("Excellent", "Good", "Pass","Fail"))
+         )
+
+
+spdf_fortified <- tidy(spdf, region = "region") %>%
+  left_join(dfPass, by = c("id" = "smolstates"))
+
+ggplot()+
+  geom_polygon(data = spdf_fortified, 
+               aes(x = long, y = lat, fill = pass, group = group),
+               color = "gray95")+
+  geom_text(data = centers, aes(x, y, label = abbrev), 
+            color = "white", size = 8, fontface = "bold")+
+  # scale_fill_fermenter(palette = "YlOrRd",direction = 1, 
+  #                      na.value = "gray80", n.breaks = 6)+
+   scale_fill_viridis_d(option = "G",na.value = "gray60", direction =-1, end = .8)+
+  # scale_fill_distiller(palette = "Blues",na.value = "gray60", direction =1, 
+  #                    limits = c(0,3))+
+  theme_pst_map(baseSize = 20)+
+  coord_fixed(.8)+
+  theme(legend.direction = "horizontal",
+        legend.position = "bottom",
+        legend.title = element_text(vjust=.8),
+        legend.spacing.y = unit(.1, "cm"),
+        legend.key.height = unit(.25,"cm"),
+        plot.title = element_text(hjust = .07),
+        legend.text = element_text(vjust = 1, lineheight = 0,
+                                   margin = margin(0,0,0,0,"cm")))+
+  labs(title = "2022 State Transparency Grades",
+       fill = "Grade:",
+       caption = paste0("A fill of gray denotes states with no 2022 score\n",capt),
+       tag = tag)
+  
+ggsave("plots/RatingMap.png", width = wdt, height = hgt, units = "in")
+
+```
+
+
+
+```{r corrplot of values}
+library(corrplot)
+
+df %>%
+  mutate(name = valueLabs[name],
+         value = if_else(year == 2013, value*.75, value))%>%
+  pivot_wider(names_from = "name") %>%
+  select(!c(state, year,valueLabs["average"]))%>%
+  cor(use = "complete.obs") %>%
+  corrplot.mixed(order = "hclust",
+                 upper = "circle",
+                 lower = "number",
+                 tl.pos = "lt",
+                 tl.col = "black")
+
+
+```
+
+```{r cluster setup}
+library(cluster)    # clustering algorithms
+library(factoextra) # clustering algorithms & visualization
+
+set.seed(123)
+
+dfClean <- df%>%
+  filter(year == 2022)%>%
+  pivot_wider(names_from = "name")%>%
+  mutate(sitingRouting = coalesce(sitingRouting, average),
+         findSite = coalesce(findSite, average),
+         regDescription = coalesce(regDescription, average))%>%
+  na.omit()%>%
+  column_to_rownames(var = "state") %>%
+  select(!c(year, average))
+
+
+fviz_nbclust(dfClean, kmeans, method = "gap_stat")
+```
+
+```{r cluster run}
+# final <- kmeans(dfClean, 3, nstart = 50)
+# print(final)
+
+fviz_cluster(final, data = dfClean, repel = T, box.padding = .1,
+             max.overlaps = 20, min.segment.length = unit(1,"pt"))+
+  scale_color_manual(values = pst1)+
+  scale_fill_manual(values = pst1)+
+  theme_pst(baseSize = 20)+
+  labs(title = "Cluster Plot",
+       subtitle = "Based on 2022 Transparency Scores",
+       caption = "Axes reflect dimension reduction and not discrete values",
+       tag = tag)+
+  theme(panel.grid.minor.x = element_line(linetype = "dotted", 
+                                          colour = "#C4C8C6"),
+        panel.grid.major.x = element_line(colour = "#394C56", 
+                                          linetype = "dotted"))
+
+ggsave("plots/ClusterPlot.png", width = wdt, height = hgt, units = "in")
+
+```
+
+```{r cluster map}
+dfCluMap <- df %>%
+  filter(year == 2022,
+         name == "average")%>%
+  column_to_rownames("state")%>%
+  cbind(final$cluster) %>%
+  rename(cluster=`final$cluster`)%>%
+  rownames_to_column(var = "state")%>%
+  mutate(smolstates = str_to_lower(state),
+         smolstates = if_else(smolstates == "dc", "district of columbia",
+                              smolstates))%>%
+  mutate(code = state.abb[match(state, state.name)],
+         abbrev = case_when(state %in% state.name ~ code,
+                            state == "California Gas" ~ "CA-G",
+                            state == "California Liquid" ~ "CA-L",
+                            state == "Arkansas OGC" ~ "AR-O",
+                            state == "DC" ~ "DC"
+                            ))
+
+spdf_fortified <- tidy(spdf, region = "region") %>%
+  left_join(dfCluMap, by = c("id" = "smolstates"))
+
+ggplot()+
+  geom_polygon(data = spdf_fortified, 
+               aes(x = long, y = lat, fill = as.factor(cluster), group = group),
+               color = "gray95")+
+  geom_text(data = centers, aes(x, y, label = abbrev), 
+            color = "white", size = 8, fontface = "bold")+
+  scale_fill_manual(values = pst1)+
+  theme_pst_map(baseSize = 20)+
+  coord_fixed(.8)+
+  theme(legend.direction = "horizontal",
+        legend.position = "bottom",
+        legend.title = element_text(vjust=.8),
+        legend.spacing.y = unit(.1, "cm"),
+        legend.key.height = unit(.25,"cm"),
+        legend.text = element_text(vjust = 1, lineheight = 0,
+                                   margin = margin(0,0,0,0,"cm")))+
+  labs(title = "State Transparency Ratings",
+       subtitle = "K-Means Clustering Results",
+       fill = "Cluster:",
+       caption = paste0("A fill of gray denotes states with no 2022 score\n",capt),
+       tag = tag)
+  
+ggsave("plots/ClusterMap.png", width = wdt, height = hgt, units = "in")
+
+```
+
+```{r cluster avg}
+
+
+as_tibble(final$centers) %>%
+  rownames_to_column(var = "cluster")%>%
+  pivot_longer(cols = !cluster) %>%
+  mutate(newclu = if_else(cluster == "2", "1", "0"),
+         cluster = if_else(cluster == "1", "2", cluster),
+         cluster = if_else(newclu == "1", "1", cluster))%>%
+  ggplot(aes(x = cluster, y = name, fill = value))+
+  geom_tile(width = .75, height = .99)+
+  geom_text(aes(label = round(value,2)), size = 10, 
+            color = "gray90", fontface = "bold")+
+  scale_fill_viridis(direction = 1, option = "G", end = .8, name = "Mean Score")+
+  scale_y_discrete(position = "right", labels = valueLabs, name = NULL,
+                   expand = expansion(0,0))+
+  scale_x_discrete(expand = expansion(0,0), name = "Cluster")+
+  theme_pst(baseSize = 20)+
+  labs(title = "Mean Cluster Values")+
+  theme(axis.line.y = element_blank(),
+        axis.line.x = element_blank(),
+        axis.text.x = element_text(angle = 45, hjust = 0),
+        panel.grid.major.y = element_blank())+
+  coord_flip()
+
+ggsave("plots/ClusterTile.png", width = wdt, height = hgt, units = "in")
+
+
+```
+
+```{r bad radars}
+
+dfCluMap %>% group_by(cluster) %>% summarise(average = mean(value))
+dfCluMap %>% filter(cluster == 3) %>% arrange(value) 
+
+badStates <- filter(dfCluMap, cluster == 3) %>% select(state) %>% as.list()
+badStates <- badStates$state
+
+df %>%
+  filter(state %in% badStates, year == 2022, name != "average") %>% 
+  select(!year) %>%
+  group_by(state)%>%
+  mutate(average = mean(value))%>%
+  ungroup()%>%
+  ggplot(aes(x = name, y = reorder(state, average), fill = as.factor(value)))+
+  geom_tile(height = .7, width = .95)+
+  scale_x_discrete(position = "top", name = "Category", labels = valueLabs)+
+  scale_fill_viridis(option = "G", discrete = T, end = .8, name = "Score")+
+  labs(title = "Cluster 3 State Transparency Ratings",
+       subtitle = "States Ordered from Highest to Lowest Average Score (1.6 to .27)",
+       caption = capt,
+       tag = tag)+
+  theme_pst(baseSize = 20)+
+  theme(axis.line.y = element_blank(),
+        axis.line.x = element_blank(),
+        axis.text.x = element_text(angle = 45, hjust = 0),
+        panel.grid.major.y = element_blank())
+
+
+ggsave("plots/LowStatesTile.png", width = wdt, height = hgt, units = "in")
+
+```
+
+```{r cluster 1 lines}
+goodStates <- filter(dfCluMap, cluster == 1) %>% select(state) %>% as.list()
+goodStates <- goodStates$state  
+
+perfStates <- df %>%
+  filter(year == 2022, name != "average") %>%
+  group_by(state) %>%
+  mutate(average = mean(value))%>%
+  filter(average ==3) %>%
+  select(state) %>%
+  as.list()
+perfStates <- unique(perfStates$state)
+
+df %>%
+  filter( name != "average", state %in% perfStates)%>%
+  mutate()
+  ggplot(aes(x = year, y = value, color = name, group = name))+
+  geom_line()+
+  facet_wrap(~state)
+
+```
+
+  
+
+```{r vert everything polar}
+catAcs <- c("regAccess", "inpectRecs", "sitingRouting")
+catCont <- c("findSite","agencyCon", "companyCon", "regDescription")
+catData <- c("incData", "mapGT", "excavationData", "enforceRecs")
+
+baseSize = 30
+
+df %>%
+  filter(year == 2022, name != "average") %>%
+  group_by(state)%>%
+  mutate(average = mean(value))%>%
+  ungroup()%>%
+  mutate(nameCat = case_when(name %in% catAcs ~ "Information Access",
+                             name %in% catCont ~ "Communications",
+                             name %in% catData ~ "Data + Maps"))%>%
+  arrange(state, average)%>%
+  mutate(name = factor(name, levels = c(catCont, catData, catAcs)))%>%
+  ggplot(aes(x = name, y = value, fill = as.factor(nameCat)))+
+  geom_hline(yintercept = 3)+
+  geom_hline(yintercept = 2, linetype = "dotted", color = "gray30")+
+  geom_hline(yintercept = 1, linetype = "dotted", color = "gray30")+
+  geom_bar(stat = "identity")+
+  scale_fill_manual(values = pst1, name = "Score Category:")+
+  theme_minimal()+
+  labs(title = "State Transparency Ratings",
+       subtitle = "All States Category Polar Plot",
+       caption = capt,
+       tag = tag)+
+  theme(
+    text = element_text(family = pstFont),
+    axis.text = element_blank(),
+    axis.title = element_blank(),
+    panel.grid = element_blank(),
+    legend.background = element_rect(fill = NULL, 
+                                     color = "#182125"),
+    legend.title = element_text(face = "bold",hjust = .1,
+                                size = baseSize),
+    legend.key = element_blank(),
+    legend.text = element_text(size = baseSize*.8),
+    legend.spacing.y = unit(.125, 'cm'),
+    plot.tag.position = c(.97,.97),
+    strip.text = element_text(size = baseSize*.8),
+    plot.tag = element_text(colour = "#8C9394", size = baseSize * .6),
+    plot.background = element_rect(fill = "#ffffff", color = NA),
+    plot.title = element_text(face = "bold", size = baseSize * 1.2),
+    plot.subtitle = element_text(colour = "#8C9394", size = baseSize),
+    plot.caption = element_text(size = baseSize *.8),
+    legend.position = "top",
+    legend.justification = "left",
+    plot.margin = margin(.2, .2, .2, .2, "cm")
+    )+
+  coord_polar()+
+  facet_wrap(~reorder(state, -average), ncol = 8)
+
+
+
+ggsave("plots/everythingVertical.png", width = 8, height = 10, units = "in")
+```
+
+```{r horz everything polar}
+
+df %>%
+  filter(year == 2022, name != "average") %>%
+  group_by(state)%>%
+  mutate(average = mean(value))%>%
+  ungroup()%>%
+  mutate(nameCat = case_when(name %in% catAcs ~ "Information Access",
+                             name %in% catCont ~ "Communications",
+                             name %in% catData ~ "Data + Maps"))%>%
+  arrange(state, average)%>%
+  mutate(name = factor(name, levels = c(catCont, catData, catAcs)))%>%
+  ggplot(aes(x = name, y = value, fill = as.factor(nameCat)))+
+  geom_hline(yintercept = 3)+
+  geom_hline(yintercept = 2, linetype = "dotted", color = "gray30")+
+  geom_hline(yintercept = 1, linetype = "dotted", color = "gray30")+
+  geom_bar(stat = "identity")+
+  scale_fill_manual(values = pst1, name = "Score Category:")+
+  theme_minimal()+
+  labs(title = "State Transparency Ratings",
+       subtitle = "All States Category Polar Plot",
+       caption = capt,
+       tag = tag)+
+  theme(
+    text = element_text(family = pstFont),
+    axis.text = element_blank(),
+    axis.title = element_blank(),
+    panel.grid = element_blank(),
+    legend.background = element_rect(fill = NULL, 
+                                     color = "#182125"),
+    legend.title = element_text(face = "bold",hjust = .1,
+                                size = baseSize),
+    legend.key = element_blank(),
+    legend.text = element_text(size = baseSize*.8),
+    legend.spacing.y = unit(.125, 'cm'),
+    panel.spacing.x = unit(15,"pt"),
+    plot.tag.position = c(.97,.97),
+    strip.text = element_text(size = baseSize*.8),
+    plot.tag = element_text(colour = "#8C9394", size = baseSize * .6),
+    plot.background = element_rect(fill = "#ffffff", color = NA),
+    plot.title = element_text(face = "bold", size = baseSize * 1.2),
+    plot.subtitle = element_text(colour = "#8C9394", size = baseSize),
+    plot.caption = element_text(size = baseSize *.8),
+    legend.position = "top",
+    legend.justification = "left",
+    plot.margin = margin(12, 6, 12, 6, "pt")
+    )+
+  coord_polar()+
+  facet_wrap(~reorder(state, -average), nrow = 5)
+
+
+
+ggsave("plots/everythingHorizontal.png", width = 3840, height = 2160, units = "px")
+```
+
+```{r one state polar}
+selStates <- c("Washington", "New Jersey", "Florida")
+
+valueLabsDf <- tibble(name = names(valueLabs), lName = valueLabs)
+
+df %>%
+  filter(year == 2022, name != "average", state %in% selStates) %>%
+  group_by(state)%>%
+  mutate(average = mean(value))%>%
+  ungroup()%>%
+  mutate(nameCat = case_when(name %in% catAcs ~ "Information Access",
+                             name %in% catCont ~ "Communications",
+                             name %in% catData ~ "Data + Maps"),
+         )%>%
+  arrange(state, average)%>%
+  left_join(valueLabsDf)%>%
+  mutate(name = factor(name, levels = c(catCont, catData, catAcs)))%>% 
+  ggplot(aes(x = name, y = value, fill = as.factor(nameCat)))+
+  geom_hline(yintercept = 3)+
+  geom_hline(yintercept = 2, linetype = "dotted", color = "gray30")+
+  geom_hline(yintercept = 1, linetype = "dotted", color = "gray30")+
+  geom_bar(stat = "identity", alpha = .9)+
+  geom_text(aes(label = str_wrap(lName, 8), y = 3.7), lineheight = .25)+
+  annotate(
+    x = 11.5, 
+    y = 1.2, 
+    label = "1", 
+    geom = "text", 
+    color = crimson,
+    fontface = "bold",
+    size = 7
+  ) +
+  annotate(
+    x = 11.5, 
+    y = 2.2, 
+    label = "2", 
+    geom = "text", 
+    color = crimson,
+    fontface = "bold",
+    size = 7
+  ) +
+  annotate(
+    x = 11.5, 
+    y =3.2, 
+    label = "3", 
+    geom = "text", 
+    color = crimson,
+    fontface = "bold",
+    size = 7
+  ) +
+  annotate(
+    x = 11.5, 
+    y =0.2, 
+    label = "0", 
+    geom = "text", 
+    color = crimson,
+    fontface = "bold",
+    size = 7
+  ) +
+  scale_fill_manual(values = pst1, name = "Score Category:")+
+  theme_minimal()+
+  labs(title = "State Transparency Ratings",
+       subtitle = "Category Polar Plot Detail",
+       caption = capt,
+       tag = tag)+
+  theme(
+    text = element_text(family = pstFont),
+    axis.text = element_blank(),
+    axis.title = element_blank(),
+    panel.grid = element_blank(),
+    legend.background = element_rect(fill = NULL, 
+                                     color = "#182125"),
+    legend.title = element_text(face = "bold",hjust = .1,
+                                size = baseSize),
+    legend.key = element_blank(),
+    legend.text = element_text(size = baseSize*.8),
+    legend.spacing.y = unit(.125, 'cm'),
+    panel.spacing.x = unit(15,"pt"),
+    plot.tag.position = c(.97,.97),
+    strip.text = element_text(size = baseSize*.8),
+    plot.tag = element_text(colour = "#8C9394", size = baseSize * .6),
+    plot.background = element_rect(fill = "#ffffff", color = NA),
+    plot.title = element_text(face = "bold", size = baseSize * 1.2),
+    plot.subtitle = element_text(colour = "#8C9394", size = baseSize),
+    plot.caption = element_text(size = baseSize *.8),
+    legend.position = "top",
+    legend.justification = "left",
+    plot.margin = margin(12, 6, 12, 6, "pt")
+    )+
+  coord_polar()+
+  facet_wrap(~reorder(state, -average))
+
+
+
+ggsave("plots/polarExample.png", width = wdt, height = hgt, units = "in")
+```
+
+
+
+
+```{r}
+
+df %>%
+  filter(year == 2022, name != "average") %>%
+  group_by(state)%>%
+  mutate(average = mean(value))%>%
+  ungroup()%>%
+  mutate(nameCat = case_when(name %in% catAcs ~ "Information Access",
+                             name %in% catCont ~ "Communications",
+                             name %in% catData ~ "Data + Maps"))%>%
+  arrange(state, average)%>%
+  mutate(name = factor(name, levels = c(catCont, catData, catAcs)) )%>%
+  ggplot()+
+  geom_point(aes(x = name, y = value, fill = as.factor(nameCat)))+
+  geom_line(aes(x = name, y = value, group = state))+
+  theme_minimal()+
+  theme(
+    axis.text = element_blank(),
+    axis.title = element_blank(),
+    panel.grid = element_blank(),
+    legend.position = "top"
+    )+
+  coord_polar()+
+  facet_wrap(~reorder(state, -average), ncol = 7)
+
+
+
+ggsave("plots/everythingLine.png", width = 8, height = 10, units = "in")
+```
+
+```{r all scores matrix}
+df %>%
+  filter(year == 2022) %>%
+  group_by(state)%>%
+  mutate(average = mean(value))%>%
+  ungroup()%>%
+  left_join(valueLabsDf)%>%
+  mutate(name = factor(name, 
+                       levels = c("average",catCont, catData, catAcs)))%>%
+  ggplot(aes(x = name, y = reorder(state, average), fill = value))+
+  geom_tile(height = .95)+
+  geom_text(data = (df %>%
+                      filter(year == 2022, name == "average")),
+            aes(y = state, x = name, label = round(value, 2)), 
+            fontface = "bold", color = "gray90", size = 10)+
+  scale_x_discrete(position = "top", label = valueLabs)+
+  scale_fill_viridis(option = "G", end = .8, name = "Rating")+
+  theme_pst(baseSize = 30)+
+  labs(title = "State Transparency Ratings",
+       subtitle = "State, Average Score, and Category Matrix",
+       caption = capt, 
+       tag = tag,
+       x = NULL,
+       y = NULL)+
+  theme(axis.line.y = element_blank(),
+        axis.line.x = element_blank(),
+        axis.text.x = element_text(angle = 45, hjust = 0),
+        panel.grid.major.y = element_blank(),
+        legend.position = "top",
+        legend.justification = "left")
+
+ggsave("plots/fullMatrix.png", width = 8, height = 10, units = "in")
+```
+
+```{r all scores matrix horiz}
+df %>%
+  filter(year == 2022) %>%
+  group_by(state)%>%
+  mutate(average = mean(value))%>%
+  ungroup()%>%
+  left_join(valueLabsDf)%>%
+  mutate(name = factor(name, 
+                       levels = c("average",catCont, catData, catAcs)))%>%
+  ggplot(aes(x = name, y = reorder(state, average), fill = value))+
+  geom_tile(height = .95)+
+  geom_text(data = (df %>%
+                      filter(year == 2022, name == "average")),
+            aes(y = state, x = name, label = round(value, 2)), 
+            fontface = "bold", color = "gray90", size = 8)+
+  scale_x_discrete(position = "top", label = valueLabs)+
+  scale_fill_viridis(option = "G", end = .8, name = "Rating")+
+  theme_pst(baseSize = 30)+
+  labs(title = "State Transparency Ratings",
+       subtitle = "State, Average Score, and Category Matrix",
+       caption = capt, 
+       tag = tag,
+       x = NULL,
+       y = NULL)+
+  theme(axis.line.y = element_blank(),
+        axis.line.x = element_blank(),
+        axis.text.x = element_text(angle = 45, hjust = 0),
+        panel.grid.major.y = element_blank(),
+        legend.position = "top",
+        legend.justification = "left")
+
+ggsave("plots/fullMatrixHoriz.png", width = 3840, height = 2160, units = "px")
+```
