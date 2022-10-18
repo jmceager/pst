@@ -627,7 +627,7 @@ df.release %>%
        tag = tag,
        x = "Date",
        y = "Release Z-Score",
-       title = "Minnesota Pipeline Incident Detail",
+       title = paste0(moStateL ," Pipeline Incident Detail"),
        subtitle = "Total Release Z-Scores, Damage Cost, and Significance (2010-2021)")
 
 plotName = "OpRelease.png"

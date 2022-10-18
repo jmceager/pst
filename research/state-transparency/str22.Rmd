@@ -661,7 +661,7 @@ ggsave("plots/AvgScoreMap.png", width = wdt, height = hgt, units = "in")
 
 ```
 
-```{r map of avg scores}
+```{r map of named ratings}
 library(rgdal)
 library(geojsonio)
 library(broom)
@@ -700,7 +700,7 @@ ggplot()+
    scale_fill_viridis_d(option = "G",na.value = "gray60", direction =-1, end = .8)+
   # scale_fill_distiller(palette = "Blues",na.value = "gray60", direction =1, 
   #                    limits = c(0,3))+
-  theme_pst_map(baseSize = 20)+
+  theme_pst_map(baseSize = 27)+
   coord_fixed(.8)+
   theme(legend.direction = "horizontal",
         legend.position = "bottom",
@@ -709,10 +709,10 @@ ggplot()+
         legend.key.height = unit(.25,"cm"),
         plot.title = element_text(hjust = .07),
         legend.text = element_text(vjust = 1, lineheight = 0,
-                                   margin = margin(0,0,0,0,"cm")))+
-  labs(title = "2022 State Transparency Grades",
-       fill = "Grade:",
-       caption = paste0("A fill of gray denotes states with no 2022 score\n",capt),
+                                   margin = ggplot2::margin(0,0,0,0,"cm")))+
+  labs(title = "2022 Website Transparency Performance",
+       fill = "Rating:",
+       caption = paste0("A fill of gray denotes states with no 2022 rating\n",capt),
        tag = tag)
   
 ggsave("plots/RatingMap.png", width = wdt, height = hgt, units = "in")
@@ -977,6 +977,8 @@ ggsave("plots/everythingVertical.png", width = 8, height = 10, units = "in")
 
 ```{r horz everything polar}
 
+baseSize = 27
+
 df %>%
   filter(year == 2022, name != "average") %>%
   group_by(state)%>%
@@ -994,8 +996,7 @@ df %>%
   geom_bar(stat = "identity")+
   scale_fill_manual(values = pst1, name = "Score Category:")+
   theme_minimal()+
-  labs(title = "State Transparency Ratings",
-       subtitle = "All States Category Polar Plot",
+  labs(title = "State Transparency Ratings by Category",
        caption = capt,
        tag = tag)+
   theme(
@@ -1020,7 +1021,7 @@ df %>%
     plot.caption = element_text(size = baseSize *.8),
     legend.position = "top",
     legend.justification = "left",
-    plot.margin = margin(12, 6, 12, 6, "pt")
+    plot.margin = ggplot2::margin(12, 6, 12, 6, "pt")
     )+
   coord_polar()+
   facet_wrap(~reorder(state, -average), nrow = 5)
@@ -1028,6 +1029,62 @@ df %>%
 
 
 ggsave("plots/everythingHorizontal.png", width = 3840, height = 2160, units = "px")
+```
+
+```{r horz everything polar pdf}
+
+baseSize = 12
+
+df %>%
+  filter(year == 2022, name != "average") %>%
+  group_by(state)%>%
+  mutate(average = mean(value))%>%
+  ungroup()%>%
+  mutate(nameCat = case_when(name %in% catAcs ~ "Information Access",
+                             name %in% catCont ~ "Communications",
+                             name %in% catData ~ "Data + Maps"))%>%
+  arrange(state, average)%>%
+  mutate(name = factor(name, levels = c(catCont, catData, catAcs)))%>%
+  ggplot(aes(x = name, y = value, fill = as.factor(nameCat)))+
+  geom_hline(yintercept = 3)+
+  geom_hline(yintercept = 2, linetype = "dotted", color = "gray30")+
+  geom_hline(yintercept = 1, linetype = "dotted", color = "gray30")+
+  geom_bar(stat = "identity")+
+  scale_fill_manual(values = pst1, name = "Score Category:")+
+  theme_minimal()+
+  labs(title = "State Transparency Ratings by Category",
+       caption = capt,
+       tag = tag)+
+  theme(
+    text = element_text(family = pstFont),
+    axis.text = element_blank(),
+    axis.title = element_blank(),
+    panel.grid = element_blank(),
+    legend.background = element_rect(fill = NULL, 
+                                     color = "#182125"),
+    legend.title = element_text(face = "bold",hjust = .1,
+                                size = baseSize*.8),
+    legend.key = element_blank(),
+    legend.text = element_text(size = baseSize*.6),
+    legend.spacing.y = unit(.125, 'cm'),
+    panel.spacing.x = unit(15,"pt"),
+    plot.tag.position = c(.97,.97),
+    strip.text = element_text(size = baseSize*.6),
+    plot.tag = element_text(colour = "#8C9394", size = baseSize * .5),
+    plot.background = element_rect(fill = "#ffffff", color = NA),
+    plot.title = element_text(face = "bold", size = baseSize * 1.2),
+    plot.subtitle = element_text(colour = "#8C9394", size = baseSize),
+    plot.caption = element_text(size = baseSize *.8),
+    legend.position = "right",
+    legend.justification = "left",
+    plot.margin = ggplot2::margin(12, 6, 12, 6, "pt")
+    )+
+  coord_polar()+
+  facet_wrap(~reorder(state, -average), nrow = 5)
+
+
+
+ggsave("plots/everythingHorizontal.pdf", width = 3840, height = 2160, units = "px")
 ```
 
 ```{r one state polar}
