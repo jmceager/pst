@@ -34,7 +34,7 @@ header <- dashboardHeader(
               hr(),
               textOutput("infoText"),
               br(),
-              actionButton("help", "Press for instructions"),
+              actionButton("help", "Tutorial Walkthrough"),
               placement = "bottom",
               arrow = TRUE,
               theme = "material")
@@ -82,10 +82,10 @@ header <- dashboardHeader(
 #### sidebar ####
 sidebar <- dashboardSidebar(
   sidebarMenu(id = "tabs",
-              menuItem("Latest Culprits", tabName="now", icon = icon("newspaper"),selected = TRUE),
-              menuItem("Repeat Culprits", tabName = "repeat", icon = icon("redo")),
+              menuItem("The Latest", tabName="now", icon = icon("newspaper"),selected = TRUE),
+              menuItem("Repeat Offenders", tabName = "repeat", icon = icon("redo")),
               menuItem("Monthly Map", tabName = "leafs", icon = icon("map")),
-              menuItem("Timeline",  tabName = "timeline", icon = icon("timeline")),
+              menuItem("Incident Plots",  tabName = "timeline", icon = icon("chart-column")),
               menuItem("Full Table", tabName = "hist", icon = icon("table"))            
   ),
   
@@ -122,7 +122,7 @@ sidebar <- dashboardSidebar(
 
 #### body ####
 body <- dashboardBody(
-  tags$head(tags$title("Culprit Call-Out"),
+  tags$head(tags$title("Worst Incidents of the Month"),
             introjsUI(),
             tags$link(rel = "stylesheet", type = "text/css", href = "custom.css"),
             tags$link(rel = "icon", href = "www/favicon.ico"),
@@ -138,6 +138,7 @@ body <- dashboardBody(
                           Shiny.setInputValue("width", width);
                         });
                         ')),
+  useShinyalert(),
   tabItems(
     #### history table ####
     tabItem(

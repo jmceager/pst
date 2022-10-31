@@ -16,6 +16,20 @@ shinyServer( function(input, output, session) {
   #### waiter ####
   w <- Waiter$new(id = c("timePlot","hlTimePlot"))
   
+  #### opening dialog ####
+  shinyalert(title = "Welcome!", 
+             text = tags$div(
+               tags$p("This dashboard explores pipeline incident data, provided by the Pipeline and 
+                      Hazardous Materials Safety Administration, to explore which operators are
+                      responsible for the worst incidents every month. Historically, the 
+                      Pipeline Safety Trust has used the size of the release to determine that 
+                      label, but we now offer a few different metrics for you to examine 
+                      what goes into labelling incidents as the \"worst\" every month. This dashboard 
+                      also offers a few new ways to visualize how these incidents compare on a monthly basis, 
+                      as well as detailing which operators are most frequently responsible for these incidents. "),
+               tags$p("For more information, use the tutorial button located in the Information drop-down labeled: ", icon("info")), 
+             ),  html = T, size = "m")
+  
   #### intro js ####
   # initiate hints on startup with custom button and event
   hintjs(session, options = list("hintButtonLabel"="Hope this hint was helpful"),
@@ -26,7 +40,7 @@ shinyServer( function(input, output, session) {
       NA,
       ifelse(input$system == "all", "#GDBox", paste0("#",input$system,"Box")),
       ".sidebar-menu",
-      ".controls",
+      "#controls",
       ".navbar-custom-menu",
       NA
     ),
@@ -41,9 +55,9 @@ shinyServer( function(input, output, session) {
       in each system this month. These boxes give a quick glance at which operator
       was responsible for the worst incident, and what kind of impact that incident had.",
       #sidebar
-      "These buttons direct you to other tabs, where a similar guide can explore the features 
-      on those pages. Repeat Culprits shows a table of the most frequent culprits, 
-      the Monthly Map displays the worst incidents alongside all other incidents in a month, 
+      "These buttons direct you to other tabs, where the info button can explain more 
+      on those pages. Briefly: Repeat Offenders shows a table of the most frequently responsible operators, 
+      the Monthly Map geographically displays the worst incidents alongside all other incidents in a month, 
       Timline offers an opportunity to graph these incidents by a host of variables, and 
       the Full Table lists out the culprits and their incidents for the entire period of 
       time covered by this set of PHMSA data (2010 to Present)",
@@ -57,9 +71,9 @@ shinyServer( function(input, output, session) {
       the link to the source data a brief description of each tab, and links for 
       sharing this dashboard to social media and email.",
       #finally
-      "Now it's time for you to call out these culprits!"
+      "Now it's time for you to explore the data!"
     ),
-    position = rep("auto", length(element))
+    position = c("auto", "auto","right", "right","left","auto")
   ))
   
   # start introjs when button is pressed with custom options and events
@@ -73,14 +87,11 @@ shinyServer( function(input, output, session) {
   #### header stuff ####
   helpMessage <- reactive({
     if(input$tabs == "now"){
-       "This tab presents the 3 perpetrators in the selected month 
+       "This tab presents the 3 wors incidents in the selected month 
         based on PHMSA data. Perpetrators are defined by their system 
-        and the determinant selected in the sidebar. Traditionally, PST has 
-        used the size of release or spill to select a \"Perp of the Month.\" 
-        Now, you can check to see which operators are the worst in a given month 
-        based on the cost of their damage, number of deaths, deaths plus injuries, 
-        or release size. Your selections will carry over to other tabs, where you 
-        can compare incidents and operators through other criteria."
+        and the determinant selected in the sidebar. Your selections 
+        will carry over to other tabs, where you can compare incidents 
+        and operators through other criteria."
     }
     else if(input$tabs == "leafs"){
       "This tab presents a map of all incidents in the selected month. Determinants
@@ -91,23 +102,23 @@ shinyServer( function(input, output, session) {
     else if(input$tabs == "repeat"){
       "This tab presents a table of repeat perpetrators given the 
       system and determinant selected. Grouped rows present aggregated values for each   
-      Operators' \"Perp\" incidents. In the case of columns like Release Size or Cost 
+      Operators' \"Worst\" incidents. In the case of columns like Release Size or Cost 
       of Damage, these are sums; but in columns like State or System, these are ranges of 
       values for each operator. Clicking on a grouped row will expand so you can see 
-      each  \"Perp\" incident and its unique details."
+      each  \"Worst\" incident and its unique details."
     }
     else if(input$tabs == "timeline"){
       "This tab offers a few unique options to examine incidents. You can select 
       either annual or monthly periods, and choose a variable for the size of the points 
       using the drop down menu with the gear icon. To offer another option and combat 
       occasional bunching near the x-axis for certain data, you can also apply a 
-      logarithm transformation to the y-axis. The results of this transformation can be 
+      logarithmic transformation to the y-axis. The results of this transformation can be 
       hugely educational but it's important to note how the axis labels and breaks change. 
       Finally, when looking at release size as a determinant, the Hazardous Liquids data 
       is split into a second plot, since HL releases are measured in different units."
     }
     else if(input$tabs == "hist"){
-      "This tab presents every \"Perp\" incident over the whole period of the data 
+      "This tab presents every \"Worst\" incident over the whole period of the data 
       (2010-Present), based on the selected system and determinant in the sidebar. 
       Each column is sortable and searchable, and the number of rows can be changed 
       at the bottom to accomodate different window sizes."

@@ -17,6 +17,7 @@ library(showtext)
 library(jsonlite)
 library(viridis)
 library(rintrojs)
+library(shinyalert)
 #> Loading required package: sysfonts
 #> Loading required package: showtextdb
 sysCol <- c("GD Perp" = "#6a3d9a",
