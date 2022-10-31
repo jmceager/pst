@@ -1,5 +1,5 @@
 <!-- Global site tag (gtag.js) - Google Analytics -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-E99Y1Q7X3W"></script>
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-EQ95L60D4R"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
   function gtag(){dataLayer.push(arguments);}
@@ -7,11 +7,17 @@
 
   gtag('config', 'G-E99Y1Q7X3W');
 
-  $(document).on('change', 'select', function(e) {
-    ga('send', 'event', 'widget', 'select data', $(e.currentTarget).val());
+  $(document).on('click', 'a', function(e) {
+    ga('send', 'event', 'TabsetPanel', 'Tab Viewed', $(this).attr('data-value'));
   });
-
-  $(document).on('click', 'button', function() {
-    ga('send', 'event', 'button', 'update plot');
+  
+  $('#weight').on('change', function(e) {
+    gtag('event', 'action', {
+     'event_category': 'category',
+     'event_label': 'label',
+     'value': <value>
+    });
   });
+  
+  
 </script>
