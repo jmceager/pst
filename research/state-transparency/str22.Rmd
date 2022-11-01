@@ -1080,11 +1080,11 @@ df %>%
     plot.margin = ggplot2::margin(12, 6, 12, 6, "pt")
     )+
   coord_polar()+
-  facet_wrap(~reorder(state, -average), nrow = 5)
+  facet_wrap(~reorder(state, -average), nrow = 6)
 
 
 
-ggsave("plots/everythingHorizontal.pdf", width = 3840, height = 2160, units = "px")
+ggsave("plots/everythingHorizontalLegend.pdf", width = 3840, height = 2160, units = "px")
 ```
 
 ```{r one state polar}
