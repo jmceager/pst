@@ -722,6 +722,112 @@ dfBig %>%
 
 ```
 
+```{r}
+exSig <- dfBig %>%
+  filter(SIGNIFICANT == "YES") %>%
+  mutate(period = case_when(IYEAR >= 2012 ~ "Post-2012",
+                            IYEAR < 2012 ~ "Pre-2012")) %>%
+  group_by(period)%>%
+  mutate(inc = n())%>%
+  ungroup()%>%
+  group_by(period, CAUSE)%>%
+  summarise(causeInc = n(),
+            inc = inc)%>%
+  distinct(period, CAUSE, .keep_all = T)%>%
+  mutate(percent = causeInc/inc)%>%
+  select(!c(causeInc, inc))%>%
+  pivot_wider(names_from = c("period"),
+              values_from = c("percent"))%>%
+  mutate(class = "Significant")
+
+
+dfBig %>%
+  filter(SERIOUS == "YES") %>%
+  mutate(period = case_when(IYEAR >= 2012 ~ "Post-2012",
+                            IYEAR < 2012 ~ "Pre-2012")) %>%
+  group_by(period)%>%
+  mutate(inc = n())%>%
+  ungroup()%>%
+  group_by(period, CAUSE)%>%
+  summarise(causeInc = n(),
+            inc = inc)%>%
+  distinct(period, CAUSE, .keep_all = T)%>%
+  mutate(percent = causeInc/inc)%>%
+  select(!c(causeInc, inc))%>%
+  pivot_wider(names_from = c("period"),
+              values_from = c("percent"))%>%
+  mutate(class = "Serious")%>%
+  mutate( class = factor(class, levels = c("Significant","Serious")),
+          CAUSE = factor(CAUSE, levels = c("Materials and Equipment", "Corrosion","External","Excavation","Operator","Other")))%>%
+  rbind(exSig) %>%
+  ggplot()+
+  geom_segment(aes(x = fct_rev(str_wrap(CAUSE, 15)),
+                   xend = fct_rev(str_wrap(CAUSE, 15)), 
+                   y = `Pre-2012`,
+                   yend = `Post-2012`))+
+  geom_point(aes(x = str_wrap(CAUSE, 15), y = `Post-2012`, color = "Post-2012"))+
+  geom_point(aes(x = str_wrap(CAUSE, 15), y = `Pre-2012`, color = "Pre-2012"))+
+  scale_color_manual(values = c(pst1[2],pst1[1]), name = "Period")+
+  scale_y_continuous(labels = scales::percent_format())+
+  theme_pst(baseSize = 20)+
+  theme(panel.grid.minor.x = element_line(linetype = "dotted", 
+                                                         colour = "#C4C8C6"),
+        panel.grid.major.x = element_line(colour = "#394C56", 
+                                          linetype = "dotted"),
+        panel.grid.major.y = element_blank(),
+        panel.grid.minor.y = element_blank(),
+        strip.text.x = element_text(colour = "gray10", family = pstFont,
+                                  size = 20, vjust = .9),
+        strip.background = element_blank(), strip.placement = "outside",
+        axis.text.y = element_text(lineheight = .25),
+        legend.spacing.y = unit(.125, 'cm'),
+        legend.position = c(.9,.175))+
+  coord_flip()+
+  labs(x = "Cause", 
+       y = "Percent of Incidents",
+       title = "Incidents by Cause in 10-Year Periods",
+       subtitle = "Serious and Significant Incidents from 2002 to 2021",
+       caption = capt,
+       tag = tag)+
+  facet_wrap(~fct_rev(class), strip.position = "top", scales = "free")
+
+
+
+
+ggsave("plots/ExcavationChange.png", width = wdt, height = hgt, units = "in")
+```
+
+```{r}
+dfBig %>%
+  filter(SIGNIFICANT == "YES")%>%
+  count(CAUSE, IYEAR) %>%
+  mutate(class = "Significant")%>%
+  rbind(dfBig %>%
+          filter(SERIOUS == "YES")%>%
+          count(CAUSE, IYEAR) %>%
+          mutate(class = "Serious"))%>%
+  ggplot(aes(x = IYEAR, y = n, group = CAUSE, color = CAUSE))+
+  geom_line(size = .75)+
+  theme_pst(baseSize = 20)+
+  scale_color_manual(values = pst1, name = "Cause")+
+  labs(y = "Incidents",
+       x = "Year",
+       title = "Pipeline Incidents by Cause",
+       subtitle = "Significant and Serious Incidents from 2002 to 2021")+
+  theme(strip.text.x = element_text(colour = "gray10", family = pstFont,
+                                  size = 20, vjust = .9),
+        strip.background = element_blank(), strip.placement = "outside",
+        axis.text.y = element_text(lineheight = .25),
+        legend.spacing.y = unit(.0205, 'cm'),
+        legend.position = c(.85,.7))+
+  facet_wrap(~fct_rev(class), scales = "free_y")
+
+ggsave("plots/ExcavationYears.png", width = wdt, height = hgt, units = "in")
+
+```
+
+
+#### HCA Vibes
 
 ```{r hca trends data }
 library(plyr)
@@ -925,106 +1031,36 @@ ggsave("plots/HCADiff.png", width = wdt, height = hgt, units = "in")
 ```
 
 ```{r}
-exSig <- dfBig %>%
-  filter(SIGNIFICANT == "YES") %>%
-  mutate(period = case_when(IYEAR >= 2012 ~ "Post-2012",
-                            IYEAR < 2012 ~ "Pre-2012")) %>%
-  group_by(period)%>%
-  mutate(inc = n())%>%
+hl2010 <- read_csv("https://github.com/jmceager/pst/blob/main/phmsa-clean/data/clean/hl_inc.csv?raw=true")
+
+hl2010 %>%
+  select(COULD_BE_HCA, CAUSE)%>%
+  count(COULD_BE_HCA, CAUSE)%>%
+  group_by(COULD_BE_HCA)%>%
+  mutate(total = sum(n))%>%
   ungroup()%>%
-  group_by(period, CAUSE)%>%
-  summarise(causeInc = n(),
-            inc = inc)%>%
-  distinct(period, CAUSE, .keep_all = T)%>%
-  mutate(percent = causeInc/inc)%>%
-  select(!c(causeInc, inc))%>%
-  pivot_wider(names_from = c("period"),
-              values_from = c("percent"))%>%
-  mutate(class = "Significant")
+  spread(key = CAUSE, value = n, fill = 0)%>%
+  mutate(across(!c(COULD_BE_HCA, total), ~ .x/total))%>%
+  view()
 
-
-dfBig %>%
-  filter(SERIOUS == "YES") %>%
-  mutate(period = case_when(IYEAR >= 2012 ~ "Post-2012",
-                            IYEAR < 2012 ~ "Pre-2012")) %>%
-  group_by(period)%>%
-  mutate(inc = n())%>%
+hl2010 %>%
+  select(COULD_BE_HCA, SYSTEM_PART_INVOLVED)%>%
+  count(COULD_BE_HCA, SYSTEM_PART_INVOLVED)%>%
+  group_by(COULD_BE_HCA)%>%
+  mutate(total = sum(n))%>%
   ungroup()%>%
-  group_by(period, CAUSE)%>%
-  summarise(causeInc = n(),
-            inc = inc)%>%
-  distinct(period, CAUSE, .keep_all = T)%>%
-  mutate(percent = causeInc/inc)%>%
-  select(!c(causeInc, inc))%>%
-  pivot_wider(names_from = c("period"),
-              values_from = c("percent"))%>%
-  mutate(class = "Serious")%>%
-  mutate( class = factor(class, levels = c("Significant","Serious")),
-          CAUSE = factor(CAUSE, levels = c("Materials and Equipment", "Corrosion","External","Excavation","Operator","Other")))%>%
-  rbind(exSig) %>%
-  ggplot()+
-  geom_segment(aes(x = fct_rev(str_wrap(CAUSE, 15)),
-                   xend = fct_rev(str_wrap(CAUSE, 15)), 
-                   y = `Pre-2012`,
-                   yend = `Post-2012`))+
-  geom_point(aes(x = str_wrap(CAUSE, 15), y = `Post-2012`, color = "Post-2012"))+
-  geom_point(aes(x = str_wrap(CAUSE, 15), y = `Pre-2012`, color = "Pre-2012"))+
-  scale_color_manual(values = c(pst1[2],pst1[1]), name = "Period")+
-  scale_y_continuous(labels = scales::percent_format())+
-  theme_pst(baseSize = 20)+
-  theme(panel.grid.minor.x = element_line(linetype = "dotted", 
-                                                         colour = "#C4C8C6"),
-        panel.grid.major.x = element_line(colour = "#394C56", 
-                                          linetype = "dotted"),
-        panel.grid.major.y = element_blank(),
-        panel.grid.minor.y = element_blank(),
-        strip.text.x = element_text(colour = "gray10", family = pstFont,
-                                  size = 20, vjust = .9),
-        strip.background = element_blank(), strip.placement = "outside",
-        axis.text.y = element_text(lineheight = .25),
-        legend.spacing.y = unit(.125, 'cm'),
-        legend.position = c(.9,.175))+
-  coord_flip()+
-  labs(x = "Cause", 
-       y = "Percent of Incidents",
-       title = "Incidents by Cause in 10-Year Periods",
-       subtitle = "Serious and Significant Incidents from 2002 to 2021",
-       caption = capt,
-       tag = tag)+
-  facet_wrap(~fct_rev(class), strip.position = "top", scales = "free")
+  spread(key = SYSTEM_PART_INVOLVED, value = n, fill = 0)%>%
+  mutate(across(!c(COULD_BE_HCA, total), ~ .x/total))%>%
+  view()
+  
 
-
-
-
-ggsave("plots/ExcavationChange.png", width = wdt, height = hgt, units = "in")
-```
-
-```{r}
-dfBig %>%
-  filter(SIGNIFICANT == "YES")%>%
-  count(CAUSE, IYEAR) %>%
-  mutate(class = "Significant")%>%
-  rbind(dfBig %>%
-          filter(SERIOUS == "YES")%>%
-          count(CAUSE, IYEAR) %>%
-          mutate(class = "Serious"))%>%
-  ggplot(aes(x = IYEAR, y = n, group = CAUSE, color = CAUSE))+
-  geom_line(size = .75)+
-  theme_pst(baseSize = 20)+
-  scale_color_manual(values = pst1, name = "Cause")+
-  labs(y = "Incidents",
-       x = "Year",
-       title = "Pipeline Incidents by Cause",
-       subtitle = "Significant and Serious Incidents from 2002 to 2021")+
-  theme(strip.text.x = element_text(colour = "gray10", family = pstFont,
-                                  size = 20, vjust = .9),
-        strip.background = element_blank(), strip.placement = "outside",
-        axis.text.y = element_text(lineheight = .25),
-        legend.spacing.y = unit(.0205, 'cm'),
-        legend.position = c(.85,.7))+
-  facet_wrap(~fct_rev(class), scales = "free_y")
-
-ggsave("plots/ExcavationYears.png", width = wdt, height = hgt, units = "in")
-
+hl2010%>%
+  count(IYEAR, COULD_BE_HCA, SYSTEM_PART_INVOLVED)%>%
+  filter( IYEAR < 2022, 
+          SYSTEM_PART_INVOLVED %in% c("ONSHORE TERMINAL/TANK FARM EQUIPMENT AND PIPING", 
+                                      "ONSHORE BREAKOUT TANK OR STORAGE VESSEL, INCLUDING ATTACHED APPURTENANCES"))%>%
+  ggplot(aes(x = IYEAR, y = n, color = SYSTEM_PART_INVOLVED))+
+  geom_line()+
+  facet_wrap(~COULD_BE_HCA)
 ```
 
