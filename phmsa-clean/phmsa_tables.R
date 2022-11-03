@@ -10,6 +10,11 @@ source("offshorefinder.R")
 ## TODO: unpack zip to raw/ directory and continue cleaning 
 ## TODO: replace 2022 miles with 2021 numbers 
 
+temp <- tempfile()
+download.file("https://www.phmsa.dot.gov/sites/phmsa.dot.gov/files/data_statistics/pipeline/PHMSA_Pipeline_Safety_Flagged_Incidents.zip", temp)
+distData <- read_xlsx(unzip(temp, files = "gd2010toPresent.xlsx"), sheet = 2)
+tranData <- read_xlsx(unzip(temp, files = "gtggungs2010toPresent.xlsx"), sheet = 2)
+hzrdData <- read_xlsx(unzip(temp, files = "hl2010toPresent.xlsx"), sheet = 2)
 
 #### MILEAGE DATA ####
 
@@ -42,7 +47,11 @@ miles <- read.csv("data/raw/GD_MilesDecadeAge.csv") %>%
   #give snapshots of operator's yearly mileage to match incident years
   group_by(OPERATOR_ID, NAME, SYSTEM_TYPE, STATE, IYEAR)%>% 
   summarise(mileage = sum(mileage, na.rm = T))%>%
-  mutate(SYS = str_sub(SYSTEM_TYPE, 1,2))
+  mutate(SYS = str_sub(SYSTEM_TYPE, 1,2)) %>% 
+  ungroup()
+
+miles <- miles %>%
+  rbind(miles %>% filter(IYEAR == max(IYEAR)) %>% mutate(IYEAR = max(IYEAR)+1) )
 
 ## note: possible to add mileage for install_decade? 
 ## note: possible handling of on/offshore mileage 
@@ -90,7 +99,7 @@ ops.simple <- ops %>%
 #### INCIDENT DATA ####
 
 # gd big 
-gd.full <- read_xlsx("data/raw/gd2010toPresent.xlsx", sheet = 2) %>% 
+gd.full <- distData %>% 
   mutate(SYSTEM_TYPE = "Gas Distribution", 
          SYS = "GD",
          UNINTENTIONAL_RELEASE = replace_na(UNINTENTIONAL_RELEASE,0), 
@@ -120,7 +129,7 @@ gd.full <- read_xlsx("data/raw/gd2010toPresent.xlsx", sheet = 2) %>%
 miles <- left_join(miles, ops.simple, by = c("OPERATOR_ID" = "sub.id")) 
 
 # gt big
-gt.full <- read_xlsx("./data/raw/gtggungs2010toPresent.xlsx", sheet = 2) %>%
+gt.full <- tranData %>%
   mutate(SYS = gsub( " .*$", "", SYSTEM_TYPE ), #accounts for UNGS and GD
          UNINTENTIONAL_RELEASE = replace_na(UNINTENTIONAL_RELEASE,0), 
          INTENTIONAL_RELEASE = replace_na(INTENTIONAL_RELEASE,0),
@@ -164,7 +173,7 @@ gt.full <- read_xlsx("./data/raw/gtggungs2010toPresent.xlsx", sheet = 2) %>%
   
 
 # hl big
-hl.full <- read_xlsx("./data/raw/hl2010toPresent.xlsx", sheet = 2)%>% 
+hl.full <- hzrdData %>% 
   mutate(SYSTEM_TYPE = "Hazardous Liquids",
          SYS = "HL")%>%
   rename( INTENTIONAL_RELEASE = INTENTIONAL_RELEASE_BBLS,
