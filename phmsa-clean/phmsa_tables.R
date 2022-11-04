@@ -122,7 +122,8 @@ gd.full <- distData %>%
   left_join(miles, by = c("OPERATOR_ID", "SYS", "STATE","IYEAR"))%>%
   mutate(mileage = replace_na(mileage, 0)) %>%
   left_join(ops.simple, by = c("OPERATOR_ID" = "sub.id"))%>% 
-  distinct(NARRATIVE, .keep_all = T)
+  distinct(NARRATIVE, .keep_all = T)%>%
+  rename(NAME = NAME.x)
 
 
 ## add safety data to mileage for consistency 
@@ -169,7 +170,8 @@ gt.full <- tranData %>%
   left_join(ops.simple, by = c("OPERATOR_ID" = "sub.id"))%>% 
   distinct(NARRATIVE, .keep_all = T)%>%
   rename(pri.id = pri.id.x,
-         pri.name = pri.name.x)
+         pri.name = pri.name.x,
+         NAME = NAME.x)
   
 
 # hl big
@@ -213,7 +215,8 @@ hl.full <- hzrdData %>%
   left_join(ops.simple, by = c("OPERATOR_ID" = "sub.id"))%>% 
   distinct(NARRATIVE, .keep_all = T)%>%
   rename(pri.id = pri.id.x,
-         pri.name = pri.name.x)
+         pri.name = pri.name.x,
+         NAME = NAME.x)
 
 
 #### JOINS, BINDS ####
