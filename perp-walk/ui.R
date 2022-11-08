@@ -138,7 +138,6 @@ body <- dashboardBody(
                           Shiny.setInputValue("width", width);
                         });
                         ')),
-  useShinyalert(),
   tabItems(
     #### history table ####
     tabItem(
