@@ -1592,8 +1592,8 @@ shinyServer( function(input, output, session) {
       )%>%
       addLegend(
         layerId = "colorLegend",
-        colors = c("#6a3d9a","#cab2d6","#1f78b4","#a6cee3","#ff7f00","#fdbf6f"),
-        labels = c("GD Perp","Other GD","GT Perp","Other GT","HL Perp","Other HL"),
+        colors = c("#cab2d6","#6a3d9a","#a6cee3","#1f78b4","#fdbf6f","#ff7f00"),
+        labels = c("Gas Distribution","Worst G.D.","Gas Transmission","Worst G.T.","Hazardous Liquid","Worst H.L."),
         position = c("topleft")
       )
     
