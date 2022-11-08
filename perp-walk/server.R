@@ -1728,14 +1728,18 @@ shinyServer( function(input, output, session) {
                          trans = if_else(input$logY == T, "pseudo_log","identity"),
                          breaks = yBreak(df[[input$weight]], input$logY,"b"),
                          labels = yBreak(df[[input$weight]], input$logY,"l"))+
-      labs(title = "Perpetrators Among All Incidents",
-           subtitle = paste(weightName(input$weight, input$system), "in", if_else(input$periodSwitch,
-                                                                                  paste(year(ymd(input$thisMonth))),
-                                                                                  paste(month(ymd(input$thisMonth),
-                                                                                              label = T,
-                                                                                              abbr = F),
-                                                                                        year(ymd(input$thisMonth)))
-               )),
+      labs(title = paste0(if_else(input$periodSwitch,
+                                  paste(year(ymd(input$thisMonth))),
+                                  paste(month(ymd(input$thisMonth),
+                                              label = T,
+                                              abbr = F),
+                                        year(ymd(input$thisMonth)))), " Pipeline Incidents"),
+           subtitle = paste0(if_else( input$weight == "TOTAL_RELEASE",
+                                      if_else(input$relSys, 
+                                              "Hazardous Liquid Incidents",
+                                              "Gas Distribution and Transmission Incidents"),
+                                      "All Systems' Incidents"), 
+                             " by ", weightName(input$weight, input$system)),
            color = "System")+
       theme_pst(font = pstFont)
   })
