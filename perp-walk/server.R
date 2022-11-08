@@ -24,7 +24,7 @@ shinyServer( function(input, output, session) {
                       responsible for the worst incidents every month. Historically, the 
                       Pipeline Safety Trust has used the size of the release to determine that 
                       label, but we now offer a few different metrics for you to examine 
-                      what goes into labelling incidents as the \"worst\" every month. This dashboard 
+                      what goes into labeling incidents as the \"worst\" every month. This dashboard 
                       also offers a few new ways to visualize how these incidents compare on a monthly basis, 
                       as well as detailing which operators are most frequently responsible for these incidents. "),
                tags$p("For more information, use the tutorial button located in the Information drop-down labeled: ", icon("info")), 
@@ -58,7 +58,7 @@ shinyServer( function(input, output, session) {
       "These buttons direct you to other tabs, where the info button can explain more 
       on those pages. Briefly: Repeat Offenders shows a table of the most frequently responsible operators, 
       the Monthly Map geographically displays the worst incidents alongside all other incidents in a month, 
-      Timline offers an opportunity to graph these incidents by a host of variables, and 
+      Incident Plots offer an opportunity to graph these incidents by a host of variables, and 
       the Full Table lists out the culprits and their incidents for the entire period of 
       time covered by this set of PHMSA data (2010 to Present)",
       #controls
@@ -87,7 +87,7 @@ shinyServer( function(input, output, session) {
   #### header stuff ####
   helpMessage <- reactive({
     if(input$tabs == "now"){
-       "This tab presents the 3 wors incidents in the selected month 
+       "This tab presents the 3 worst incidents in the selected month 
         based on PHMSA data. Perpetrators are defined by their system 
         and the determinant selected in the sidebar. Your selections 
         will carry over to other tabs, where you can compare incidents 
