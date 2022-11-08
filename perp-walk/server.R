@@ -1617,14 +1617,14 @@ shinyServer( function(input, output, session) {
                         weightName = input$weight,
                         legName = "gasLeg")%>%
         addLegendCustom(weight = unlist(hazWeight[input$weight]),
-                        units = "gal",
+                        units = "U.S. Gal.",
                         sys = "HL",
                         weightName = input$weight,
                         legName = "hazLeg")
     }
     else {
       units <- if_else(input$weight == "TOTAL_RELEASE" & input$system != "HL","mscf",
-                       if_else(input$weight == "TOTAL_RELEASE" & input$system == "HL", "gal",
+                       if_else(input$weight == "TOTAL_RELEASE" & input$system == "HL", "U.S. Gal.",
                                "")
                        )
       leafProxy %>%
