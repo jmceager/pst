@@ -254,7 +254,7 @@ body <- dashboardBody(
                   label = "<i class=\"fa-solid fa-calendar-days\"></i>",
                   inputId = "periodSwitch",
                   value = F,
-                  onLabel = "Year",
+                  onLabel = " Year",
                   offLabel = "Month",
                   onStatus = "info",
                   offStatus = "primary"
