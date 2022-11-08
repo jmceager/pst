@@ -1242,7 +1242,7 @@ shinyServer( function(input, output, session) {
         style = "white-space:pre-wrap; font-size: 2vw;"
       )
       ,
-      subtitle = HTML( paste0("mscf of <em>", 
+      subtitle = HTML( paste0("thousand standard cubic feet of <em>", 
                               str_to_lower(recentGT()$COMMODITY_RELEASED_TYPE), 
                               "</em> released")),
       icon = tags$i(class = "fa-solid fa-smog", style = "font-size: 3vw"),
@@ -1350,7 +1350,7 @@ shinyServer( function(input, output, session) {
         style = "white-space:pre-wrap; font-size: 2vw;"
       )
       ,
-      subtitle = HTML( paste0("mscf of <em>", 
+      subtitle = HTML( paste0("thousand standard cubic feet of <em>", 
                               str_to_lower(recentGD()$COMMODITY_RELEASED_TYPE), 
                               "</em> released")),
       icon = tags$i(class = "fa-solid fa-smog", style = "font-size: 3vw"),
