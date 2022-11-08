@@ -20,11 +20,11 @@ library(rintrojs)
 library(shinyalert)
 #> Loading required package: sysfonts
 #> Loading required package: showtextdb
-sysCol <- c("GD Perp" = "#6a3d9a",
+sysCol <- c("GD Worst" = "#6a3d9a",
             "GD" = "#cab2d6",
-            "GT Perp" = "#1f78b4",
+            "GT Worst" = "#1f78b4",
             "GT" = "#a6cee3",
-            "HL Perp" = "#ff7f00",
+            "HL Worst" = "#ff7f00",
             "HL" = "#fdbf6f")
 
 fargs <- formals(icon)

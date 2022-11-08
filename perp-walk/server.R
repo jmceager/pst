@@ -88,7 +88,7 @@ shinyServer( function(input, output, session) {
   helpMessage <- reactive({
     if(input$tabs == "now"){
        "This tab presents the 3 worst incidents in the selected month 
-        based on PHMSA data. Perpetrators are defined by their system 
+        based on PHMSA data. The worst incidents are defined by their system 
         and the determinant selected in the sidebar. Your selections 
         will carry over to other tabs, where you can compare incidents 
         and operators through other criteria."
@@ -100,7 +100,7 @@ shinyServer( function(input, output, session) {
       operator name, and other impact statistics."
     }
     else if(input$tabs == "repeat"){
-      "This tab presents a table of repeat perpetrators given the 
+      "This tab presents a table of operators with multiple worst-of-the-month incidents given the 
       system and determinant selected. Grouped rows present aggregated values for each   
       Operators' \"Worst\" incidents. In the case of columns like Release Size or Cost 
       of Damage, these are sums; but in columns like State or System, these are ranges of 
@@ -379,7 +379,7 @@ shinyServer( function(input, output, session) {
             NAME = colDef(width = 150, 
                           align = "left",
                           name = "Operator"),
-            inc = colDef(name = "Perp Count", 
+            inc = colDef(name = "Worst Count", 
                          defaultSortOrder = "desc",
                          show = F),
             STATE = colDef(aggregate = "unique",
@@ -753,7 +753,7 @@ shinyServer( function(input, output, session) {
           NAME = colDef(width = 150, 
                         align = "left",
                         name = "Operator"),
-          inc = colDef(name = "Perp Count", 
+          inc = colDef(name = "Worst Count", 
                        defaultSortOrder = "desc",
                        show = F),
           STATE = colDef(aggregate = "unique",
@@ -1651,7 +1651,7 @@ shinyServer( function(input, output, session) {
           dplyr::filter(booMo == T & booYr == T) %>%
           group_by(SYS, MoYr) %>%
           mutate(Max = if_else(.data[[input$weight]] == max(.data[[input$weight]]), T, F))%>%
-          mutate(SysMax = paste0(SYS, ifelse(Max, " Perp", "")),
+          mutate(SysMax = paste0(SYS, ifelse(Max, " Worst", "")),
                  None = 1)
 
       }
@@ -1663,7 +1663,7 @@ shinyServer( function(input, output, session) {
           group_by(SYS, MoYr) %>%
           mutate(Max = if_else(.data[[input$weight]] == max(.data[[input$weight]]) &
                                  max(.data[[input$weight]]) > 0, T, F))%>%
-          mutate(SysMax = paste0(SYS, ifelse(Max, " Perp", "")),
+          mutate(SysMax = paste0(SYS, ifelse(Max, " Worst", "")),
                  None = 1)
       }
     }
@@ -1675,7 +1675,7 @@ shinyServer( function(input, output, session) {
         dplyr::filter(grepl(input$system, SYS)) %>%
         group_by(MoYr)%>%
         mutate(Max = if_else(.data[[input$weight]] == max(.data[[input$weight]]), T, F))%>%
-        mutate(SysMax = paste0(SYS, ifelse(Max, " Perp", "")),
+        mutate(SysMax = paste0(SYS, ifelse(Max, " Worst", "")),
                None = 1)
     }
   })
@@ -1779,14 +1779,18 @@ shinyServer( function(input, output, session) {
                                          input$logY,"b"),
                          labels = yBreak(filter(plotData(),grepl("HL", SYS))[[input$weight]],
                                          input$logY,"l"))+
-      labs(title = "Perpetrators Among All Incidents",
-           subtitle = paste(weightName(input$weight, "HL"), "in", if_else(input$periodSwitch,
-                                                                          paste(year(ymd(input$thisMonth))),
-                                                                          paste(month(ymd(input$thisMonth),
-                                                                                      label = T,
-                                                                                      abbr = F),
-                                                                                    year(ymd(input$thisMonth)))
-                                                                          )),
+      labs(title = paste0(if_else(input$periodSwitch,
+                                  paste(year(ymd(input$thisMonth))),
+                                  paste(month(ymd(input$thisMonth),
+                                              label = T,
+                                              abbr = F),
+                                        year(ymd(input$thisMonth)))), " Pipeline Incidents"),
+           subtitle = paste0(if_else( input$weight == "TOTAL_RELEASE",
+                                      if_else(input$relSys, 
+                                              "Hazardous Liquid Incidents",
+                                              "Gas Distribution and Transmission Incidents"),
+                                      "All Systems' Incidents"), 
+                             " by ", weightName(input$weight, input$system)),
            color = "System")+
       theme_pst(font = pstFont)
   })
