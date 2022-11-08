@@ -35,7 +35,7 @@ rangeBrother <- function(x){
 #custom legend builder
 #sheesh cleaned that up a lot
 unitsMatch <- function(u){
-  if(grepl("Gal", u)){
+  if(grepl("Gal", u, ignore.case = T)){
     match <- "Liquids, Gal."
   }
   else{
