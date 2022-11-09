@@ -248,13 +248,13 @@ body <- dashboardBody(
                 id = "buttonCol",
                 2,
                 h4("Options"),
-                h6("Period"),
+                h6("Time Period"),
                 switchInput(
                   label = "<i class=\"fa-solid fa-calendar-days\"></i>",
                   inputId = "periodSwitch",
                   value = F,
-                  onLabel = " Year",
-                  offLabel = "Month",
+                  onLabel = "Yr.",
+                  offLabel = "Mo.",
                   onStatus = "info",
                   offStatus = "primary"
                   ),
