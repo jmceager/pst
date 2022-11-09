@@ -217,6 +217,11 @@ Starting with content, navbar, logo
   justify-items: center;
 }
 
+.well .ggtip{
+  padding: 10px;
+  font-size: calc(12pt - 1vh);
+}
+
 #timePlot .text{
   font-family:  "Montserrat", sans-serif;
 }
