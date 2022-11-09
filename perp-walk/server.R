@@ -1639,7 +1639,7 @@ shinyServer( function(input, output, session) {
     }
   })
   
-#### Timeline Plots  ####
+#### Incident Plots  ####
   plotData <- reactive({
     selMo =  if_else(rep(input$periodSwitch == F,12), rep(month(ymd(input$thisMonth)),12), seq(1,12,1) )
     selYr = year(ymd(input$thisMonth))
@@ -1826,7 +1826,12 @@ shinyServer( function(input, output, session) {
     
     # create style property for tooltip
     # transparent bg and z-index for placement
-    pos <- paste0("left:", left_px + 2, "px; top:", top_px + 2, "px;")
+    pos <- paste0("left:", left_px + 2, 
+                  #adjust placement for lower points
+                  if_else(top_px < 250, "px; top:", "px; bottom:"), 
+                  if_else(top_px < 250, paste0(top_px + 2, "px;"), 
+                          paste0("calc(100% - ", top_px, "px);")))
+                          
     
     # tooltip  as wellPanel
     wellPanel(
@@ -1859,7 +1864,11 @@ shinyServer( function(input, output, session) {
     
     # create style property for tooltip
     # transparent bg and z-index for placement
-    pos <- paste0("left:", left_px + 2, "px; top:", top_px + 2, "px;")
+    pos <- paste0("left:", left_px + 2, 
+                  #adjust placement for lower points
+                  if_else(top_px < 250, "px; top:", "px; bottom:"), 
+                  if_else(top_px < 250, paste0(top_px + 2, "px;"), 
+                          paste0("calc(100% - ", top_px, "px);")))
     
     # tooltip  as wellPanel
     wellPanel(
