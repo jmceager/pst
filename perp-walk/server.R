@@ -27,7 +27,10 @@ shinyServer( function(input, output, session) {
                       what goes into labeling incidents as the \"worst\" every month. This dashboard 
                       also offers a few new ways to visualize how these incidents compare on a monthly basis, 
                       as well as detailing which operators are most frequently responsible for these incidents. "),
+               br(),
                tags$p("For more information, use the tutorial button located in the Information drop-down labeled: ", icon("info")), 
+               br(),
+               tags$p("If you are viewing this dashboard on the PST website and want to view it in fullscreen "), tags$a(href = "https://jamespst.shinyapps.io/worst-month/" ,"click here!")
              ),  html = T, size = "m")
   
   #### intro js ####
