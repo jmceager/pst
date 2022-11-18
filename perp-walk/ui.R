@@ -267,7 +267,7 @@ body <- dashboardBody(
                                   "Injured",
                                   "Operator Mileage",
                                   "Evacuations"),
-                  choiceValues = c("",
+                  choiceValues = c("None",
                                    "TOTAL_COST_CURRENT",
                                    "FATAL",
                                    "INJURE",
