@@ -39,7 +39,7 @@ vignettes/*.pdf
 .Renviron
 
 # Mac stuff 
-.DS_Store
+*.DS_Store
 */rsconnect/*
 
 .Rproj
