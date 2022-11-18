@@ -1646,6 +1646,7 @@ shinyServer( function(input, output, session) {
   plotData <- reactive({
     selMo =  if_else(rep(input$periodSwitch == F,12), rep(month(ymd(input$thisMonth)),12), seq(1,12,1) )
     selYr = year(ymd(input$thisMonth))
+    incs$None = rep(0,nrow(incs))
     if(input$system == "all"){
       if(input$weight == "TOTAL_RELEASE"){
         incs %>%
@@ -1720,17 +1721,20 @@ shinyServer( function(input, output, session) {
       scale_x_date(date_labels = if_else( input$periodSwitch, "%b", "%b %d"),
                    date_breaks = if_else(input$periodSwitch, "1 month", "7 days"),
                    limits = dayRange(input$thisMonth,if_else(input$periodSwitch, "y","m")),
-                   name = ""
-                   )+
-      scale_size(name = str_wrap(prettysize(),15),
+                   name = "")+
+      scale_size(name = str_wrap(prettysize(),10),
                  limits = c(0, max(df[[input$sizeButton]])),
+                 range = c(3,ifelse(max(df[[input$sizeButton]]) == min(df[[input$sizeButton]]),4,12)),
                  labels = ifelse(input$sizeButton == "TOTAL_COST_CURRENT",
                                   scales::dollar_format(scale = .001, suffix = " K"),
                                   scales::comma_format())  )+
       scale_y_continuous(name = prettyweight(),
                          trans = if_else(input$logY == T, "pseudo_log","identity"),
                          breaks = yBreak(df[[input$weight]], input$logY,"b"),
-                         labels = yBreak(df[[input$weight]], input$logY,"l"))+
+                         labels = yBreak(df[[input$weight]], input$logY,"l"),
+                         expand = expansion(mult = c(0.025,.1)))+
+      guides(color = guide_legend(order = 1),
+             size = ifelse(input$sizeButton == "None", "none", "legend"))+
       labs(title = paste0(if_else(input$periodSwitch,
                                   paste(year(ymd(input$thisMonth))),
                                   paste(month(ymd(input$thisMonth),
@@ -1747,7 +1751,6 @@ shinyServer( function(input, output, session) {
       theme_pst(font = pstFont)
   })
 
-##TODO: update tooltip so if its in bottom half it goes up, and left side goes right
   output$hlTimePlot <- renderPlot({
     w$show()
     on.exit({
@@ -1771,17 +1774,21 @@ shinyServer( function(input, output, session) {
                    limits = dayRange(input$thisMonth, if_else(input$periodSwitch, "y","m")),
                    name = ""
                    )+
-      scale_size(name = str_wrap(prettysize(),15),
+      scale_size(name = str_wrap(prettysize(),10),
                  limits = c(0, max(df[[input$sizeButton]])),
+                 range = c(3,ifelse(max(df[[input$sizeButton]]) == min(df[[input$sizeButton]]),4,12)),
                  labels = ifelse(input$sizeButton == "TOTAL_COST_CURRENT",
                                  scales::dollar_format(scale = .001, suffix = " K"),
-                                 scales::comma_format()))+
+                                 scales::comma_format())  )+
       scale_y_continuous(name = prettyweight(),
                          trans = if_else(input$logY == T, "pseudo_log","identity"),
                          breaks = yBreak(filter(plotData(),grepl("HL", SYS))[[input$weight]],
                                          input$logY,"b"),
                          labels = yBreak(filter(plotData(),grepl("HL", SYS))[[input$weight]],
-                                         input$logY,"l"))+
+                                         input$logY,"l"),
+                         expand = expansion(mult = c(0.025,.1)))+
+      guides(color = guide_legend(order = 1),
+             size = ifelse(input$sizeButton == "None", "none", "legend"))+
       labs(title = paste0(if_else(input$periodSwitch,
                                   paste(year(ymd(input$thisMonth))),
                                   paste(month(ymd(input$thisMonth),
