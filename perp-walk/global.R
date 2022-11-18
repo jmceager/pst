@@ -18,8 +18,13 @@ library(jsonlite)
 library(viridis)
 library(rintrojs)
 library(shinyalert)
-#> Loading required package: sysfonts
-#> Loading required package: showtextdb
+
+## TODO: higher-contrast pst theme
+## TODO: light theme pst plotting 
+## TODO: make themes of reactables for dark/light switch too
+## TODO: add incident rate to repeat offenders 
+
+
 sysCol <- c("GD Worst" = "#6a3d9a",
             "GD" = "#cab2d6",
             "GT Worst" = "#1f78b4",
@@ -30,6 +35,8 @@ sysCol <- c("GD Worst" = "#6a3d9a",
 fargs <- formals(icon)
 fargs$verify_fa <- FALSE
 formals(icon) <- fargs
+
+baseFont = 16
 
 #### functions ####
 #fun little html function
@@ -256,7 +263,64 @@ yBreak <- function(data, log=c(T,F), output = c("b", "l")){
 }
 
 # theme clean adjustments to apply to ggplot
-theme_pst <- function(font = "Arial") {
+theme_pst <- function(font = "Arial", fontSize = baseFont) {
+  (theme(
+    axis.line.x = element_line(
+      colour = "#B3C7D0",
+      linewidth = 0.5,
+      linetype = "solid"
+    ),
+    axis.line.y = element_line(
+      colour = "#B3C7D0",
+      linewidth = 0.5,
+      linetype = "solid"
+    ),
+    axis.ticks.y = element_line(
+      colour = "#B3C7D0",
+      linewidth = 0.5,
+      linetype = "solid"
+    ),
+    text = element_text(family = font,
+                        size = fontSize),
+    axis.text = element_text(colour = "#81A2B1",
+                             size = fontSize),
+    axis.title = element_text(colour ="#C4C8C6",
+                              size = fontSize),
+    panel.grid.minor.y = element_line(linetype = "dotted", 
+                                      colour = "#557A8B",
+                                      linewidth = .25),
+    panel.grid.major.y = element_line(colour = "#81A2B1", 
+                                      linetype = "dotted"),
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    panel.background = element_blank(),
+    panel.border = element_blank(),
+    strip.background = element_rect(linetype = 0),
+    strip.text = element_blank(),
+    strip.text.x = element_blank(),
+    strip.text.y = element_blank(),
+    legend.text = element_text(colour = "#C4C8C6",
+                               size = fontSize * .8),
+    legend.background = element_rect(fill = "#233239", color = "#182125"),
+    legend.title = element_text( face = "bold", 
+                                 colour = "#C4C8C6",
+                                 size = fontSize),
+    legend.position = "right",
+    legend.key = element_blank(),
+    legend.margin = margin(4,12,4,6, "pt"),
+    #legend.background = element_blank(),
+    plot.background = element_rect(fill = "#233239"),
+    plot.title = element_text(face = "bold", 
+                              colour = "#C4C8C6",
+                              size = fontSize * 1.2),
+    plot.subtitle = element_text(colour = "#C4C8C6",
+                                 size = fontSize)
+  )
+  )
+}
+
+
+theme_pst_lite <- function(font = "Arial") {
   (theme(
     axis.line.x = element_line(
       colour = "#182125",
