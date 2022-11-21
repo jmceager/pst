@@ -248,6 +248,16 @@ body <- dashboardBody(
                 id = "buttonCol",
                 2,
                 h4("Options"),
+                h6("Plot Theme"),
+                switchInput(
+                  label = "<i class=\"fa-solid fa-brush\"></i>",
+                  inputId = "themeSwitch",
+                  value = F,
+                  onLabel = "Light",
+                  offLabel = "Dark",
+                  onStatus = "info",
+                  offStatus = "primary"
+                ),
                 h6("Time Period"),
                 switchInput(
                   label = "<i class=\"fa-solid fa-calendar-days\"></i>",
