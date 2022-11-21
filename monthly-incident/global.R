@@ -19,7 +19,6 @@ library(viridis)
 library(rintrojs)
 library(shinyalert)
 
-## TODO: light theme pst plotting 
 ## TODO: make themes of reactables for dark/light switch too
 ## TODO: add incident rate to repeat offenders 
  

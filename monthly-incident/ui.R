@@ -1,9 +1,5 @@
 #worst incidents of month dashboard server side
 # this is a shiny app that isnt very shiny at all
-
-# TODO: Fix waiter auto load
-# TODO: add overlay for educational purposes - intro.js
-# TODO: some locations in allinc not quite figuring their stuff out
 # TODO: reformat and style code to be consistent with standards 
 
 # load data just for date 
