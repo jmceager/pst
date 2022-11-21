@@ -1691,6 +1691,13 @@ shinyServer( function(input, output, session) {
     on.exit({
       w$hide()
     })
+    # set lite / dark theme
+    if(input$themeSwitch == F){
+      theme_set(theme_pst(font = pstFont))
+    }
+    else{
+      theme_set(theme_pst_lite(font = pstFont))
+    }
     #for year
     if(input$system == "all" & input$weight == "TOTAL_RELEASE"){
       df <- plotData() %>%
@@ -1747,8 +1754,7 @@ shinyServer( function(input, output, session) {
                                               "Gas Distribution and Transmission Incidents"),
                                       "All Systems' Incidents"), 
                              " by ", weightName(input$weight, input$system)),
-           color = "System")+
-      theme_pst(font = pstFont)
+           color = "System")
   })
 
   output$hlTimePlot <- renderPlot({
@@ -1756,6 +1762,13 @@ shinyServer( function(input, output, session) {
     on.exit({
       w$hide()
     })
+    # set lite / dark theme
+    if(input$themeSwitch == F){
+      theme_set(theme_pst(font = pstFont))
+    }
+    else{
+      theme_set(theme_pst_lite(font = pstFont))
+    }
     # data 
     df <- filter(plotData(), grepl("HL", SYS))
     #the actual plot
@@ -1801,8 +1814,7 @@ shinyServer( function(input, output, session) {
                                               "Gas Distribution and Transmission Incidents"),
                                       "All Systems' Incidents"), 
                              " by ", weightName(input$weight, input$system)),
-           color = "System")+
-      theme_pst(font = pstFont)
+           color = "System")
   })
   
 
