@@ -19,11 +19,10 @@ library(viridis)
 library(rintrojs)
 library(shinyalert)
 
-## TODO: higher-contrast pst theme
 ## TODO: light theme pst plotting 
 ## TODO: make themes of reactables for dark/light switch too
 ## TODO: add incident rate to repeat offenders 
-
+ 
 
 sysCol <- c("GD Worst" = "#6a3d9a",
             "GD" = "#cab2d6",
@@ -320,28 +319,40 @@ theme_pst <- function(font = "Arial", fontSize = baseFont) {
 }
 
 
-theme_pst_lite <- function(font = "Arial") {
+theme_pst_lite <- function(font = "Arial", fontSize = baseFont) {
   (theme(
     axis.line.x = element_line(
-      colour = "#182125",
-      size = 0.5,
+      colour = "#233239",
+      linewidth = 0.5,
+      linetype = "solid"
+    ),
+    axis.ticks.x = element_line(
+      colour = "#233239",
+      linewidth = 0.5,
       linetype = "solid"
     ),
     axis.line.y = element_line(
-      colour = "#182125",
-      size = 0.5,
+      colour = "#233239",
+      linewidth = 0.5,
       linetype = "solid"
     ),
     axis.ticks.y = element_line(
-      colour = "#182125",
-      size = 0.5,
+      colour = "#233239",
+      linewidth = 0.5,
       linetype = "solid"
     ),
-    text = element_text(family = font),
-    axis.text = element_text(colour = "#8C9394"),
-    axis.title = element_text(colour ="#C4C8C6"),
-    panel.grid.minor.y = element_line(linetype = "dotted", colour = "#29363D"),
-    panel.grid.major.y = element_line(colour = "#394C56", linetype = "dotted"),
+    text = element_text(family = font,
+                        size = fontSize),
+    axis.text = element_text(colour = "#4D6B80",
+                             size = fontSize),
+    axis.title = element_text(colour ="#3D5566",
+                              size = fontSize),
+    panel.grid.minor.y = element_line(linetype = "dotted", 
+                                      colour = "#81A2B1",
+                                      linewidth = .25),
+    panel.grid.major.y = element_line(colour = "#4D6B80", 
+                                      linetype = "dotted",
+                                      linewidth = .5),
     panel.grid.major.x = element_blank(),
     panel.grid.minor.x = element_blank(),
     panel.background = element_blank(),
@@ -350,16 +361,22 @@ theme_pst_lite <- function(font = "Arial") {
     strip.text = element_blank(),
     strip.text.x = element_blank(),
     strip.text.y = element_blank(),
-    legend.text = element_text(colour = "#C4C8C6"),
-    legend.background = element_rect(fill = "#233239", color = "#182125"),
-    legend.title = element_text( face = "bold", colour = "#C4C8C6"),
+    legend.text = element_text(colour = "#3D5566",
+                               size = fontSize * .8),
+    legend.background = element_rect(fill = "#E6ECF0", color = "#182125"),
+    legend.title = element_text( face = "bold", 
+                                 colour = "#3D5566",
+                                 size = fontSize),
     legend.position = "right",
     legend.key = element_blank(),
     legend.margin = margin(4,12,4,6, "pt"),
     #legend.background = element_blank(),
-    plot.background = element_rect(fill = "#233239"),
-    plot.title = element_text(face = "bold", colour = "#C4C8C6"),
-    plot.subtitle = element_text(colour = "#C4C8C6")
+    plot.background = element_rect(fill = "#E6ECF0"),
+    plot.title = element_text(face = "bold", 
+                              colour = "#172026",
+                              size = fontSize * 1.2),
+    plot.subtitle = element_text(colour = "#172026",
+                                 size = fontSize)
   )
   )
 }
