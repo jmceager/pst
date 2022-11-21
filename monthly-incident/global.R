@@ -311,9 +311,11 @@ theme_pst <- function(font = "Arial", fontSize = baseFont) {
     plot.background = element_rect(fill = "#233239"),
     plot.title = element_text(face = "bold", 
                               colour = "#C4C8C6",
-                              size = fontSize * 1.2),
+                              size = fontSize * 1.2,
+                              hjust = 0),
     plot.subtitle = element_text(colour = "#C4C8C6",
-                                 size = fontSize)
+                                 size = fontSize,
+                                 hjust = 0)
   )
   )
 }
@@ -366,7 +368,8 @@ theme_pst_lite <- function(font = "Arial", fontSize = baseFont) {
     legend.background = element_rect(fill = "#E6ECF0", color = "#182125"),
     legend.title = element_text( face = "bold", 
                                  colour = "#3D5566",
-                                 size = fontSize),
+                                 size = fontSize,
+                                 hjust = 0),
     legend.position = "right",
     legend.key = element_blank(),
     legend.margin = margin(4,12,4,6, "pt"),
@@ -374,9 +377,11 @@ theme_pst_lite <- function(font = "Arial", fontSize = baseFont) {
     plot.background = element_rect(fill = "#E6ECF0"),
     plot.title = element_text(face = "bold", 
                               colour = "#172026",
-                              size = fontSize * 1.2),
+                              size = fontSize * 1.2,
+                              hjust = 0),
     plot.subtitle = element_text(colour = "#172026",
-                                 size = fontSize)
+                                 size = fontSize,
+                                 hjust = 0)
   )
   )
 }
