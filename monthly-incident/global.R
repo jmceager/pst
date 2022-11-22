@@ -34,7 +34,7 @@ fargs <- formals(icon)
 fargs$verify_fa <- FALSE
 formals(icon) <- fargs
 
-baseFont = 16
+baseFont = 18
 
 #### functions ####
 #fun little html function
