@@ -33,7 +33,8 @@ header <- dashboardHeader(
               hr(),
               textOutput("infoText"),
               br(),
-              actionButton("help", "Tutorial Walkthrough"),
+              conditionalPanel(condition = "input.tabs=='now'",
+                               actionButton("help", "Intro Walkthrough")),
               placement = "bottom",
               arrow = TRUE,
               theme = "material")
