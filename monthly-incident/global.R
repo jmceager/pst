@@ -81,7 +81,7 @@ addLegendCustom <- function(map, weight, weightName, sys, legName,units, opacity
                                  "#b2b2b2")
                  )
   )
-  title <- if_else(weightName == "TOTAL_RELEASE", paste0("Commodity Released (", unitsMatch(units), ")"),
+  title <- if_else(weightName == "TOTAL_RELEASE", paste0("Commodity Released </br> (", unitsMatch(units), ")"),
                    if_else(weightName == "TOTAL_COST_CURRENT", "Cost (2022 USD)",
                            if_else(weightName == "FATAL", "Deaths",
                                    "Deaths + Injuries"))
@@ -299,10 +299,11 @@ theme_pst <- function(font = "Arial", fontSize = baseFont) {
     strip.text.y = element_blank(),
     legend.text = element_text(colour = "#C4C8C6",
                                size = fontSize * .8),
-    legend.background = element_rect(fill = "#233239", color = "#182125"),
+    legend.background = element_rect(fill = "#233239", color = "#B3C7D0"),
     legend.title = element_text( face = "bold", 
                                  colour = "#C4C8C6",
-                                 size = fontSize),
+                                 size = fontSize,
+                                 hjust = 0),
     legend.position = "right",
     legend.key = element_blank(),
     legend.margin = margin(4,12,4,6, "pt"),
