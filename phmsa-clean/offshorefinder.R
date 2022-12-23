@@ -1,165 +1,82 @@
 library(tidyverse)
-library(rgeos)
-library(rgdal)
 library(sf)
 library(maps)
-library(maptools)
 
+#load census state and county data
+land <- st_read("data/gis/census_county/cb_2021_us_county_5m.shp") %>%
+  # select useful cols 
+  select(GEOID, NAME, STATE_NAME)
+#load us water reference
+water <- st_read("data/gis/hydro/us_hydro.shp") %>%
+  #keep names, create abrev. that match mileage data 
+  select(Name1) %>%
+  mutate(OCS_ABV = case_when(Name1 == "Pacific Ocean" ~ "OCSP",
+                             Name1 == "Atlantic Ocean" ~ "OCSAT",
+                             Name1 == "Gulf of Mexico" ~ "OCSG")) %>%
+  st_transform(4269)
 
-locCleaner <- function(df, col, lat, lon, org = NULL){
-  
-  #clean bad lat longs 
-  df <- df %>%
-    mutate(LOCATION_LONGITUDE = if_else(.data[[lon]] < -180, 
-                                        .data[[lon]]/100000,
-                                        .data[[lon]]))%>%
-    mutate(LOCATION_LONGITUDE = if_else(.data[[lon]] > 0, 
-                                        .data[[lon]]*-1,
-                                        .data[[lon]]))
-  
-  #separate good locations
-  goodLoc <- df %>%
-    filter(!grepl("NA", .data[[col]]) 
-           & !grepl("N/A", .data[[col]]) 
-           & !grepl("Municipality", .data[[col]]) 
-           & !grepl(" Miles", .data[[col]])
-           & !grepl("[[:digit:]]", .data[[col]])) %>%
-    mutate(cleanLoc = .data[[col]])
-  
-  #run gis on bad location
-  if(is.null(org)){
-    badLoc <- df %>%
-      filter(grepl("NA", .data[[col]]) 
-             | grepl("N/A", .data[[col]]) 
-             | grepl("Municipality", .data[[col]]) 
-             | grepl(" Miles", .data[[col]])
-             | grepl("[[:digit:]]", .data[[col]])) %>%
-      mutate(cleanLoc = glue(lat = .data[[lat]], lon = LOCATION_LONGITUDE))
-  }
-  else{
-    badLoc <- df %>%
-      filter(grepl("NA", .data[[col]]) 
-             | grepl("N/A", .data[[col]]) 
-             | grepl("Municipality", .data[[col]]) 
-             | grepl(" Miles", .data[[col]])
-             | grepl("[[:digit:]]", .data[[col]])) %>%
-      mutate(cleanLoc = glue(lat = .data[[lat]], lon = LOCATION_LONGITUDE, org = .data[[org]]))
-  }
-  
-  #return clean DF
-  return( rbind(goodLoc, badLoc) )
-}
-
-
-glue <- function(lat, lon, org = NULL){
-  state <- locState(lat = lat, lon = lon)
-  if(is.null(org)){
-    county <- locCounty(lat = lat, lon = lon)
-  }
-  else{
-    county <- locCounty(lat = lat, lon = lon, org = org)
-  }
-  #replace empty county names with generic offshore
-  #can we get more specific in the future? 
-  #is this just down to some projection funkiness or county generalization?
-  county <- replace_na(county, "Offshore")
-  #create empty list for iterating clean place names
-  place <- rep("",length(county))
-  #naming places based on origin 
-  #most state waters get a county assigned already
-  for(i in 1:length(place)){
-    if(str_detect("Outer Continental Shelf",county[i])){
-      place[i] <- paste0(county[i], ", near ", state[i])
-    }
-    else if(str_detect("State Waters", county[i])){
-      place[i] <- paste0(state[i], " ", county[i])
-    }
-    else if(str_detect("Offshore", county[i])){
-      place[i] <- paste0(county[i], ", near ", state[i])
-    }
-    else{
-      place[i] <- paste0(county[i], ", ", state[i])
-    }
-  }
-  place
-}
-
-
-locState <- function(lat, lon){
-  ### states
-  #load state data
-  states <- readOGR("./data/gis/us_states.shp")
-  #set up projections
-  x <- data.frame(X=lon, Y = lat)
+#retreive clean state and location names
+locCleaner <- function(df, loc, lat, lon, org, state){
+  #set up phmsa points
+  x <- data.frame(X=df[[lon]], Y = df[[lat]], O = df[[org]], 
+                  I = df[[loc]], S = df[[state]]) %>%
+    mutate(run = case_when((grepl("NA", I) 
+                            | grepl("N/A", I) 
+                            | grepl("Municipality", I) 
+                            | grepl(" Miles", I)
+                            | grepl("[[:digit:]]", I)
+                            | is.na(I)) ~ T,
+                           TRUE ~ F))
   #equidistant conic
   projStr <- "+proj=longlat +datum=WGS84"
   crs <- CRS(projStr)
-  coordinates(x) <- c("X","Y")
-  proj4string(x) <- crs
-  #x <- spTransform(x, crs)
-  statesProj <- spTransform(states, crs)
+  # transform to simple features
+  x_sf <- st_as_sf(x,
+                   agr = NA_agr_,
+                   coords = c("X", "Y"),
+                   crs = crs,
+                   dim = "XY",
+                   remove = TRUE,
+                   na.fail = TRUE,
+                   sf_column_name = NULL
+  )%>%
+    #transform crs to same as census 
+    st_transform(4269)
   
   
-  ## Set up containers for results
-  n <- length(x)
-  nearState <- character(n)
-  distState <- numeric(n)
-  
-  #other format things
-  xSf <- st_as_sf(x)
-  statesSf <- st_as_sf(statesProj)
-
-  #loop
-  for (i in seq_along(nearState)) {
-    gDists <- st_distance(xSf[i,], statesSf, by_element=T)
-    nearState[i] <- statesSf$NAME[which.min(gDists)]
-    distState[i] <- min(gDists)
+  ## main loop: probably has to be a way to vectorize / conditionalize 
+  for (i in 1:nrow(x_sf)){
+    if (x[i, "run"] == T){
+      # for on land county finding 
+      if (is.na(x[i, "O"])){
+        x_sf[i, ] <- st_join(x_sf[i, ], land, join = st_within, left = T) %>%
+          mutate(I = paste0(NAME, " County, ", state.abb[match(STATE_NAME, state.name)]),
+                 S = coalesce(S, STATE_NAME))%>%
+          select(setdiff(colnames(x_sf), colnames(land)))
+      }
+      # for OCS incidents
+      else if (grepl("OCS", x[i, "O"])){
+        x_sf[i, ] <- st_join(x_sf[i, ], water, join = st_within, left = TRUE) %>%
+          mutate(I = paste0("Outer Continental Shelf: ", 
+                            case_when(OCS_ABV == "OCSG" ~ "Gulf of Mexico",
+                                      OCS_ABV == "OCSAT" ~ "Atlantic",
+                                      OCS_ABV == "OCSP" ~ "Pacific")),
+                 S = OCS_ABV
+          )%>%
+          select(setdiff(colnames(x_sf), colnames(water)))
+      }
+      # for offshore state waters that fell through cracks 
+      else{
+        x_sf[i, ] <- st_join(x_sf[i, ], land, join = st_nearest_feature, left = TRUE)%>%
+          mutate(I = paste0(STATE_NAME, " State Waters"))%>%
+          select(setdiff(colnames(x_sf), colnames(land)))
+      }
+    }
   }
   
-  # state_converter <- data.frame(abb = state.abb, name = str_to_upper(state.name))
-  # nearState <- data.frame(name = nearState) 
-  # nearState <- left_join(nearState, state_converter)
-  # nearState <- nearState$abb
-  state.abb[match(nearState,state.name)]
+  #only return loc and state, clean df and colnames, bind to df
+  cbind(df, select(x_sf, I, S)) %>%
+    mutate(cleanLoc = I,
+           STATE = S)%>%
+    select(-c(I,S))
 }
-
-locCounty <- function(lat, lon, org = NULL){
-  x <- data.frame(X = lon, Y = lat)
-  # Prepare SpatialPolygons object with one SpatialPolygon
-  # per county
-  counties <- maps::map('county', fill=TRUE, col="transparent", plot=FALSE)
-  IDs <- sapply(strsplit(counties$names, ":"), function(x) x[1])
-  counties_sp <- map2SpatialPolygons(counties, 
-                                     IDs=IDs,
-                                     proj4string=CRS("+proj=longlat +datum=WGS84"))
-  
-  # Convert pointsDF to a SpatialPoints object 
-  points_sp <- SpatialPoints(x, proj4string=CRS("+proj=longlat +datum=WGS84"))
-  
-  # Use 'over' to get _indices_ of the Polygons object containing each point 
-  indices <- over(points_sp, counties_sp)
-  
-  # Return the county names of the Polygons object containing each point
-  countyNames <- sapply(counties_sp@polygons, function(x) x@ID)
-  counties <- countyNames[indices]
-  
-  if(is.null(org)){
-    offshore <- rep("Offshore", length(counties))
-  }
-  else{
-    offshore <- org %>%
-      coalesce(rep("Offshore", length(counties)))%>%
-      str_replace("ON THE OUTER CONTINENTAL SHELF", "Outer Continental Shelf") %>%
-      str_remove(" \\s*\\([^\\)]+\\)")%>% # remove (OCS) from string
-      str_replace("IN STATE WATERS", "State Waters")
-  }
-
-  counties <- coalesce(counties, offshore)
-  counties <- sub(".*,","",counties)
-  counties <- str_to_title(counties)
-  
-  counties
-  
-}
-
-
