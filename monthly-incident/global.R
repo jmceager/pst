@@ -12,12 +12,12 @@ library(htmlwidgets)
 library(waiter)
 library(showtext)
 library(thematic)
-library(ggthemes)
 library(showtext)
 library(jsonlite)
 library(viridis)
 library(rintrojs)
 library(shinyalert)
+library(tippy)
 
 ## TODO: make themes of reactables for dark/light switch too
 ## TODO: add incident rate to repeat offenders 

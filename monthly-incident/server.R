@@ -17,21 +17,21 @@ shinyServer( function(input, output, session) {
   w <- Waiter$new(id = c("timePlot","hlTimePlot"))
   
   #### opening dialog ####
-  shinyalert(title = "Welcome!", 
-             text = tags$div(
-               tags$p("This dashboard explores pipeline incident data, provided by the Pipeline and 
-                      Hazardous Materials Safety Administration, to explore which operators are
-                      responsible for the worst incidents every month. Historically, the 
-                      Pipeline Safety Trust has used the size of the release to determine that 
-                      label, but we now offer a few different metrics for you to examine 
-                      what goes into labeling incidents as the \"worst\" every month. This dashboard 
-                      also offers a few new ways to visualize how these incidents compare on a monthly basis, 
-                      as well as detailing which operators are most frequently responsible for these incidents. "),
-               br(),
-               tags$p("For more information, use the tutorial button located in the Information drop-down labeled: ", icon("info")), 
-               br(),
-               tags$p("If you are viewing this dashboard on the PST website and want to view it in fullscreen "), tags$a(href = "https://jamespst.shinyapps.io/worst-month/" ,"click here!")
-             ),  html = T, size = "m")
+  # shinyalert(title = "Welcome!", 
+  #            text = tags$div(
+  #              tags$p("This dashboard explores pipeline incident data, provided by the Pipeline and 
+  #                     Hazardous Materials Safety Administration, to explore which operators are
+  #                     responsible for the worst incidents every month. Historically, the 
+  #                     Pipeline Safety Trust has used the size of the release to determine that 
+  #                     label, but we now offer a few different metrics for you to examine 
+  #                     what goes into labeling incidents as the \"worst\" every month. This dashboard 
+  #                     also offers a few new ways to visualize how these incidents compare on a monthly basis, 
+  #                     as well as detailing which operators are most frequently responsible for these incidents. "),
+  #              br(),
+  #              tags$p("For more information, use the tutorial button located in the Information drop-down labeled: ", icon("info")), 
+  #              br(),
+  #              tags$p("If you are viewing this dashboard on the PST website and want to view it in fullscreen "), tags$a(href = "https://jamespst.shinyapps.io/worst-month/" ,"click here!")
+  #            ),  html = T, size = "m")
   
   #### intro js ####
   # initiate hints on startup with custom button and event
@@ -59,9 +59,9 @@ shinyServer( function(input, output, session) {
       was responsible for the worst incident, and what kind of impact that incident had.",
       #sidebar
       "These buttons direct you to other tabs, where the info button can explain more 
-      on those pages. Briefly: Repeat Offenders shows a table of the most frequently responsible operators, 
+      on those pages. Briefly: Repeat Offenders shows a table of the operators with the most worst-of-the-month incidents, 
       the Monthly Map geographically displays the worst incidents alongside all other incidents in a month, 
-      Incident Plots offer an opportunity to graph these incidents by a host of variables, and 
+      Incident Plots offer an opportunity to graph all monthly incidents by more variables, and 
       the Full Table lists out the culprits and their incidents for the entire period of 
       time covered by this set of PHMSA data (2010 to Present)",
       #controls

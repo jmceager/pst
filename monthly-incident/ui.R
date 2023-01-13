@@ -1,8 +1,7 @@
 #worst incidents of month dashboard server side
 # this is a shiny app that isnt very shiny at all
-# TODO: reformat and style code to be consistent with standards 
-# TODO: add more info to tooltips 
-# TODO: maybe trial different basesize for plots?
+# TODO: reformat and style code to be consistent 
+# TODO: add more info to map and plot tooltips 
 # TODO: is there a way to make the tutorial reactive to pages? 
 
 # load data just for date 
