@@ -16,9 +16,11 @@ water <- st_read("data/gis/hydro/us_hydro.shp") %>%
   st_transform(4269)
 
 #retreive clean state and location names
-locCleaner <- function(df, loc, lat, lon, org, state){
+locCleaner <- function(df, loc, lat, lon, org = NULL, state){
+  #handling gd df with no origin col
+  org <- ifelse(is.null(org), rep(NA, nrow(df)), df[[org]])
   #set up phmsa points
-  x <- data.frame(X=df[[lon]], Y = df[[lat]], O = df[[org]], 
+  x <- data.frame(X=df[[lon]], Y = df[[lat]], O = org, 
                   I = df[[loc]], S = df[[state]]) %>%
     mutate(run = case_when((grepl("NA", I) 
                             | grepl("N/A", I) 

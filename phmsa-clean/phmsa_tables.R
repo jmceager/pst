@@ -6,7 +6,6 @@ library(readxl)
 source("offshorefinder.R")
 
 #### Data Setup ####
-## TODO: download zip direct from PHMSA website
 ## TODO: unpack zip to raw/ directory and continue cleaning 
 ## TODO: replace 2022 miles with 2021 numbers 
 
@@ -24,7 +23,9 @@ mileCols <- c("Operator.ID", "Operator.Business.Name",
               "Total.Miles.by.Decade", "Total.By.Decade.Miles")
 
 miles <- read.csv("data/raw/GD_MilesDecadeAge.csv") %>% 
-  mutate(system = "GD (Gas Distribution)") %>% 
+  mutate(system = "GD (Gas Distribution)",
+         services = select(., Unknown.services:X2020.2029.Number.of.Services) %>% rowSums(na.rm = T),
+         Total.Miles.by.Decade = Total.Miles.by.Decade + (services * 0.0134) )%>%
   select(any_of(mileCols))%>%
   rbind(select(
     read.csv("data/raw/GT_MilesDecadeAge.csv"), 
@@ -90,11 +91,14 @@ ops<-safe %>%
   ),
   pri.name = if_else(str_detect(pri.name,regex("kinder morgan",ignore_case = TRUE)),
                      "Kinder Morgan",pri.name
-  )
+  ),
+  sub.sys = str_extract_all(sub.sys, pattern = "[A-Z]") %>% #extract capital letters
+    sapply(.,paste,collapse = "")%>%   #paste list into sys abbreviations
+    str_replace(.,"PF","") # fix lngpf to lng
   )
 
 ops.simple <- ops %>%
-  select(sub.id, sub.name, pri.id, pri.name)
+  select(sub.id, sub.name, sub.sys, pri.id, pri.name)
 
 #### INCIDENT DATA ####
 
@@ -117,11 +121,11 @@ gd.full <- distData %>%
          MoYr = my(paste(IMONTH,IYEAR, sep = "-")),
          MSYS = "Gas",
          ILOC = paste(str_to_title(LOCATION_CITY_NAME),LOCATION_STATE_ABBREVIATION, sep = ", "),
-         STATE = LOCATION_STATE_ABBREVIATION) %>%
-  locCleaner(., "ILOC", lat= "LOCATION_LATITUDE", lon = "LOCATION_LONGITUDE")%>%
+         STATE = LOCATION_STATE_ABBREVIATION)%>%
+  locCleaner(., loc = "ILOC", lat= "LOCATION_LATITUDE", lon = "LOCATION_LONGITUDE", state = "STATE")%>%
   left_join(miles, by = c("OPERATOR_ID", "SYS", "STATE","IYEAR"))%>%
   mutate(mileage = replace_na(mileage, 0)) %>%
-  left_join(ops.simple, by = c("OPERATOR_ID" = "sub.id"))%>% 
+  left_join(filter(ops.simple, sub.sys == "GD"), by = c("OPERATOR_ID" = "sub.id"))%>% 
   distinct(NARRATIVE, .keep_all = T)%>%
   rename(NAME = NAME.x)
 
@@ -151,23 +155,18 @@ gt.full <- tranData %>%
          ILOC =  if_else(ON_OFF_SHORE == "ONSHORE", 
                          paste(str_to_title(ONSHORE_CITY_NAME), ONSHORE_STATE_ABBREVIATION,
                                sep = ", "),
-                         if_else(is.na(OFFSHORE_COUNTY_NAME),
-                                 "NA",
-                                 paste(paste(str_to_title(OFFSHORE_COUNTY_NAME), "County Waters", sep = " "),
-                                       OFFSHORE_STATE_ABBREVIATION,
-                                       sep = ", "))
-                         
-                          ),
+                         if_else(grepl("STATE WATERS", OFF_ACCIDENT_ORIGIN, ignore.case= T) ,
+                                 paste0(state.name[match(OFFSHORE_STATE_ABBREVIATION, state.abb)], "State Waters"),
+                                 "NA" )),
          STATE = coalesce(ONSHORE_STATE_ABBREVIATION, OFFSHORE_STATE_ABBREVIATION),
          STATE = if_else(is.na(STATE) & grepl("OCS", OFF_ACCIDENT_ORIGIN),
                          "OCS",
-                         STATE),
-         STATE = if_else(is.na(STATE),locState(LOCATION_LATITUDE, LOCATION_LONGITUDE),STATE)  
+                         STATE)
     )%>%
-  locCleaner(.,"ILOC","LOCATION_LATITUDE","LOCATION_LONGITUDE", "OFF_ACCIDENT_ORIGIN")%>%
+  locCleaner(.,"ILOC","LOCATION_LATITUDE","LOCATION_LONGITUDE", "OFF_ACCIDENT_ORIGIN", "STATE")%>%
   left_join(miles, by = c("OPERATOR_ID", "SYS", "STATE","IYEAR"))%>%
   mutate(mileage = replace_na(mileage, 0))%>%
-  left_join(ops.simple, by = c("OPERATOR_ID" = "sub.id"))%>% 
+  left_join(filter(ops.simple, sub.sys == "GT"), by = c("OPERATOR_ID" = "sub.id"))%>% 
   distinct(NARRATIVE, .keep_all = T)%>%
   rename(pri.id = pri.id.x,
          pri.name = pri.name.x,
@@ -196,30 +195,25 @@ hl.full <- hzrdData %>%
          ILOC =  if_else(ON_OFF_SHORE == "ONSHORE", 
                          paste(str_to_title(ONSHORE_CITY_NAME), ONSHORE_STATE_ABBREVIATION,
                                sep = ", "),
-                         if_else(is.na(OFFSHORE_COUNTY_NAME),
-                                 "NA",
-                                 paste(paste(str_to_title(OFFSHORE_COUNTY_NAME), "County Waters", sep = " "),
-                                       OFFSHORE_STATE_ABBREVIATION,
-                                       sep = ", "))
-                         
-                         ),
+                         if_else(grepl("STATE WATERS", OFF_ACCIDENT_ORIGIN, ignore.case= T) ,
+                                 paste0(state.name[match(OFFSHORE_STATE_ABBREVIATION, state.abb)], "State Waters"),
+                                 "NA" )),
          STATE = coalesce(ONSHORE_STATE_ABBREVIATION, OFFSHORE_STATE_ABBREVIATION),
          STATE = if_else(is.na(STATE) & grepl("OCS", OFF_ACCIDENT_ORIGIN),
                          "OCS",
-                         STATE),
-         STATE = if_else(is.na(STATE),locState(LOCATION_LATITUDE, LOCATION_LONGITUDE),STATE) 
+                         STATE) 
         )%>%
-  locCleaner(.,"ILOC","LOCATION_LATITUDE","LOCATION_LONGITUDE", "OFF_ACCIDENT_ORIGIN")%>%
+  locCleaner(.,"ILOC","LOCATION_LATITUDE","LOCATION_LONGITUDE", "OFF_ACCIDENT_ORIGIN", "STATE")%>%
   left_join(miles, by = c("OPERATOR_ID", "SYS", "STATE","IYEAR"))%>%
   mutate(mileage = replace_na(mileage, 0))%>%
-  left_join(ops.simple, by = c("OPERATOR_ID" = "sub.id"))%>% 
+  left_join(filter(ops.simple, sub.sys == "HL"), by = c("OPERATOR_ID" = "sub.id"))%>% 
   distinct(NARRATIVE, .keep_all = T)%>%
   rename(pri.id = pri.id.x,
          pri.name = pri.name.x,
          NAME = NAME.x)
 
 
-#### JOINS, BINDS ####
+#### JOINS, BINDS, RATE ####
 
 #columns for abridged incidents
 short_cols <- c( "REPORT_NUMBER", "NAME","OPERATOR_ID",  #basic characteristics
@@ -239,6 +233,62 @@ all.inc <- rbind(select(hl.full, all_of(short_cols)),
                  select(gd.full, all_of(short_cols))) 
 
 
+## get incident rate per operator (by base ID not prime/sub)
+## QUESTION: What do I do about terminal / tank farm incident rates? 
+operatorRate <- miles %>%
+  group_by(OPERATOR_ID, SYS, IYEAR)%>%
+  summarize(miles = sum(mileage))%>%
+  full_join(hl.full %>%
+              count(OPERATOR_ID, IYEAR) %>%
+              mutate(SYS = "HL"),
+             by = c("OPERATOR_ID", "IYEAR","SYS")
+            )%>% 
+  full_join(gt.full %>%
+               count(OPERATOR_ID, IYEAR) %>%
+               mutate(SYS = "GT"),
+            by = c("OPERATOR_ID", "IYEAR","SYS")
+  )%>%
+  full_join(gd.full %>%
+               count(OPERATOR_ID, IYEAR) %>%
+               mutate(SYS = "GD"),
+            by = c("OPERATOR_ID", "IYEAR","SYS")
+  )%>%
+  mutate(inc = sum(n,n.x,n.y, na.rm=T),
+         inc = replace_na(inc, 0))%>%
+  select(!c(n,n.x,n.y))%>%
+   #filter(OPERATOR_ID == 32363)%>% view()
+  ungroup()%>%
+  group_by(OPERATOR_ID, SYS)%>%
+  summarize(n = n(),
+            inc = sum(inc, na.rm=T)/n,
+            miles = sum(miles, na.rm = T)/n,
+            ipm = inc/miles,
+            ipm2 = (inc/n)/(miles/n),
+            ipm = ifelse(is.nan(ipm) & inc == 0, 0, ipm),
+            ipm2 = ifelse(is.nan(ipm2) & inc == 0, 0, ipm2)) 
+
+
+all.inc <- left_join(all.inc, operatorRate, 
+                     by = c("OPERATOR_ID", "SYS"), suffix = c("",".or"))
+
+gt.full <- left_join(gt.full, operatorRate, 
+                     by = c("OPERATOR_ID", "SYS"), suffix = c("",".or"))
+gd.full <- left_join(gd.full, operatorRate, 
+                     by = c("OPERATOR_ID", "SYS"), suffix = c("",".or"))
+hl.full <- left_join(hl.full, operatorRate, 
+                     by = c("OPERATOR_ID", "SYS"), suffix = c("",".or"))
+
+
+
+length(unique(all.inc$NAME)) #747
+
+length(unique(c(unique(gt.full$OPERATOR_STREET_ADDRESS), 
+                unique(gd.full$OPERATOR_STREET_ADDRESS),
+                unique(hl.full$OPERATOR_STREET_ADDRESS)))) #659
+
+length(unique(c(unique(gt.full$OPERATOR_ID), 
+                unique(gd.full$OPERATOR_ID),
+                unique(hl.full$OPERATOR_ID)))) #660? why different?
 
 #### WRITING EXPORTS ####
   
