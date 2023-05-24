@@ -223,7 +223,7 @@ short_cols <- c( "REPORT_NUMBER", "NAME","OPERATOR_ID",  #basic characteristics
                  "UNINTENTIONAL_RELEASE", "INTENTIONAL_RELEASE", "TOTAL_RELEASE","UNITS", #releases
                  "FATALITY_IND","FATAL", "INJURY_IND","INJURE", #human impact
                  "EXPLODE_IND","IGNITE_IND" ,  "NUM_PUB_EVACUATED", "TOTAL_COST_CURRENT",#impact 2
-                 "INSTALLATION_YEAR", "SYSTEM_PART_INVOLVED", #inc char 
+                 "INSTALLATION_YEAR", "SYSTEM_PART_INVOLVED", "PIPE_DIAMETER", #inc char 
                  "CAUSE","CAUSE_DETAILS", "NARRATIVE", #inc char 
                  "mileage", "pri.id","pri.name")  #joined char
 

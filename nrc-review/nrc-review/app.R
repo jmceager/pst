@@ -228,7 +228,7 @@ server <- function(input, output) {
                                                             valForm,
                                                             unit)
                                                     ), # inner div 1 
-                                                div( style = "font-size: .9rem",
+                                                div( style = "font-size: .9em",
                                                      ifelse(value != 0, unit, "")
                                                 )
                                               )
