@@ -15,7 +15,12 @@ water <- st_read("data/gis/hydro/us_hydro.shp") %>%
                              Name1 == "Gulf of Mexico" ~ "OCSG")) %>%
   st_transform(4269)
 
+
 #retreive clean state and location names
+# df is for clean piping and any rep functions 
+#loc is the current "dirty" location 
+# lat / lon / state obvious 
+# org is from the origin column in PHMSA's data
 locCleaner <- function(df, loc, lat, lon, org = NULL, state){
   #handling gd df with no origin col
   org <- ifelse(is.null(org), rep(NA, nrow(df)), df[[org]])
@@ -28,7 +33,7 @@ locCleaner <- function(df, loc, lat, lon, org = NULL, state){
                             | grepl(" Miles", I)
                             | grepl("[[:digit:]]", I)
                             | is.na(I)) ~ T,
-                           TRUE ~ F))
+                           .default = F))
   #equidistant conic
   projStr <- "+proj=longlat +datum=WGS84"
   crs <- CRS(projStr)
