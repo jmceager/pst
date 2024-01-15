@@ -128,6 +128,9 @@ ops.simple <- ops %>%
 
 # gd big 
 gd.full <- distData %>% 
+  #assorted nonsense I thought was useful early on
+  #mostly cleaning things up to make more sense
+  #always wondering if changing Y/N cols to true bools would make more sense too
   mutate(SYSTEM_TYPE = "Gas Distribution", 
          SYS = "GD",
          UNINTENTIONAL_RELEASE = replace_na(UNINTENTIONAL_RELEASE,0), 
@@ -145,29 +148,31 @@ gd.full <- distData %>%
          MoYr = my(paste(IMONTH,IYEAR, sep = "-")),
          MSYS = "Gas",
          ILOC = paste(str_to_title(LOCATION_CITY_NAME),LOCATION_STATE_ABBREVIATION, sep = ", "),
-         STATE = LOCATION_STATE_ABBREVIATION)%>%
-  #locCleaner(., loc = "ILOC", lat= "LOCATION_LATITUDE", lon = "LOCATION_LONGITUDE", state = "STATE")%>%
+         STATE = LOCATION_STATE_ABBREVIATION,
+         OFF_ACCIDENT_ORIGIN = NA)%>%
+  #clean location data
+  mutate( cleanLoc = pmap(list(ILOC, LOCATION_LATITUDE, LOCATION_LONGITUDE,
+                               OPERATOR_ID, REPORT_NUMBER, STATE,
+                               OFF_ACCIDENT_ORIGIN, SYS), 
+                          locCleaner) %>% unlist()) %>%
+  select(!OFF_ACCIDENT_ORIGIN)%>%
   left_join(miles, by = c("OPERATOR_ID", "SYS", "STATE","IYEAR"))%>%
-  mutate(mileage = replace_na(mileage, 0)) %>%
-  #left_join(filter(ops.simple, sub.sys == "GD"), by = c("OPERATOR_ID" = "sub.id"))%>% 
-  distinct(NARRATIVE, .keep_all = T)%>%
+  mutate(mileage = replace_na(mileage, 0))%>%
+  ## add safety data
+  #many to many left join
+  left_join(filter(ops, sub.sys == "GT"), 
+            by = c("OPERATOR_ID" = "sub.id"),
+            suffix = c("", ".o"))%>%
+  #determine valid records by checking date of incident by dates in safety rec
+  mutate(valid = between(MDY, start, end) ,
+         valid = replace_na(valid, T))%>%
+  group_by(REPORT_NUMBER)%>%
+  mutate(rep = n())%>%
+  ungroup()%>%
+  filter(valid  | rep == 1)%>%
+  #clean up 
   rename(NAME = NAME.x)
 
-# gd.op <- tibble()
-# for(i in 1:nrow(gd.full)){
-#   row <- gd.full[i,]
-#   if(row$OPERATOR_ID %in% ops$sub.id){
-#     ops_match <- filter(ops, sub.id == row$OPERATOR_ID, 
-#                              sub.sys == row$SYS, 
-#                              start <= row$MDY,
-#                              end > row$MDY)
-#     row_match <- left_join(row, ops_match, by = c("OPERATOR_ID" = "sub.id"))
-#   }
-#   else {
-#     row_match <- row
-#   }
-#   gd.op <- bind_rows(gd.op, row_match)
-# }
 
 
 ## add safety data to mileage for consistency 
@@ -193,44 +198,36 @@ gt.full <- tranData %>%
          MoYr = my(paste(IMONTH,IYEAR, sep = "-")),
          MSYS = "Gas",
          ILOC =  if_else(ON_OFF_SHORE == "ONSHORE", 
-                         paste(str_to_title(ONSHORE_CITY_NAME), ONSHORE_STATE_ABBREVIATION,
-                               sep = ", "),
+                         paste0(str_to_title(ONSHORE_CITY_NAME), ", ", ONSHORE_STATE_ABBREVIATION),
                          if_else(grepl("STATE WATERS", OFF_ACCIDENT_ORIGIN, ignore.case= T) ,
-                                 paste0(state.name[match(OFFSHORE_STATE_ABBREVIATION, state.abb)], "State Waters"),
-                                 "NA" )),
+                                 paste0(state.name[match(OFFSHORE_STATE_ABBREVIATION, state.abb)], " State Waters"),
+                                 "Outer Continental Shelf" )),
          STATE = coalesce(ONSHORE_STATE_ABBREVIATION, OFFSHORE_STATE_ABBREVIATION),
-         STATE = if_else(is.na(STATE) & grepl("OCS", OFF_ACCIDENT_ORIGIN),
+         STATE = if_else(grepl("OCS", OFF_ACCIDENT_ORIGIN),
                          "OCS",
                          STATE)
     )%>%
-  #locCleaner(.,"ILOC","LOCATION_LATITUDE","LOCATION_LONGITUDE", "OFF_ACCIDENT_ORIGIN", "STATE")%>%
+  mutate( cleanLoc = pmap(list(ILOC, LOCATION_LATITUDE, LOCATION_LONGITUDE,
+                               OPERATOR_ID, REPORT_NUMBER, STATE,
+                               OFF_ACCIDENT_ORIGIN, SYS), 
+                          locCleaner) %>% unlist()) %>%
   left_join(miles, by = c("OPERATOR_ID", "SYS", "STATE","IYEAR"))%>%
   mutate(mileage = replace_na(mileage, 0))%>%
-  #left_join(filter(ops.simple, sub.sys == "GT"), by = c("OPERATOR_ID" = "sub.id"))%>% 
-  distinct(NARRATIVE, .keep_all = T)
+    ## add safety data
+    #many to many left join
+    left_join(filter(ops, sub.sys == "GT"), 
+              by = c("OPERATOR_ID" = "sub.id"),
+              suffix = c("", ".o"))%>%
+    #determine valid records by checking date of incident by dates in safety rec
+    mutate(valid = between(MDY, start, end) ,
+           valid = replace_na(valid, T))%>%
+    group_by(REPORT_NUMBER)%>%
+    mutate(rep = n())%>%
+    ungroup()%>%
+    filter(valid  | rep == 1)%>%
+    select(!c("rep", "valid"))
   
 # gt.op <- tibble()
-# for(i in 1:nrow(gt.full)){
-#   row <- gt.full[i,]
-#   if(row$OPERATOR_ID %in% ops$sub.id){
-#     ops_match <- filter(ops, sub.id == row$OPERATOR_ID, 
-#                         sub.sys == row$SYS, 
-#                         start <= row$MDY,
-#                         end > row$MDY)
-#     row_match <- left_join(row, ops_match, by = c("OPERATOR_ID" = "sub.id"))
-#   }
-#   else {    
-#     empty_op <- tibble(sub.sys = "GT",
-#                        sub.status = NA,
-#                        pri.id = NA,
-#                        pri.name = NA,
-#                        pri.status = NA,
-#                        start = NA,
-#                        end = NA)
-#     row_match <- cbind(row, empty_op)
-#   }
-#   gt.op <- rbind(gt.op, row_match)
-# }
 
 
 # hl big
@@ -253,37 +250,34 @@ hl.full <- hzrdData %>%
          MoYr = my(paste(IMONTH,IYEAR, sep = "-")),
          MSYS = "HL",
          ILOC =  if_else(ON_OFF_SHORE == "ONSHORE", 
-                         paste(str_to_title(ONSHORE_CITY_NAME), ONSHORE_STATE_ABBREVIATION,
-                               sep = ", "),
+                         paste0(str_to_title(ONSHORE_CITY_NAME), ", ", ONSHORE_STATE_ABBREVIATION),
                          if_else(grepl("STATE WATERS", OFF_ACCIDENT_ORIGIN, ignore.case= T) ,
-                                 paste0(state.name[match(OFFSHORE_STATE_ABBREVIATION, state.abb)], "State Waters"),
-                                 "NA" )),
+                                 paste0(state.name[match(OFFSHORE_STATE_ABBREVIATION, state.abb)], " State Waters"),
+                                 "Outer Continental Shelf" )),
          STATE = coalesce(ONSHORE_STATE_ABBREVIATION, OFFSHORE_STATE_ABBREVIATION),
-         STATE = if_else(is.na(STATE) & grepl("OCS", OFF_ACCIDENT_ORIGIN),
+         STATE = if_else(grepl("OCS", OFF_ACCIDENT_ORIGIN),
                          "OCS",
                          STATE) 
         )%>%
-  #locCleaner(.,"ILOC","LOCATION_LATITUDE","LOCATION_LONGITUDE", "OFF_ACCIDENT_ORIGIN", "STATE")%>%
+  mutate( cleanLoc = pmap(list(ILOC, LOCATION_LATITUDE, LOCATION_LONGITUDE,
+                               OPERATOR_ID, REPORT_NUMBER, STATE,
+                               OFF_ACCIDENT_ORIGIN, SYS), 
+                          locCleaner) %>% unlist()) %>%
   left_join(miles, by = c("OPERATOR_ID", "SYS", "STATE","IYEAR"))%>%
   mutate(mileage = replace_na(mileage, 0))%>%
-  #left_join(filter(ops.simple, sub.sys == "HL"), by = c("OPERATOR_ID" = "sub.id"))%>% 
-  distinct(NARRATIVE, .keep_all = T)
-
-# hl.op <- tibble()
-# for(i in 1:nrow(hl.full)){
-#   row <- hl.full[i,]
-#   if(row$OPERATOR_ID %in% ops$sub.id){
-#     ops_match <- filter(ops, sub.id == row$OPERATOR_ID, 
-#                         sub.sys == row$SYS, 
-#                         start <= row$MDY,
-#                         end > row$MDY)
-#     row_match <- left_join(row, ops_match, by = c("OPERATOR_ID" = "sub.id"))
-#   }
-#   else {
-#     row_match <- row
-#   }
-#   hl.op <- bind_rows(hl.op, row_match)
-# }
+  ## add safety data
+  #many to many left join
+  left_join(filter(ops, sub.sys == "HL"), 
+            by = c("OPERATOR_ID" = "sub.id"),
+            suffix = c("", ".o"))%>%
+  #determine valid records by checking date of incident by dates in safety rec
+  mutate(valid = between(MDY, start, end) ,
+         valid = replace_na(valid, T))%>%
+  group_by(REPORT_NUMBER)%>%
+  mutate(rep = n())%>%
+  ungroup()%>%
+  filter(valid  | rep == 1)%>%
+  select(!c("rep", "valid"))
 
 # 
 # miles.op <- tibble()
@@ -308,7 +302,7 @@ hl.full <- hzrdData %>%
 #columns for abridged incidents
 short_cols <- c( "REPORT_NUMBER", "NAME","OPERATOR_ID",  #basic characteristics
                  "IYEAR","MDY","MoYr" ,"LOCAL_DATETIME" ,   #temporal char
-                 "LOCATION_LATITUDE","LOCATION_LONGITUDE", #"cleanLoc", 
+                 "LOCATION_LATITUDE","LOCATION_LONGITUDE", "cleanLoc", 
                  "STATE", "ON_OFF_SHORE",#location
                  "SYS","MSYS" ,"SIGNIFICANT", "SERIOUS","COMMODITY_RELEASED_TYPE",#inc summary
                  "UNINTENTIONAL_RELEASE", "INTENTIONAL_RELEASE", "TOTAL_RELEASE","UNITS", #releases
@@ -316,7 +310,7 @@ short_cols <- c( "REPORT_NUMBER", "NAME","OPERATOR_ID",  #basic characteristics
                  "EXPLODE_IND","IGNITE_IND" ,  "NUM_PUB_EVACUATED", "TOTAL_COST_CURRENT",#impact 2
                  "INSTALLATION_YEAR", "SYSTEM_PART_INVOLVED", "PIPE_DIAMETER", #inc char 
                  "CAUSE","CAUSE_DETAILS", "NARRATIVE", #inc char 
-                 "mileage"#, "pri.id","pri.name"
+                 "mileage", "pri.id","pri.name"
                  )  #joined char
 
 #abridged all inc  
@@ -360,15 +354,15 @@ operatorRate <- miles %>%
             ipm2 = ifelse(is.nan(ipm2) & inc == 0, 0, ipm2)) 
 
 
-all.inc <- left_join(all.inc, operatorRate, 
-                     by = c("OPERATOR_ID", "SYS"), suffix = c("",".or"))
-
-gt.op <- left_join(gt.op, operatorRate, 
-                   by = c("OPERATOR_ID", "SYS"), suffix = c("",".or"))
-gd.op <- left_join(gd.op, operatorRate, 
-                   by = c("OPERATOR_ID", "SYS"), suffix = c("",".or"))
-hl.op <- left_join(hl.op, operatorRate, 
-                   by = c("OPERATOR_ID", "SYS"), suffix = c("",".or"))
+# all.inc <- left_join(all.inc, operatorRate, 
+#                      by = c("OPERATOR_ID", "SYS"), suffix = c("",".or"))
+# 
+# gt.op <- left_join(gt.op, operatorRate, 
+#                    by = c("OPERATOR_ID", "SYS"), suffix = c("",".or"))
+# gd.op <- left_join(gd.op, operatorRate, 
+#                    by = c("OPERATOR_ID", "SYS"), suffix = c("",".or"))
+# hl.op <- left_join(hl.op, operatorRate, 
+#                    by = c("OPERATOR_ID", "SYS"), suffix = c("",".or"))
 
 
 
@@ -385,9 +379,9 @@ length(unique(c(unique(gt.full$OPERATOR_ID),
 #### WRITING EXPORTS ####
   
 #csvs for each full table
-write_csv(gt.op, "data/clean/gt_inc.csv")
-write_csv(gd.op, "data/clean/gd_inc.csv")
-write_csv(hl.op, "data/clean/hl_inc.csv")
+write_csv(gt.full, "data/clean/gt_inc.csv")
+write_csv(gd.full, "data/clean/gd_inc.csv")
+write_csv(hl.full, "data/clean/hl_inc.csv")
 
 
 #csv for abridged all incidents
