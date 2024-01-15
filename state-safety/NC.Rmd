@@ -36,7 +36,6 @@ library(scales)
 library(readxl)
 library(kableExtra)
 library(sp)
-library(sf)
 library(rgeos)
 library(rgdal)
 library(ggspatial)
@@ -44,7 +43,7 @@ library(mapboxapi)
 library(showtext)
 
 #setting state
-moState = "TN"
+moState = "NC"
 moStateL = state.name[match(moState,state.abb)]
 
 # setting options 
@@ -57,73 +56,17 @@ font_add_google(pstFont)
 showtext_auto()
 
 #setting plot items
-capt = "Source: PHMSA Incident and Mileage Data (2010-2021)"
+capt = "Source: PHMSA Incident and Mileage Data (2010-2022)"
 datadir = "https://raw.githubusercontent.com/jmceager/pst/main/phmsa-clean/data/"
 tag = paste("PST", lubridate::year(Sys.Date()))
-bs = 24
+bs = 12
 exportdir = paste0("./", moState, "/" )
+w = 8
+h = w/1.62
+u = "in"
 ```
 
 ```{r theme_pst}
-#### main plot theme ####
-theme_pst <- function(baseSize=bs) {
-  (theme(
-                       axis.line.x = element_line(
-                         colour = "#182125",
-                         size = 0.5,
-                         linetype = "solid"
-                       ),
-                       axis.line.y = element_line(
-                         colour = "#182125",
-                         size = 0.5,
-                         linetype = "solid"
-                       ),
-                       axis.ticks.y = element_line(
-                         colour = "#182125",
-                         size = 0.5,
-                         linetype = "solid"
-                       ),
-                       text = element_text(family = pstFont),
-                       axis.text = element_text(colour = "#8C9394",
-                                                size = baseSize * .8),
-                       axis.title = element_text(colour ="black", 
-                                                 size= baseSize),
-                       panel.grid.minor.y = element_line(linetype = "dotted", 
-                                                         colour = "#C4C8C6"),
-                       panel.grid.major.y = element_line(colour = "#394C56", 
-                                                         linetype = "dotted"),
-                       panel.grid.major.x = element_blank(),
-                       panel.grid.minor.x = element_blank(),
-                       panel.background = element_blank(),
-                       panel.border = element_blank(),
-                       strip.background = element_rect(linetype = 0),
-                       strip.text = element_blank(),
-                       strip.text.x = element_blank(),
-                       strip.text.y = element_blank(),
-                       legend.text = element_text(colour = "black",
-                                                  size = baseSize * .8),
-                       legend.background = element_rect(fill = NULL, 
-                                                        color = "#182125"),
-                       legend.title = element_text( face = "bold", 
-                                                    colour = "black",
-                                                    size = baseSize),
-                       legend.position = "right",
-                       legend.key = element_blank(),
-                       legend.spacing.y = unit(.125, 'cm'),
-                       #legend.background = element_blank(),
-                       plot.tag.position = c(.97,.97),
-                       plot.tag = element_text(size = baseSize *.66,
-                                               colour = "#8C9394"),
-                       plot.background = element_rect(fill = "#ffffff"),
-                       plot.title = element_text(face = "bold", 
-                                                 colour = "black",
-                                                 size = baseSize*1.2),
-                       plot.subtitle = element_text(colour = "#8C9394",
-                                                    size = baseSize),
-                       plot.caption = element_text(size = baseSize *.8)
-                     )
-  )
-}
 
 #### map theme ####
 theme_pst_map <- function(baseSize=bs) {
@@ -155,6 +98,138 @@ theme_pst_map <- function(baseSize=bs) {
        )
 
                     
+  )
+}
+
+# theme clean adjustments to apply to ggplot
+theme_pst <- function(font = pstFont, fontSize = bs) {
+  (theme(
+    axis.line.x = element_line(
+      colour = "#B3C7D0",
+      linewidth = 0.5,
+      linetype = "solid"
+    ),
+    axis.line.y = element_line(
+      colour = "#B3C7D0",
+      linewidth = 0.5,
+      linetype = "solid"
+    ),
+    axis.ticks.y = element_line(
+      colour = "#B3C7D0",
+      linewidth = 0.5,
+      linetype = "solid"
+    ),
+    text = element_text(family = font,
+                        size = fontSize),
+    axis.text = element_text(colour = "#81A2B1",
+                             size = fontSize),
+    axis.title = element_text(colour ="#C4C8C6",
+                              size = fontSize),
+    panel.grid.minor.y = element_line(linetype = "dotted", 
+                                      colour = "#557A8B",
+                                      linewidth = .25),
+    panel.grid.major.y = element_line(colour = "#81A2B1", 
+                                      linetype = "dotted"),
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    panel.background = element_blank(),
+    panel.border = element_blank(),
+    strip.background = element_rect(linetype = 0),
+    strip.text = element_blank(),
+    strip.text.x = element_blank(),
+    strip.text.y = element_blank(),
+    legend.text = element_text(colour = "#C4C8C6",
+                               size = fontSize * .8),
+    legend.background = element_rect(fill = "#233239", color = "#B3C7D0"),
+    legend.title = element_text( face = "bold", 
+                                 colour = "#C4C8C6",
+                                 size = fontSize,
+                                 hjust = 0),
+    legend.position = "right",
+    legend.key = element_blank(),
+    legend.margin = margin(4,12,4,6, "pt"),
+    #legend.background = element_blank(),
+    plot.background = element_rect(fill = "#233239"),
+    plot.title = element_text(face = "bold", 
+                              colour = "#C4C8C6",
+                              size = fontSize * 1.2,
+                              hjust = 0),
+    plot.subtitle = element_text(colour = "#C4C8C6",
+                                 size = fontSize,
+                                 hjust = 0)
+  )
+  )
+}
+
+
+theme_pst_lite <- function(font = pstFont, fontSize = bs) {
+  (theme(
+    axis.line.x = element_line(
+      colour = "#233239",
+      linewidth = 0.5,
+      linetype = "solid"
+    ),
+    axis.ticks.x = element_line(
+      colour = "#233239",
+      linewidth = 0.5,
+      linetype = "solid"
+    ),
+    axis.line.y = element_line(
+      colour = "#233239",
+      linewidth = 0.5,
+      linetype = "solid"
+    ),
+    axis.ticks.y = element_line(
+      colour = "#233239",
+      linewidth = 0.5,
+      linetype = "solid"
+    ),
+    text = element_text(family = font,
+                        size = fontSize),
+    axis.text = element_text(colour = "#233239",
+                             size = fontSize),
+    axis.title = element_text(colour ="#001D29",
+                              size = fontSize),
+    panel.grid.minor.y = element_line(linetype = "dotted", 
+                                      colour = "#4D6B80",
+                                      linewidth = .25),
+    panel.grid.major.y = element_line(colour = "#233239", 
+                                      linetype = "dotted",
+                                      linewidth = .5),
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    panel.background = element_blank(),
+    panel.border = element_blank(),
+    strip.background = element_rect(linetype = 0),
+    strip.text = element_blank(),
+    strip.text.x = element_blank(),
+    strip.text.y = element_blank(),
+    legend.text = element_text(colour = "#001D29",
+                               size = fontSize * .8),
+    legend.background = element_rect(fill = "#FFFFFF", color = "#001D29"),
+    legend.title = element_text( face = "bold", 
+                                 colour = "#001D29",
+                                 size = fontSize,
+                                 hjust = 0),
+    legend.position = "right",
+    legend.key = element_blank(),
+    legend.margin = margin(4,12,4,6, "pt"),
+    #legend.background = element_blank(),
+    plot.background = element_rect(fill = "#FFFFFF"),
+    plot.title = element_text(face = "bold", 
+                              colour = "#001D29",
+                              size = fontSize * 1.2,
+                              hjust = 0,
+                              vjust = 1),
+    plot.subtitle = element_text(colour = "#001D29",
+                                 size = fontSize,
+                                 hjust = 0),
+    plot.tag = element_text(size = fontSize *.66, 
+                            colour = "#4D6B80",
+                            hjust = 1,
+                            vjust = 0),
+    plot.tag.position = c(.99,.99)
+  )
   )
 }
 
@@ -199,32 +274,20 @@ pst1 <- c(darkBlue, liteGreen, lilac, bluGreen, honey,  crimson)
 pst2 <- c(darkBlue, liteGreen, hunterGrn, bluGreen, maize, midBlue)
 ```
 
-```{r load gis data and get adjacent states}
-projcrs <- "+proj=longlat +datum=WGS84 +no_defs"
-
-states <- read_sf("gis/us_states.shp")
-statesF <- as(states, Class = "Spatial")
-
-stateShape <- states[states$NAME == moStateL,]
-
-mtx <- gTouches(statesF, byid = T)
-
-adjList <- states[which(mtx[which(statesF$NAME == moStateL),]== T), "NAME"]$NAME
-#mb_access_token("accesstokenhere", install = T)
-```
-
 ```{r loading incident data}
 #all incident data + op mileage
 df <- read_csv(paste0(datadir, "clean/all_inc.csv")) %>%
-  filter(STATE == moState)
+  filter(STATE == moState,
+         IYEAR < 2023)
 
-adj.states <- state.abb[match(adjList,state.name)] #insert adjacent states here 
+adj.states <- c("VA", "GA", "SC", "TN") #insert adjacent states here 
+
 df.adj <- read_csv(paste0(datadir, "clean/all_inc.csv"))%>%
   filter(STATE %in% adj.states)%>%
   mutate(MSYS = str_sub(SYS, 1,2),
          MSYS = if_else(MSYS == "UN", "UNGS",MSYS))
 
-df.all <- read_csv(paste0(datadir, "clean/all_inc.csv")) 
+df.all <- read_csv(paste0(datadir, "clean/all_inc.csv"))
 ```
 
 ```{r mileage data}
@@ -241,21 +304,67 @@ stateMilesYear <- filter(miles, STATE == moState) %>% select(miles, IYEAR)
 milesFull <- read_csv(paste0(datadir, "clean/sys_miles.csv"))
 
 #adjacent state miles
-adjSM <- read_csv(paste0(datadir,"clean/sys_miles.csv"))%>%
+adjSM <- milesFull%>%
   filter(IYEAR >=2010,
          STATE == moState | STATE %in% adj.states)%>%
   mutate(STATE = if_else(STATE != moState, "Adjacent (avg.)", STATE))%>%
   group_by(STATE, IYEAR)%>%
-  summarise(mileage = sum(mileage))
+  summarise(mileage = sum(mileage)) %>%
+  mutate(mileage = if_else(STATE != moState, mileage/length(adj.states), mileage))
 
 #other state miles
-allSM <- read_csv(paste0(datadir,"clean/sys_miles.csv")) %>% 
+allSM <- milesFull %>% 
   filter(IYEAR >=2010)%>%
   mutate(STATE = "U.S.A. (avg.)")%>%
   group_by(STATE, IYEAR)%>%
   summarise(mileage = sum(mileage)) %>%
   rbind(adjSM)
 ```
+
+
+```{r 2021 to 22 incidents}
+#dfFull <- read_csv(paste0(datadir, "clean/all_inc.csv")) 
+
+dfFull%>% 
+  filter(IYEAR > 2020,
+         IYEAR != 2023) %>%
+  count(STATE, IYEAR) %>%
+  pivot_wider(names_from = IYEAR,
+              values_from = n) %>%
+  mutate(change = (`2022`-`2021`),
+         per_change = change/`2021`) %>%
+  arrange(-change)%>%
+  top_n(n = 8, wt = change) %>%
+  mutate(sLong = state.name[match(STATE,state.abb)])%>%
+  ggplot(aes(x = reorder(sLong, change))) +
+  geom_point(aes(size = `2022`, y = change), col = darkBlue)+
+  geom_linerange(aes(ymin = 0, ymax = change), col = darkBlue)+
+  scale_y_continuous(breaks = seq(0,8,4), name = "Incident Increase",
+                     expand = expansion(mult = c(0,0.1)))+
+  scale_size(name = "2022 Incidents")+
+  theme_pst_lite()+
+  labs(x = "State",
+       title = "Change in Pipeline Incident Count",
+       subtitle = "All Systems, 2021 to 2022", 
+       caption = capt, tag = tag)+
+  coord_flip()+
+  theme(legend.position = c(0.8,.2),
+        panel.grid.minor.x = element_line(linetype = "dotted", 
+                                      colour = "#4D6B80",
+                                      linewidth = .25),
+    panel.grid.major.x = element_line(colour = "#233239", 
+                                      linetype = "dotted",
+                                      linewidth = .5),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor.y = element_blank())
+
+plotName = "ChangeInc.png"
+plotExport = paste0(exportdir, plotName)
+wdt = 8
+hgt = wdt/1.62
+ggsave(plotExport, width = wdt, height = hgt, units = "in")
+```
+
 
 # Pipeline Incident Analysis  
 
@@ -320,7 +429,7 @@ quickFacts <- tibble(
   val = c(nrow(df), nrow(filter(df,grepl("HL",SYS))),
           nrow(filter(df,grepl("GT",SYS))), nrow(filter(df,grepl("GD",SYS))),
           sig[[2]], bad[[1]], injure[[1]], death[[1]],
-          fire[[1]], comma(evac[[1]]),comma(gasRel[[1]]), comma(liqRel[[2]]),
+          fire[[1]], comma(evac[[1]]),comma(gasRel[[1]]), comma(hazRel[[2]]),
           freqOp)
   )
 ```
@@ -356,16 +465,16 @@ df %>%
   mutate(ir = n/(mileage / 1000))%>%
   ggplot(aes(x = IYEAR, y = ir, group = STATE, color = STATE))+
   #geom_point( alpha = .8)+
-  geom_line(size = .7)+
-  theme_pst()+
+  geom_line()+
+  theme_pst_lite()+
   scale_color_manual(values = pst1,
                      name = "State",
                      breaks = c(moState, "Adjacent (avg.)", "U.S.A. (avg.)"),
                      labels = c(moStateL, "Adjacent (avg.)", "U.S.A. (avg.)"))+
   scale_x_continuous(labels = seq(2010,2021,2), breaks = seq(2010,2021,2))+
-  scale_y_continuous(limits = c(0,.22),
-                     breaks = seq(0,.2,.05))+ 
-  theme(legend.position = c(.85, .9),
+   scale_y_continuous(limits = c(0,.22),
+                      breaks = seq(0,.2,.05))+ 
+  theme(legend.position = c(.2, .8),
         legend.box = "horizontal")+
   labs(title = paste(moStateL, "Pipeline Incident Rate"),
        subtitle = "All Systems, All Incidents per 1,000 Miles (2010-2021)",
@@ -395,16 +504,16 @@ df %>%
   mutate(ir = n/(mileage/1000) )%>%
   complete(STATE, IYEAR, fill = list(ir = 0))%>%
   ggplot(aes(x = IYEAR, y = ir, group = STATE, color = STATE))+
-  #geom_point(aes(size = n), alpha = .8)+
-  geom_line(size = .7)+
-  theme_pst()+
+  geom_line()+
+  theme_pst_lite()+
   scale_color_manual(values = pst1,
                      name = "State",
                      breaks = c(moState, "Adjacent (avg.)", "U.S.A. (avg.)"),
                      labels = c(moStateL, "Adjacent (avg.)", "U.S.A. (avg.)"))+
-  scale_x_continuous(labels = seq(2010,2021,2), breaks = seq(2010,2021,2))+
-  scale_y_continuous(limits = c(0, .1),breaks = seq(0,.10,.025))+ 
-  theme(legend.position = c(.15, .8),
+  scale_y_continuous(limits = c(0, .15),breaks = seq(0,.15,.05),
+                     expand = expansion(c(0,0.05)))+ 
+    scale_x_continuous(labels = seq(2010,2021,2), breaks = seq(2010,2021,2))+
+  theme(legend.position = c(.2, .8),
         legend.box = "horizontal")+
   labs(title = paste(moStateL, "Significant Incident Rate"),
        subtitle = "All Systems, Significant Incidents per 1,000 Miles (2010-2021)",
@@ -424,7 +533,7 @@ ggsave(plotExport, width = wdt, height = hgt, units = "px")
 ## Operator Analysis 
 
 ```{r op table}
-milesTN <- milesFull %>%
+milesND <- milesFull %>%
   filter(STATE == moState) %>%
   group_by(OPERATOR_ID, IYEAR, SYS)%>%
   summarise(mileage = mean(mileage),
@@ -432,7 +541,7 @@ milesTN <- milesFull %>%
             pri.name = pri.name,
             pri.id = pri.id)
 
-df.noinc <- milesTN %>%
+df.noinc <- milesND %>%
   filter(!OPERATOR_ID %in% df$OPERATOR_ID)%>%
   select(OPERATOR_ID, pri.name, pri.id, SYS, mileage)%>%
   mutate(SIGNIFICANT = 0,
@@ -448,9 +557,11 @@ df.noinc <- milesTN %>%
   select(!mileage)
 
 
+newNames <- c("PUBLIC SERVICE CO OF NORTH CAROLINA", "PIEDMONT NATURAL GAS CO INC")
+
 #note: figure out how to more accurately rep ipm 
 df.t <- df %>%
-  left_join(milesTN, by = c("OPERATOR_ID", "IYEAR", "SYS"), 
+  left_join(milesND, by = c("OPERATOR_ID", "IYEAR", "SYS"), 
              suffix = c("",".j"), keep = T)%>%
   distinct(NARRATIVE, .keep_all = T)%>%
   mutate(SIGNIFICANT = if_else(SIGNIFICANT == "YES", 1,0),
@@ -477,31 +588,39 @@ df.t <- df %>%
             rpi = rel/n )%>%
   ungroup() %>% 
   mutate(across(where(is.numeric) & !c(pri.id), ~ replace_na(.x, 0))) %>%
-  distinct(pri.name, pri.id, .keep_all = T) %>%
+  distinct(pri.name, SYS,pri.id, .keep_all = T) %>%
   drop_na(pri.name)
 
-nGD <- nrow(df.t[df.t$SYS == "GD", "pri.name"])
+lumpD <- 3
+nGD <- nrow(df.t[df.t$SYS == "GD", "pri.name"]) - lumpD
 t.gd <- df.t %>%
   filter(SYS == "GD") %>% 
-  mutate(pri.name = if_else(grepl("CENTERPOINT", pri.name), "Centerpoint (GD)", pri.name),
-         pri.name = fct_lump(f=pri.name, 4, w=n, other_level = paste0(nGD," Others (GD, avg.)")))%>%
+  mutate(pri.name = if_else(pri.name %in% newNames, 
+                            paste0(pri.name, " (GD)"), pri.name),
+         pri.name = fct_lump(f=pri.name, lumpD, w=n, 
+                             other_level = paste0(nGD," Others (GD, avg.)")))%>%
   group_by(pri.name)%>%
   summarise_at(vars(n:rpi), mean, na.rm = T) %>%
   arrange(desc(n))
 
-nGT <- nrow(df.t[df.t$SYS == "GT", "pri.name"])
+lumpT <- 4
+nGT <- nrow(df.t[df.t$SYS == "GT", "pri.name"]) - lumpT
 t.gt <- df.t %>%
   filter(SYS == "GT") %>%
-  mutate(pri.name = if_else(grepl("CENTERPOINT", pri.name), "Centerpoint (GT)", pri.name),
-         pri.name = fct_lump(f=pri.name, 4, w=n, other_level = paste0(nGT," Others (GT, avg.)")))%>%
+  mutate(pri.name = if_else(pri.name %in% newNames, 
+                            paste0(pri.name, " (GT)"), pri.name),
+         pri.name = fct_lump(f=pri.name, lumpT, w=n, 
+                             other_level = paste0(nGT," Others (GT, avg.)")))%>%
   group_by(pri.name)%>%
   summarise_at(vars(n:rpi), mean, na.rm = T) %>%
   arrange(desc(n))
 
-nHL <- nrow(df.t[df.t$SYS == "HL", "pri.name"])
+lumpH <- 3
+nHL <- nrow(df.t[df.t$SYS == "HL", "pri.name"]) - lumpH
 t.hl <- df.t %>%
   filter(SYS == "HL") %>% 
-  mutate(pri.name = fct_lump(f=pri.name, 2, w=n, other_level = paste0(nHL," Others (HL, avg.)")))%>%
+  mutate(pri.name = fct_lump(f=pri.name, lumpH, w=n, 
+                             other_level = paste0(nHL," Others (HL, avg.)")))%>%
   group_by(pri.name)%>%
   summarise_at(vars(n:rpi), mean, na.rm = T)%>%
   arrange(desc(n))
@@ -511,29 +630,35 @@ df.k <- rbind(t.hl, t.gd, t.gt)
 bigNames <- as.character(c(as.character(t.hl$pri.name), as.character(t.gd$pri.name), as.character(t.gt$pri.name)))
 bigNames <- bigNames[!grepl("Others",bigNames)]
 
-namesMatch <- tibble(pri.name = bigNames, SYS = c(rep("HL",nrow(t.hl) - 1),
-                                                  rep("GD",nrow(t.gd) - 1),
-                                                  rep("GT",nrow(t.gt) - 1)))
+namesMatch <- tibble(pri.name = bigNames, SYS = c(rep("HL",lumpH),
+                                                  rep("GD",lumpD),
+                                                  rep("GT",lumpT)))
 
 df.trend <- df %>%
   filter(IYEAR <2022,
          SYS != "UNGS",
          SYS != "GG")%>%
+  mutate(pri.name = if_else(pri.name %in% newNames, 
+                            paste0(pri.name, " (",SYS,")"), pri.name))%>%
   left_join(namesMatch, by = c("pri.name", "SYS"), keep = T)%>%
-  mutate(pri.name.y = if_else(pri.name.x == "CENTERPOINT ENERGY RESOURCES CORP., DBA CENTERPOINT ENERGY MINNESOTA GAS",
-                              if_else(SYS.x == "GT", "Centerpoint (GT)", "Centerpoint (GD)"),
-                              pri.name.y),
+  mutate(
+         # pri.name.y = if_else(pri.name.x == "PIEDMONT NATURAL GAS CO INC",
+         #                      if_else(SYS.x == "GT", 
+         #                              "PIEDMONT NATURAL GAS CO INC (GT)", 
+         #                              "PIEDMONT NATURAL GAS CO INC (GD)"),
+         #                      pri.name.x),
          pri.name.y = if_else(is.na(pri.name.y),
                               if_else(SYS.x == "GT", paste0(nGT," Others (GT, avg.)"),
-                                      if_else(SYS.x == "GD", paste0(nGD," Others (GD, avg.)"), 
-                                              if_else(SYS.x == "HL", paste0(nHL," Others (HL, avg.)"),
+                                      if_else(SYS.x == "GD", 
+                                              paste0(nGD," Others (GD, avg.)"), 
+                                              if_else(SYS.x == "HL", 
+                                                      paste0(nHL," Others (HL, avg.)"),
                                                       "N"))),
                               pri.name.y),
          SYS.y = coalesce(SYS.y, SYS.x))%>%
   rename(pri.name = pri.name.y,
          SYS = SYS.y)%>%
-  count(pri.name, SYS, IYEAR) %>%
-  rbind(count(df.noinc, pri.name, SYS, IYEAR) %>% mutate(n = 0) %>% ungroup() %>%select(!OPERATOR_ID))%>%
+  count(pri.name, SYS, IYEAR)%>%
   complete(pri.name, SYS, IYEAR, fill = list(n = 0))%>%
   left_join(namesMatch %>% mutate(pri.name = if_else(grepl("CENTERPOINT",pri.name),
                                                      if_else(SYS == "GT", "Centerpoint (GT)", "Centerpoint (GD)"),
@@ -550,6 +675,7 @@ df.trend <- df %>%
          pri.name = if_else(is.na(pri.name), pri.name.x, pri.name))%>%
   ungroup()%>%
   mutate(pri.name = factor(pri.name, levels = levels(df.k$pri.name))) %>%
+  complete(pri.name, IYEAR, fill = list(n=0))%>%
   arrange(pri.name)
 
 df.lines <- split(df.trend$n, df.trend$pri.name)
@@ -569,7 +695,7 @@ df.k %>%
   kable_classic_2(lightable_options = c("striped","hover"))%>%
   add_header_above(c(" "=1, "Incidents" = 4, "Cost\n(K, USD)" =2, "Releases" = 2)) %>% 
   # color columns relative to values
-  column_spec(5, image = spec_plot(df.lines, same_lim = T,
+  column_spec(5, image = spec_plot(df.lines, same_lim = T, 
                                    min = list(col = orange, pch = 20, cex = .2),
                                    max = list(col = green, pch = 20, cex = .2)))%>%
   column_spec(4, color=spec_color(df.k$ipm, option = "B", end = .7), bold = T)%>%
@@ -577,9 +703,9 @@ df.k %>%
   column_spec(9, color=spec_color(df.k$rpi, option = "B", end = .7), bold = T) %>%
   #group rows according to system
   # TODO: automate start/ends? 
-  group_rows(start_row = 1, end_row = nrow(t.hl), group_label = "Hazardous Liquids")%>%
-  group_rows(start_row = nrow(t.hl)+1, end_row = nrow(t.hl)+nrow(t.gd), group_label = "Gas Distribution")%>%
-  group_rows(start_row = nrow(t.hl)+nrow(t.gd)+1, end_row = nrow(df.k), group_label = "Gas Transmission")%>%
+  group_rows(start_row = 1, end_row = lumpH+1, group_label = "Hazardous Liquids")%>%
+  group_rows(start_row = lumpH+2, end_row = lumpH+2+lumpD, group_label = "Gas Distribution")%>%
+  group_rows(start_row = lumpH+3+lumpD, end_row = lumpH+3+lumpD+lumpT, group_label = "Gas Transmission")%>%
   cat(., file = paste0(exportdir, "table.html"))
 ```
 
@@ -602,33 +728,27 @@ df.release %>%
   ggplot(aes(x = MDY, y = TOTAL_RELEASE, size = TOTAL_COST_CURRENT/1000000, color = as.factor(SIGSER)))+
   geom_point(alpha = .9)+
   #adjust labeling based on whatever 
-  geom_label_repel(data = filter(df.release, TOTAL_RELEASE > 2 | 
-                                   SIGSER > 1 & SYS != "GD" | 
-                                   SIGSER > 1 & FATAL > 0 |
-                                   TOTAL_COST_CURRENT > 1000000),
+  geom_label_repel(data = filter(df.release, TOTAL_RELEASE > 3 | SIGSER > 1 & FATAL >0),
                   aes(x = MDY, y = TOTAL_RELEASE, label = pri.name),
-                  size = 5, color = "gray 20",  parse = F,
-                  box.padding = .6, min.segment.length = .4, 
+                  size = 4, color = "gray 20",  parse = F,
+                  box.padding = .6, min.segment.length = .2, 
                   nudge_y = -0.2, nudge_x = 15, seed = 2020,)+
  # annotate("text", x = ymd("2010-12-30"), y = 8, label = "ok")+
-  theme_pst()+
-  theme(legend.position = c(.15,.7),
-        plot.caption = element_text(lineheight = .25))+
+  theme_pst_lite()+
+  theme(legend.position = "right",
+        legend.direction = "vertical")+
   scale_color_brewer(palette = "Purples", name = "Significance",
                      labels = c("None", "Significant","Serious"))+
-  scale_y_continuous(limits = c(-1,6.2))+
-  scale_size(#breaks = seq(0,25,5), 
+  scale_y_continuous(limits = c(-1.1,6))+
+  scale_size(breaks = seq(0,100,25), 
              labels =scales::unit_format(prefix = "$",
                                          suffix = "M") ,
-             name = "Damage Cost (2022 USD)",
-             range = c(1,9))+
-  guides(color = guide_legend(order = 1),
-        size = guide_legend(order = 2))+
-  labs(caption = paste0("Release Z-Scores are specific to unit of system measurement: MSCF for Natural Gas and BBLs for Liquids." ,"\n",capt),
+             name = "Damage Cost\n(2022 USD)")+
+  labs(caption = paste0("Release Z-Scores are calculated to unit of system measurement:\n MSCF for Natural Gas and BBLs for Liquids." ,"\n",capt),
        tag = tag,
        x = "Date",
        y = "Release Z-Score",
-       title = paste0(moStateL ," Pipeline Incident Detail"),
+       title = paste0(moStateL," Pipeline Incident Detail"),
        subtitle = "Total Release Z-Scores, Damage Cost, and Significance (2010-2021)")
 
 plotName = "OpRelease.png"
@@ -641,10 +761,12 @@ ggsave(plotExport, width = wdt, height = hgt, units = "px")
 
 ```{r operators by cause tiles}
 df.c <- df %>%
-  filter(pri.name %in% bigNames | grepl("CENTERPOINT", pri.name)) %>%
-  mutate(pri.name = if_else(grepl("CENTERPOINT", pri.name),
-                            "Centerpoint",
-                            pri.name))%>%
+  filter(pri.name %in% bigNames | pri.name %in% newNames) %>%
+  mutate(pri.name = if_else(grepl(newNames[1], pri.name),
+                            newNames[1],
+                            if_else(grepl(newNames[2],pri.name),
+                                    newNames[2],
+                                    pri.name)))%>%
   group_by(pri.name)%>%
   mutate(inc = n())%>%
   ungroup()%>%
@@ -659,44 +781,49 @@ df.c <- df %>%
          colText = if_else(cPer >.5 , "black", "white"))
 
 df.c%>%
-  ggplot(aes(y=str_wrap(pri.name, 24), x = str_wrap(str_to_sentence(CAUSE),15), fill = cPer))+
+  ggplot(aes(y=str_wrap(pri.name, 15), x = str_wrap(str_to_sentence(CAUSE),15), fill = cPer))+
   geom_tile(width = .8, height = .8)+
-  geom_text(aes(label = percent(cPer, accuracy = .1), color = colText, 
+  geom_text(aes(label = percent(cPer, accuracy = 1), color = colText, 
                 fontface = ifelse(colText == "black", "bold","plain")), 
-            size = 10, family = pstFont)+
+            size = 6, family = pstFont)+
   scale_fill_viridis(name = "Percent\nof Incidents", labels = percent_format())+
   scale_color_manual(values = c("gray25", "gray75"), guide = NULL)+
-  scale_x_discrete(position = "top", name = "Cause")+
+  scale_x_discrete(position = "top", name = NULL)+
   labs(y = NULL,
        title = "Incident Cause Proportions by Operator",
        subtitle = paste0("Selected Operators in ", moStateL, " (2010-2021)"),
        tag = tag, 
        caption = capt)+
-  theme_pst()+
-  theme(axis.text.x = element_text(angle = -36, hjust = 1, size = 24, lineheight = .25),
-        axis.text.y = element_text(size = 24, lineheight = .25),
+  theme_pst_lite()+
+  theme(axis.text.x = element_text(angle = -36, hjust = 1, size = 6.6),
+        axis.text.y = element_text( size = 6.6),
         panel.grid.major.y = element_blank(),
-        legend.text = element_text(size = 16),
-        legend.title = element_text(size = 20, lineheight = .25),
-        axis.title.x = element_text(size = 24),
         legend.position = "bottom",
         legend.direction = "horizontal",
-        plot.title = element_text(size = 32),
-        plot.subtitle = element_text(size = 28),
-        plot.tag = element_text(size = 16),
-        plot.caption = element_text(size = 16))
+        legend.text = element_text(size = 6),
+        legend.title = element_text(size = 6.6))
 
 plotName = "OpCause.png"
 plotExport = paste0(exportdir, plotName)
-wdt = 2560
+wdt = 8
 hgt = wdt/1.62
-ggsave(plotExport, width = wdt, height = hgt, units = "px")
+ggsave(plotExport, width = wdt, height = hgt, units = "in")
 ```
 
 
 ## Spatial Analysis  
+```{r load state shapefile}
+library(sf)
+projcrs <- "+proj=longlat +datum=WGS84 +no_defs"
 
-```{r map elemtns loading}
+stateShape <- read_sf("gis/us_states.shp")
+
+stateShape <- stateShape[stateShape$NAME == moStateL,]
+
+#mb_access_token("accesstokenhere", install = T)
+```
+
+```{r map, include = TRUE, fig.fullsize = TRUE}
 df.sp <- st_as_sf(df, 
                   coords = c("LOCATION_LONGITUDE","LOCATION_LATITUDE"),
                   crs = projcrs) 
@@ -705,7 +832,9 @@ df.state <- st_join(df.sp, st_transform(stateShape, crs = projcrs), join = st_wi
   filter(NAME.y == moStateL) %>%
   st_transform(crs = 3857)
 
-base_tiles <- get_static_tiles(location = stateShape,
+bbox <- st_bbox(df.state, crs = 3857)
+
+base_tiles <- get_static_tiles(location = df.state,
                                zoom = 5,
                                style_id = "cl1pbimv7000114ouzmsb6obk",
                                username = "jimeagah",
@@ -717,19 +846,16 @@ place_tiles <- get_static_tiles(location = stateShape,
                                 zoom = 5,
                                 style_id = "cl6zaoczy004n14jqcivrkvb5",
                                 username = "jimeagah",
-                                buffer_dist = 1000,
+                                buffer_dist = 100,
                                 scaling_factor = "2x",
                                 crop = F)
 
-
 ```
 
-
-```{r map, include = TRUE, fig.fullsize = TRUE}
-
+```{r}
 bbox <- st_bbox(df.state, crs = 3857)
 xdist <- (bbox[[3]]-bbox[[1]])
-bxn <- bbox[[1]] - (.1*xdist)
+bxn <- bbox[[1]] - (.2*xdist)
 bxx <- bbox[[3]] + (.1*xdist)
 byn <-  mean(c(bbox[[4]],bbox[[2]])) - ((xdist / 1.62)/2)
 byx <- mean(c(bbox[[4]],bbox[[2]])) + ((xdist / 1.62)/2)
@@ -743,11 +869,9 @@ df.state%>%
   geom_sf(data = stateShape, fill = NA, color = "gray50")+
   layer_spatial(place_tiles)+
   geom_sf(aes(color = SYS, size = TOTAL_COST_CURRENT), alpha = .6)+
-  scale_size(name = "Cost of Damage\n(Mil. USD)",
-              breaks = seq(1,10000001, 2500000),
-              labels = seq(0,10,2.5),
-             range = c(1,8)
-             )+
+  scale_size(name = "Cost of Damage",
+             breaks = seq(0,100000000, 25000000),
+             labels = scales::label_dollar(scale = .000001, suffix = "M", accuracy = 1))+
   scale_color_brewer(palette = "Set2", name = "System",
                      labels = c("Gas Distribution","Gas Transmission", "Hazardous Liquids"))+
   coord_sf(crs = 3857,
@@ -755,36 +879,31 @@ df.state%>%
            ylim = c(byn , byx),
            expand = TRUE)+
   labs(title = paste0("Incident Locations and Cost in ", moStateL),
-       subtitle = "All Systems (2010 - 2021)",
+       subtitle = "All Systems (2010 - 2022)",
        x = NULL,
        y = NULL,
        caption = capt,
        tag = tag)+
-  guides(size = "legend",
-         color = "legend")+
-  theme_pst_map(32)+
-  theme(legend.position = c(0.015,0.975),
+  theme_void()+
+  theme(legend.position = c(0.2,0.2),
+        legend.background = element_rect(fill = "#E8EBEA", colour = NA),
+        legend.box = "horizontal",
         text = element_text(pstFont),
-        legend.direction = "vertical",
-        legend.justification = c("left","top"),
         plot.margin = unit(c(0,0,0,0), "cm"),
         plot.tag.position = c(.96,0.95),
-        legend.spacing.y = unit(2, 'pt'),
-        plot.tag = element_text(color = "gray 30", size = 16),
-        plot.title = element_text(face = "bold", colour = "black",
-                                  hjust = .015, lineheight = .25),
+        plot.tag = element_text(color = "gray 30", size = 8),
+        plot.title = element_text(face = "bold", colour = "black", hjust = .015),
         plot.subtitle = element_text(colour = "black", hjust = .015),
-        plot.caption = element_text(colour = "gray 30", hjust = .975),
-        legend.title = element_text(colour = "gray 10", face = "bold",
-                                    lineheight = .25),
-        legend.text = element_text(colour = "gray 10", lineheight = 0),
+        plot.caption = element_text(colour = "gray 30"),
+        legend.title = element_text(colour = "gray 10", face = "bold"),
+        legend.text = element_text(colour = "gray 10"),
         plot.background = element_rect(fill = "#E8EBEA", colour = NA)) #fill is to match bg
 
 plotName = "Map.png"
 plotExport = paste0(exportdir, plotName)
-wdt = 2560
+wdt = 8
 hgt = wdt/1.62
-ggsave(plotExport, width = wdt, height = hgt, units = "px")
+ggsave(plotExport, width = wdt, height = hgt, units = "in")
 ``` 
 
 
