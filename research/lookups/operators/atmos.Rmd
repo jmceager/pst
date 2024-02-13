@@ -1,0 +1,511 @@
+---
+title: "Untitled Analysis"
+subtitle: "Specifics (Timeline)"
+runningheader: "Pipeline Safety Trust `r format(Sys.time(), '%m/%Y')`"
+author: "Pipeline Safety Trust"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  tufte::tufte_handout: default
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r include = FALSE, echo = FALSE}
+rm(list = ls())
+```
+
+```{r setup, include=FALSE}
+library(tufte)
+# invalidate cache when the tufte version changes
+knitr::opts_chunk$set(cache.extra = packageVersion('tufte'))
+options(htmltools.dir.version = FALSE)
+
+library(tidyverse)
+library(ggrepel)
+library(cowplot)
+library(units)
+library(RColorBrewer)
+library(ggthemes)
+library(ggExtra)
+library(viridis)
+library(scales)
+library(readxl)
+library(kableExtra)
+library(lubridate)
+library(sf)
+library(tufte)
+library(ggspatial)
+library(mapboxapi)
+library(reactable)
+library(reactablefmtr)
+library(tidycensus)
+library(tigris)
+library(pscl)
+library(MASS)
+library(corrplot)
+library(showtext)
+library(cluster)
+library(factoextra)
+
+knitr::opts_chunk$set(echo = FALSE, include = FALSE, message = FALSE)
+options(knitr.table.format = "latex")
+options(tigris_use_cache = TRUE)
+wdt = 7.25
+hgt = wdt/1.62
+bs= 10
+capt = paste0("Source: PHMSA Incident and Mileage Data (", lubridate::year(Sys.Date()),")")
+datadir = "https://raw.githubusercontent.com/jmceager/pst/main/phmsa-clean/data/"
+tag = paste("PST", lubridate::year(Sys.Date()))
+
+pstFont = "Montserrat"
+font_add_google(pstFont)
+showtext_opts(dpi=300) 
+showtext_auto()# theme clean adjustments to apply to ggplot
+
+```
+
+```{r theme_pst}
+#### main plot theme ####
+theme_pst <- function(baseSize=bs) {
+  (theme(
+                       axis.line.x = element_line(
+                         colour = "#182125",
+                         size = 0.5,
+                         linetype = "solid"
+                       ),
+                       axis.line.y = element_line(
+                         colour = "#182125",
+                         size = 0.5,
+                         linetype = "solid"
+                       ),
+                       axis.ticks.y = element_line(
+                         colour = "#182125",
+                         size = 0.5,
+                         linetype = "solid"
+                       ),
+                       text = element_text(family = pstFont),
+                       axis.text = element_text(colour = "#8C9394",
+                                                size = baseSize * .8),
+                       axis.title = element_text(colour ="black", 
+                                                 size= baseSize),
+                       panel.grid.minor.y = element_line(linetype = "dotted", 
+                                                         colour = "#C4C8C6"),
+                       panel.grid.major.y = element_line(colour = "#394C56", 
+                                                         linetype = "dotted"),
+                       panel.grid.major.x = element_blank(),
+                       panel.grid.minor.x = element_blank(),
+                       panel.background = element_blank(),
+                       panel.border = element_blank(),
+                       strip.background = element_rect(linetype = 0),
+                       strip.text = element_blank(),
+                       strip.text.x = element_blank(),
+                       strip.text.y = element_blank(),
+                       legend.text = element_text(colour = "black",
+                                                  size = baseSize * .8),
+                       legend.background = element_rect(fill = NULL, 
+                                                        color = "#182125"),
+                       legend.title = element_text( face = "bold", 
+                                                    colour = "black",
+                                                    size = baseSize),
+                       legend.position = "right",
+                       legend.key = element_blank(),
+                       legend.spacing.y = unit(.125, 'cm'),
+                       #legend.background = element_blank(),
+                       plot.tag.position = c(.97,.97),
+                       plot.tag = element_text(size = baseSize *.66,
+                                               colour = "#8C9394"),
+                       plot.background = element_rect(fill = "#ffffff"),
+                       plot.title = element_text(face = "bold", 
+                                                 colour = "black",
+                                                 size = baseSize*1.2),
+                       plot.subtitle = element_text(colour = "#8C9394",
+                                                    size = baseSize),
+                       plot.caption = element_text(size = baseSize *.8)
+                     )
+  )
+}
+
+#### map theme ####
+theme_pst_map <- function(baseSize=bs) {
+  (theme_void() + 
+     theme(
+       legend.direction = "horizontal",
+       legend.position = "bottom",
+       plot.tag.position = c(.97,.97),
+       text = element_text(family = pstFont),
+       legend.text = element_text(colour = "black",
+                                   size = baseSize * .8),
+       legend.background = element_rect(fill = NA, 
+                                        color = NA),
+       legend.title = element_text( face = "bold", 
+                                    colour = "black",
+                                    size = baseSize),
+       legend.key = element_blank(),
+       plot.background = element_rect(fill = "#ffffff", colour = NA),
+       plot.margin = unit(c(0,0,0,0), "cm"),
+       plot.tag = element_text(size = baseSize *.66,
+                               colour = "#8C9394"),
+       plot.title = element_text(face = "bold", 
+                                 colour = "black",
+                                 size = baseSize*1.2),
+       plot.subtitle = element_text(colour = "#8C9394",
+                                    size = baseSize),
+       plot.caption = element_text(size = baseSize *.8,
+                                   lineheight = .33)
+       )
+
+                    
+  )
+}
+
+#### flip theme ####
+theme_pst_flip <- function(baseSize=bs) {
+  (theme(
+                       axis.line.y = element_line(
+                         colour = "#182125",
+                         size = 0.5,
+                         linetype = "solid"
+                       ),
+                       axis.line.x = element_line(
+                         colour = "#182125",
+                         size = 0.5,
+                         linetype = "solid"
+                       ),
+                       axis.ticks.y = element_line(
+                         colour = "#182125",
+                         size = 0.5,
+                         linetype = "solid"
+                       ),
+                       text = element_text(family = pstFont),
+                       axis.text = element_text(colour = "#8C9394",
+                                                size = baseSize * .8),
+                       axis.title = element_text(colour ="black", 
+                                                 size= baseSize),
+                       panel.grid.minor.x = element_line(linetype = "dotted", 
+                                                         colour = "#C4C8C6"),
+                       panel.grid.major.x = element_line(colour = "#394C56", 
+                                                         linetype = "dotted"),
+                       panel.grid.major.y = element_blank(),
+                       panel.grid.minor.y = element_blank(),
+                       panel.background = element_blank(),
+                       panel.border = element_blank(),
+                       strip.background = element_rect(linetype = 0),
+                       strip.text = element_blank(),
+                       strip.text.x = element_blank(),
+                       strip.text.y = element_blank(),
+                       legend.text = element_text(colour = "black",
+                                                  size = baseSize * .8),
+                       legend.background = element_rect(fill = NULL, 
+                                                        color = "#182125"),
+                       legend.title = element_text( face = "bold", 
+                                                    colour = "black",
+                                                    size = baseSize),
+                       legend.position = "right",
+                       legend.key = element_blank(),
+                       #legend.background = element_blank(),
+                       plot.tag.position = c(.97,.97),
+                       plot.tag = element_text(size = baseSize *.66,
+                                               colour = "#8C9394"),
+                       plot.background = element_rect(fill = "#ffffff"),
+                       plot.title = element_text(face = "bold", 
+                                                 colour = "black",
+                                                 size = baseSize*1.2),
+                       plot.subtitle = element_text(colour = "#8C9394",
+                                                    size = baseSize),
+                       plot.caption = element_text(size = baseSize *.8)
+                     )
+  )
+}
+
+#### facet theme ####
+theme_pst_facet <- function(baseSize=bs) {
+  (theme(
+                       axis.line.x = element_line(
+                         colour = "#182125",
+                         size = 0.5,
+                         linetype = "solid"
+                       ),
+                       axis.line.y = element_line(
+                         colour = "#182125",
+                         size = 0.5,
+                         linetype = "solid"
+                       ),
+                       axis.ticks.y = element_line(
+                         colour = "#182125",
+                         size = 0.5,
+                         linetype = "solid"
+                       ),
+                       text = element_text(family = pstFont),
+                       axis.text = element_text(colour = "#8C9394",
+                                                size = baseSize * .8),
+                       axis.title = element_text(colour ="black", 
+                                                 size= baseSize),
+                       panel.grid.minor.y = element_line(linetype = "dotted", 
+                                                         colour = "#C4C8C6"),
+                       panel.grid.major.y = element_line(colour = "#394C56", 
+                                                         linetype = "dotted"),
+                       panel.grid.major.x = element_blank(),
+                       panel.grid.minor.x = element_blank(),
+                       panel.border = element_blank(),
+                       strip.background = element_rect(linetype = 0),
+                       strip.text = element_blank(),
+                       strip.text.x = element_text(colour = "gray15",
+                                                  size = baseSize * .8,
+                                                  margin = ),
+                       strip.text.y = element_text(colour = "gray15",
+                                                  size = baseSize * .8),
+                       legend.text = element_text(colour = "black",
+                                                  size = baseSize * .8),
+                       legend.background = element_rect(fill = NULL, 
+                                                        color = "#182125"),
+                       legend.title = element_text( face = "bold", 
+                                                    colour = "black",
+                                                    size = baseSize),
+                       legend.position = "right",
+                       legend.key = element_blank(),
+                       legend.spacing.y = unit(.125, 'cm'),
+                       #legend.background = element_blank(),
+                       plot.tag.position = c(.97,.97),
+                       plot.tag = element_text(size = baseSize *.66,
+                                               colour = "#8C9394"),
+                       plot.background = element_rect(fill = "#ffffff"),
+                       panel.background = element_rect(fill = "#f1f3f4"),
+                       plot.title = element_text(face = "bold", 
+                                                 colour = "black",
+                                                 size = baseSize*1.2),
+                       plot.subtitle = element_text(colour = "#8C9394",
+                                                    size = baseSize),
+                       plot.caption = element_text(size = baseSize *.8)
+                     )
+  )
+}
+
+
+```
+
+```{r nice colors}
+#brewer pal
+col <- brewer.pal(6,"Set2")
+green <- col[1]
+orange <- col[2]
+purple <- col[3]
+pink <- col[4]
+lime <- col[5]
+yellow <- col[6]
+
+#pst 
+darkBlue <- "#003E59"
+midBlue <- "#00546F"
+bluGreen <- "#459197"
+liteGreen <- "#61A893"
+
+
+#pst contrast 
+#1
+honey <- "#FFAD05"
+lilac <- "#C297B8"
+# 2
+hunterGrn <- "#315C2B"
+maize <- "#E7BB41"
+
+crimson <- "#96140D"
+lavBlu <- "#C6CAED"
+
+#based on pst
+liteBlue <- "#5CCEFF"
+liteBlu2 <- "#0AC2FF"
+darkGreen <- "#3C685A"
+brown <- "#664400"
+
+#pals 
+pst1 <- c(darkBlue, liteGreen, lilac, honey, bluGreen, crimson)
+pst2 <- c(darkBlue, liteGreen, lilac, brown, maize, midBlue)
+pstMax <- c(darkBlue, liteGreen, lilac, honey, liteBlue, brown, crimson, "gray55")
+
+```
+
+```{r incident data}
+#get df
+#remove outer continental shelf incidents 
+df <- read_csv(paste0(datadir, "clean/all_inc.csv") ) 
+
+
+#join, including transformation from wgs84 to nad 83
+df_sp <- df %>%
+  st_as_sf(coords = c("LOCATION_LONGITUDE", "LOCATION_LATITUDE"), crs = 4326)%>%
+  st_transform(2229)
+
+## TODO: consider GD / GT / HL differences, how do we want to analyze these?
+gd <- read_csv(paste0(datadir, "clean/gd_inc.csv") ) 
+
+gt <- read_csv(paste0(datadir, "clean/gt_inc.csv") ) 
+
+hl <- read_csv(paste0(datadir, "clean/hl_inc.csv") )
+
+```
+
+
+```{r}
+atmos <- df %>%
+  filter(grepl("atmos", NAME, ignore.case= T)|
+           grepl("atmos", pri.name, ignore.case= T),)
+```
+
+```{r}
+df %>%
+  filter(grepl("atmos", NAME, ignore.case= T)|
+           grepl("atmos", pri.name, ignore.case= T),
+         SYS %in% c("GT", "GD")) 
+```
+
+
+```{r}
+atmos %>%
+  group_by(SYS)%>%
+  summarize(n = n(),
+            cost = sum(TOTAL_COST_CURRENT),
+            release = sum(TOTAL_RELEASE)) %>%
+  kbl()%>%
+  kable_material()
+
+atmos %>%
+  count(SYS, SIGNIFICANT,CAUSE) %>%
+  view()
+```
+
+```{r}
+home_explosions <- atmos %>%
+  filter(grepl("home|house", NARRATIVE, ignore.case = T),
+         EXPLODE_IND == "YES",
+         IGNITE_IND == "YES") %>% pull(REPORT_NUMBER)
+
+atmos %>%
+  ggplot(aes(x = MDY, y = TOTAL_COST_CURRENT, shape = SYS, col = FATAL+INJURE))+
+  # geom_point(data = df %>% 
+  #              filter(!REPORT_NUMBER %in% atmos$REPORT_NUMBER,
+  #                     SYS %in% c("GT", "GD")),
+  #           aes(x =MDY, y =TOTAL_COST_CURRENT, shape =SYS), 
+  #               col = "gray85", alpha = .3)+
+  geom_point(size = 3, alpha = .7)+
+  geom_point(data = atmos %>% filter(REPORT_NUMBER %in% home_explosions) ,
+             aes(x = MDY, y = TOTAL_COST_CURRENT),
+             shape = 23, size = 4, col = "red",inherit.aes = F)+
+  scale_color_viridis_b(option = "C", end = .9)+
+  scale_x_date(date_breaks = "2 years", 
+               date_labels = "'%y")+
+  theme_pst()
+```
+
+```{r}
+home_explosions <- atmos %>%
+  filter(grepl("home|house", NARRATIVE, ignore.case = T),
+         EXPLODE_IND == "YES"| IGNITE_IND == "YES") %>% view() %>% pull(REPORT_NUMBER)
+
+atmos %>%
+  ggplot(aes(x = MDY, y = TOTAL_COST_CURRENT, shape = SYS, col = FATAL+INJURE))+
+  geom_point(data = df %>%
+               filter(!REPORT_NUMBER %in% atmos$REPORT_NUMBER,
+                      SYS %in% c("GT", "GD")),
+            aes(x =MDY, y =TOTAL_COST_CURRENT, shape =SYS),
+                col = "gray66", alpha = .5)+
+  geom_point(size = 3, alpha = .7)+
+  geom_point(data = atmos %>% filter(REPORT_NUMBER %in% home_explosions) ,
+             aes(x = MDY, y = TOTAL_COST_CURRENT),
+             shape = 23, size = 4, col = "red",inherit.aes = F)+
+  scale_color_viridis_b(option = "C", end = .9)+
+  scale_x_date(date_breaks = "2 years", 
+               date_labels = "'%y")+
+  scale_y_continuous(limits = c(0,4e6))+
+  facet_wrap(~CAUSE)+
+  theme_pst_facet()
+```
+
+```{r}
+unique(df$CAUSE)
+
+df %>%
+  filter(SYS  %in% c("GD", "GT"))%>%
+  group_by(pri.name, SYS)%>%
+  summarize(
+    n = n(),
+    excav = sum(CAUSE == "EXCAVATION DAMAGE"),
+    equip = sum(CAUSE == "EQUIPMENT FAILURE"),
+    corros = sum(CAUSE == "CORROSION FAILURE"),
+    incor = sum(CAUSE == "INCORRECT OPERATION"),
+    mater = sum(grepl("weld", CAUSE, ignore.case = T)),
+    natural = sum(CAUSE == "NATURAL FORCE DAMAGE"),
+    outside = sum(CAUSE == "OTHER OUTSIDE FORCE DAMAGE"),
+    other = sum(CAUSE == "OTHER ACCIDENT FAILURE") +
+      sum(CAUSE == "OTHER INCIDENT FAILURE")
+  ) %>%
+  filter(n >= 5)%>%
+  mutate(across(excav:other, ~.x/n))%>%
+  pivot_longer(!c(pri.name, SYS, n),
+               names_to = "cause",
+               values_to = "per_inc")%>%
+  mutate(atmos = ifelse(grepl("atmos", pri.name, ignore.case =T), T, F))%>%
+  ggplot(aes(x = cause, y = per_inc))+
+  geom_boxplot(outlier.shape = NA)+
+  geom_point(aes(shape = atmos, col = atmos), 
+             position = position_jitter(width = .1),
+             size = 3)+
+  scale_shape_manual(values = c(1,16))+
+  scale_color_manual(values = c(darkBlue, honey))+
+  facet_wrap(~SYS)+
+  coord_flip()+
+  theme_pst_facet()+
+  theme(
+    panel.grid.minor.x = element_line(linetype = "dotted", 
+                                                         colour = "#C4C8C6"),
+                       panel.grid.major.x = element_line(colour = "#394C56", 
+                                                         linetype = "dotted"),
+                       panel.grid.major.y = element_blank(),
+                       panel.grid.minor.y = element_blank()
+  )
+```
+
+```{r}
+unique(df$CAUSE)
+
+df %>%
+  filter(SYS  %in% c("GD", "GT"))%>%
+  group_by(pri.name, SYS)%>%
+  summarize(
+    n = n(),
+    excav = sum(CAUSE == "EXCAVATION DAMAGE"),
+    equip = sum(CAUSE == "EQUIPMENT FAILURE"),
+    corros = sum(CAUSE == "CORROSION FAILURE"),
+    incor = sum(CAUSE == "INCORRECT OPERATION"),
+    mater = sum(grepl("weld", CAUSE, ignore.case = T)),
+    natural = sum(CAUSE == "NATURAL FORCE DAMAGE"),
+    outside = sum(CAUSE == "OTHER OUTSIDE FORCE DAMAGE"),
+    other = sum(CAUSE == "OTHER ACCIDENT FAILURE") +
+      sum(CAUSE == "OTHER INCIDENT FAILURE")
+  ) %>%
+  filter(n >= 5)%>%
+  mutate(across(excav:other, ~.x/n)) %>%
+  pivot_longer(!c(pri.name, SYS, n),
+               names_to = "cause",
+               values_to = "per_inc")%>%
+  mutate(atmos = ifelse(grepl("atmos", pri.name, ignore.case =T), T, F))%>%
+  ggplot(aes(x = cause, y = per_inc))+
+  geom_boxplot(outlier.shape = NA)+
+  geom_point(aes(shape = atmos, col = atmos), 
+             position = position_jitter(width = .1),
+             size = 3)+
+  scale_shape_manual(values = c(1,16))+
+  scale_color_manual(values = c(darkBlue, honey))+
+  facet_wrap(~SYS)+
+  coord_flip()+
+  theme_pst_facet()+
+  theme(
+    panel.grid.minor.x = element_line(linetype = "dotted", 
+                                                         colour = "#C4C8C6"),
+                       panel.grid.major.x = element_line(colour = "#394C56", 
+                                                         linetype = "dotted"),
+                       panel.grid.major.y = element_blank(),
+                       panel.grid.minor.y = element_blank()
+  )
+```
+
+
