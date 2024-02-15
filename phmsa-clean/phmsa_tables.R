@@ -7,7 +7,9 @@ library(fuzzyjoin)
 library(httr)
 
 httr::set_config(config(http_version = 1.1))
-source("offshorefinder.R")
+source("new_functions.R")
+
+crs = 4326
 
 #### Data Setup ####
 ## TODO: unpack zip to raw/ directory and continue cleaning 
@@ -164,7 +166,7 @@ gd.full <- distData %>%
             by = c("OPERATOR_ID" = "sub.id"),
             suffix = c("", ".o"))%>%
   #determine valid records by checking date of incident by dates in safety rec
-  mutate(valid = between(MDY, start, end) ,
+  mutate(valid = between(MDY, start, end-days(1)) ,
          valid = replace_na(valid, T))%>%
   group_by(REPORT_NUMBER)%>%
   mutate(rep = n())%>%
@@ -180,6 +182,7 @@ gd.full <- distData %>%
 
 # gt big
 gt.full <- tranData %>%
+  slice_sample(n=50)%>%
   mutate(SYS = gsub( " .*$", "", SYSTEM_TYPE ), #accounts for UNGS and GD
          UNINTENTIONAL_RELEASE = replace_na(UNINTENTIONAL_RELEASE,0), 
          INTENTIONAL_RELEASE = replace_na(INTENTIONAL_RELEASE,0),
@@ -219,17 +222,28 @@ gt.full <- tranData %>%
               by = c("OPERATOR_ID" = "sub.id"),
               suffix = c("", ".o"))%>%
     #determine valid records by checking date of incident by dates in safety rec
-    mutate(valid = between(MDY, start, end) ,
+    mutate(valid = between(MDY, start, end-days(1)) ,
            valid = replace_na(valid, T))%>%
     group_by(REPORT_NUMBER)%>%
     mutate(rep = n())%>%
     ungroup()%>%
     filter(valid  | rep == 1)%>%
-    select(!c("rep", "valid"))
+    select(!c("rep", "valid")) %>%
+    #repeat step to catch any overlapping dates, 
+    #typically occurs when one primary is suprseded and one current
+    group_by(REPORT_NUMBER)%>%
+    mutate(rep2 = n())%>%
+    ungroup()%>%
+    {if(rep > 1) filter(pri.status != "Current")}
+    
   
+
+
+#{if(rep > 1) filter(pri.status != "Current")}%>%
+# filter(!(rep>1 & pri.status != "Current"))%>%
 # gt.op <- tibble()
 
-
+# TODO: wtf is going wrong here 
 # hl big
 hl.full <- hzrdData %>% 
   mutate(SYSTEM_TYPE = "Hazardous Liquids",
@@ -271,12 +285,13 @@ hl.full <- hzrdData %>%
             by = c("OPERATOR_ID" = "sub.id"),
             suffix = c("", ".o"))%>%
   #determine valid records by checking date of incident by dates in safety rec
-  mutate(valid = between(MDY, start, end) ,
+  mutate(valid = between(MDY, start, end-days(1)) ,
          valid = replace_na(valid, T))%>%
   group_by(REPORT_NUMBER)%>%
   mutate(rep = n())%>%
   ungroup()%>%
   filter(valid  | rep == 1)%>%
+  filter(!(rep>1 & pri.status != "Current"))%>%
   select(!c("rep", "valid"))
 
 # 

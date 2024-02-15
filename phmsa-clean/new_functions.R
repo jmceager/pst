@@ -41,17 +41,17 @@ water <- st_read("data/gis/hydro/us_hydro.shp") %>%
 # plot(states)
 # plot(x_sf, add = T)
 
-points <- tranData %>%
-  st_as_sf(agr = NA_agr_,
-           coords = c("LOCATION_LONGITUDE", "LOCATION_LATITUDE"),
-           crs = crs,
-           dim = "XY",
-           remove = TRUE,
-           na.fail = TRUE,
-           sf_column_name = NULL
-  )%>%
-  #transform crs to same as census 
-  st_transform(4269)
+# points <- tranData %>%
+#   st_as_sf(agr = NA_agr_,
+#            coords = c("LOCATION_LONGITUDE", "LOCATION_LATITUDE"),
+#            crs = crs,
+#            dim = "XY",
+#            remove = TRUE,
+#            na.fail = TRUE,
+#            sf_column_name = NULL
+#   )%>%
+#   #transform crs to same as census 
+#   st_transform(4269)
 
 # fix improperly documented lats and longs 
 latlongizer <- function( vals, type = c("lat", "lon")){
@@ -125,21 +125,21 @@ ocs_fixer <- function(df, xy){
   return(new_xy)
   
 }
-
-idx = 67
-loc = gt.sample$ILOC[[idx]]
-lat = gt.sample$LOCATION_LATITUDE[[idx]]
-lon = gt.sample$LOCATION_LONGITUDE[[idx]]
-state = gt.sample$STATE[[idx]]
-org = gt.sample$OFF_ACCIDENT_ORIGIN[[idx]]
-op = gt.sample$OPERATOR_ID[[idx]]
-rn = gt.sample$REPORT_NUMBER[[idx]]
-
-
-test <- gt.sample %>%
-  mutate(newloc = locCleaner(loc, lat, lon, state, org))
-
-pmap(list(loc, lat,lon, op, rn, state, org, sys), locCleaner)
+# 
+# idx = 67
+# loc = gt.sample$ILOC[[idx]]
+# lat = gt.sample$LOCATION_LATITUDE[[idx]]
+# lon = gt.sample$LOCATION_LONGITUDE[[idx]]
+# state = gt.sample$STATE[[idx]]
+# org = gt.sample$OFF_ACCIDENT_ORIGIN[[idx]]
+# op = gt.sample$OPERATOR_ID[[idx]]
+# rn = gt.sample$REPORT_NUMBER[[idx]]
+# 
+# 
+# test <- gt.sample %>%
+#   mutate(newloc = locCleaner(loc, lat, lon, state, org))
+# 
+# pmap(list(loc, lat,lon, op, rn, state, org, sys), locCleaner)
 #vectorize original locCleaner
 #assume lat and lon are already cleaned 
 #state and origina null to handle offshore / OCS incidents
