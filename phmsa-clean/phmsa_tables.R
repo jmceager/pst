@@ -182,7 +182,7 @@ gd.full <- distData %>%
 
 # gt big
 gt.full <- tranData %>%
-  slice_sample(n=50)%>%
+ # slice_sample(n=50)%>%
   mutate(SYS = gsub( " .*$", "", SYSTEM_TYPE ), #accounts for UNGS and GD
          UNINTENTIONAL_RELEASE = replace_na(UNINTENTIONAL_RELEASE,0), 
          INTENTIONAL_RELEASE = replace_na(INTENTIONAL_RELEASE,0),
@@ -234,7 +234,7 @@ gt.full <- tranData %>%
     group_by(REPORT_NUMBER)%>%
     mutate(rep2 = n())%>%
     ungroup()%>%
-    {if(rep > 1) filter(pri.status != "Current")}
+    filter(ifelse(rep2 > 1,pri.status != "Current", TRUE ) )
     
   
 
@@ -291,9 +291,13 @@ hl.full <- hzrdData %>%
   mutate(rep = n())%>%
   ungroup()%>%
   filter(valid  | rep == 1)%>%
-  filter(!(rep>1 & pri.status != "Current"))%>%
-  select(!c("rep", "valid"))
-
+  select(!c("rep", "valid")) %>%
+  #repeat step to catch any overlapping dates, 
+  #typically occurs when one primary is suprseded and one current
+  group_by(REPORT_NUMBER)%>%
+  mutate(rep2 = n())%>%
+  ungroup()%>%
+  filter(ifelse(rep2 > 1,pri.status != "Current", TRUE ) )
 # 
 # miles.op <- tibble()
 # for(i in 1:nrow(miles)){
