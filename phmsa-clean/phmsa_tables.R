@@ -139,6 +139,7 @@ gd.full <- distData %>%
          INTENTIONAL_RELEASE = replace_na(INTENTIONAL_RELEASE,0),
          ON_OFF_SHORE = "ONSHORE",
          UNITS = "mscf",
+         INTER_INTRA = "INTRASTATE",
          TOTAL_RELEASE = UNINTENTIONAL_RELEASE + INTENTIONAL_RELEASE,
          TOTAL_COST_CURRENT = replace_na(parse_number(TOTAL_COST_CURRENT), 0),
          EXPLODE_IND = replace_na(EXPLODE_IND, "NO"),
@@ -234,7 +235,8 @@ gt.full <- tranData %>%
     group_by(REPORT_NUMBER)%>%
     mutate(rep2 = n())%>%
     ungroup()%>%
-    filter(ifelse(rep2 > 1,pri.status != "Current", TRUE ) )
+    filter(ifelse(rep2 > 1,pri.status != "Current", TRUE ) ) %>%
+  rename(INTER_INTRA = PIPE_FACILITY_TYPE)
     
   
 
@@ -249,7 +251,8 @@ hl.full <- hzrdData %>%
   mutate(SYSTEM_TYPE = "Hazardous Liquids",
          SYS = "HL")%>%
   rename( INTENTIONAL_RELEASE = INTENTIONAL_RELEASE_BBLS,
-          UNINTENTIONAL_RELEASE = UNINTENTIONAL_RELEASE_BBLS)%>%
+          UNINTENTIONAL_RELEASE = UNINTENTIONAL_RELEASE_BBLS,
+          INTER_INTRA = PIPE_FACILITY_TYPE)%>%
   mutate(UNINTENTIONAL_RELEASE = replace_na(UNINTENTIONAL_RELEASE,0)*42, 
          INTENTIONAL_RELEASE = replace_na(INTENTIONAL_RELEASE,0)*42,
          UNITS = "US Gal.",
@@ -322,7 +325,7 @@ hl.full <- hzrdData %>%
 short_cols <- c( "REPORT_NUMBER", "NAME","OPERATOR_ID",  #basic characteristics
                  "IYEAR","MDY","MoYr" ,"LOCAL_DATETIME" ,   #temporal char
                  "LOCATION_LATITUDE","LOCATION_LONGITUDE", "cleanLoc", 
-                 "STATE", "ON_OFF_SHORE",#location
+                 "STATE", "ON_OFF_SHORE","INTER_INTRA",#location
                  "SYS","MSYS" ,"SIGNIFICANT", "SERIOUS","COMMODITY_RELEASED_TYPE",#inc summary
                  "UNINTENTIONAL_RELEASE", "INTENTIONAL_RELEASE", "TOTAL_RELEASE","UNITS", #releases
                  "FATALITY_IND","FATAL", "INJURY_IND","INJURE", #human impact
