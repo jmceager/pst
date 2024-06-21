@@ -1,0 +1,4720 @@
+---
+title: "str_23"
+author: "James Eager"
+date: "`r Sys.Date()`"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r}
+rm(list = ls())
+```
+
+
+```{r setup, include=FALSE}
+library(tufte)
+# invalidate cache when the tufte version changes
+knitr::opts_chunk$set(cache.extra = packageVersion('tufte'))
+options(htmltools.dir.version = FALSE)
+
+library(tidyverse)
+library(ggrepel)
+library(RColorBrewer)
+library(ggwaffle)
+library(ggthemes)
+library(extrafont)
+library(viridis)
+library(scales)
+library(readxl)
+library(tidycensus)
+library(kableExtra)
+library(GGally)
+library(sp)
+library(sf)
+library(rgeos)
+library(tufte)
+library(showtext)
+library(rgdal)
+library(ggspatial)
+library(mapboxapi)
+library(ggnewscale)
+
+wdt = 7.25
+hgt = wdt/1.62
+bs = 10
+
+#check for f a incons 
+font_import()
+
+fonts()[grep("Awesome", fonts())]
+
+
+
+ 
+knitr::opts_chunk$set(echo = FALSE, include = FALSE, message = FALSE)
+options(knitr.table.format = "latex")
+capt = "Source: PST State Transparency Review Data"
+datadir = "https://raw.githubusercontent.com/jmceager/pst/main/phmsa-clean/data/"
+tag = paste("PST", lubridate::year(Sys.Date()))
+expo_dir = "23_plots/"
+
+
+pstFont = "Montserrat"
+font_add_google(pstFont)
+showtext_opts(dpi=300) 
+showtext_auto()# theme clean adjustments to apply to ggplot
+
+
+commsName = "Find + Connect"
+agencyName = "Agency Authority"
+dataName = "Data + Maps"
+
+new_pal = c("#000000","#49446E", "#3285A4", "#7EC8B0", "grey50")
+```
+
+```{r theme_pst}
+#### main plot theme ####
+theme_pst <- function(bs=10) {
+  (theme(
+                       axis.line.x = element_line(
+                         colour = "#182125",
+                         size = 0.5,
+                         linetype = "solid"
+                       ),
+                       axis.line.y = element_line(
+                         colour = "#182125",
+                         size = 0.5,
+                         linetype = "solid"
+                       ),
+                       axis.ticks.y = element_line(
+                         colour = "#182125",
+                         size = 0.5,
+                         linetype = "solid"
+                       ),
+                       text = element_text(family = pstFont),
+                       axis.text = element_text(colour = "#8C9394",
+                                                size = bs * .8),
+                       axis.title = element_text(colour ="black", 
+                                                 size= bs),
+                       panel.grid.minor.y = element_line(linetype = "dotted", 
+                                                         colour = "#C4C8C6"),
+                       panel.grid.major.y = element_line(colour = "#394C56", 
+                                                         linetype = "dotted"),
+                       panel.grid.major.x = element_blank(),
+                       panel.grid.minor.x = element_blank(),
+                       panel.background = element_blank(),
+                       panel.border = element_blank(),
+                       strip.background = element_rect(linetype = 0),
+                       strip.text = element_blank(),
+                       strip.text.x = element_blank(),
+                       strip.text.y = element_blank(),
+                       legend.text = element_text(colour = "black",
+                                                  size = bs * .8),
+                       legend.background = element_rect(fill = NULL, 
+                                                        color = "#182125"),
+                       legend.title = element_text( face = "bold", 
+                                                    colour = "black",
+                                                    size = bs),
+                       legend.position = "right",
+                       legend.key = element_blank(),
+                       legend.spacing.y = unit(.125, 'cm'),
+                       #legend.background = element_blank(),
+                       plot.tag.position = c(.97,.97),
+                       plot.tag = element_text(size = bs *.66,
+                                               colour = "#8C9394"),
+                       plot.background = element_rect(fill = "#ffffff"),
+                       plot.title = element_text(face = "bold", 
+                                                 colour = "black",
+                                                 size = bs*1.2),
+                       plot.subtitle = element_text(colour = "#8C9394",
+                                                    size = bs),
+                       plot.caption = element_text(size = bs *.8)
+                     )
+  )
+}
+
+#### map theme ####
+theme_pst_map <- function(bs=10) {
+  (theme_void() + 
+     theme(
+       legend.direction = "horizontal",
+       legend.position = "bottom",
+       plot.tag.position = c(.97,.97),
+       text = element_text(family = pstFont),
+       legend.text = element_text(colour = "black",
+                                   size = bs * .8),
+       legend.background = element_rect(fill = NA, 
+                                        color = NA),
+       legend.title = element_text( face = "bold", 
+                                    colour = "black",
+                                    size = bs),
+       legend.key = element_blank(),
+       plot.background = element_rect(fill = "#ffffff", colour = NA),
+       plot.margin = unit(c(0,0,0,0), "cm"),
+       plot.tag = element_text(size = bs *.66,
+                               colour = "#8C9394"),
+       plot.title = element_text(face = "bold", 
+                                 colour = "black",
+                                 size = bs*1.2),
+       plot.subtitle = element_text(colour = "#8C9394",
+                                    size = bs),
+       plot.caption = element_text(size = bs *.8,
+                                   lineheight = .33)
+       )
+
+                    
+  )
+}
+
+#### flip theme ####
+theme_pst_flip <- function(bs=10) {
+  (theme(
+                       axis.line.y = element_line(
+                         colour = "#182125",
+                         size = 0.5,
+                         linetype = "solid"
+                       ),
+                       axis.line.x = element_line(
+                         colour = "#182125",
+                         size = 0.5,
+                         linetype = "solid"
+                       ),
+                       axis.ticks.y = element_line(
+                         colour = "#182125",
+                         size = 0.5,
+                         linetype = "solid"
+                       ),
+                       text = element_text(family = pstFont),
+                       axis.text = element_text(colour = "#8C9394",
+                                                size = bs * .8),
+                       axis.title = element_text(colour ="black", 
+                                                 size= bs),
+                       panel.grid.minor.x = element_line(linetype = "dotted", 
+                                                         colour = "#C4C8C6"),
+                       panel.grid.major.x = element_line(colour = "#394C56", 
+                                                         linetype = "dotted"),
+                       panel.grid.major.y = element_blank(),
+                       panel.grid.minor.y = element_blank(),
+                       panel.background = element_blank(),
+                       panel.border = element_blank(),
+                       strip.background = element_rect(linetype = 0),
+                       strip.text = element_blank(),
+                       strip.text.x = element_blank(),
+                       strip.text.y = element_blank(),
+                       legend.text = element_text(colour = "black",
+                                                  size = bs * .8),
+                       legend.background = element_rect(fill = NULL, 
+                                                        color = "#182125"),
+                       legend.title = element_text( face = "bold", 
+                                                    colour = "black",
+                                                    size = bs),
+                       legend.position = "right",
+                       legend.key = element_blank(),
+                       #legend.background = element_blank(),
+                       plot.tag.position = c(.97,.97),
+                       plot.tag = element_text(size = bs *.66,
+                                               colour = "#8C9394"),
+                       plot.background = element_rect(fill = "#ffffff"),
+                       plot.title = element_text(face = "bold", 
+                                                 colour = "black",
+                                                 size = bs*1.2),
+                       plot.subtitle = element_text(colour = "#8C9394",
+                                                    size = bs),
+                       plot.caption = element_text(size = bs *.8)
+                     )
+  )
+}
+
+#### facet theme ####
+theme_pst_facet <- function(bs=10) {
+  (theme(
+                       axis.line.x = element_line(
+                         colour = "#182125",
+                         size = 0.5,
+                         linetype = "solid"
+                       ),
+                       axis.line.y = element_line(
+                         colour = "#182125",
+                         size = 0.5,
+                         linetype = "solid"
+                       ),
+                       axis.ticks.y = element_line(
+                         colour = "#182125",
+                         size = 0.5,
+                         linetype = "solid"
+                       ),
+                       text = element_text(family = pstFont),
+                       axis.text = element_text(colour = "#8C9394",
+                                                size = bs * .8),
+                       axis.title = element_text(colour ="black", 
+                                                 size= bs),
+                       panel.grid.minor.y = element_line(linetype = "dotted", 
+                                                         colour = "#C4C8C6"),
+                       panel.grid.major.y = element_line(colour = "#394C56", 
+                                                         linetype = "dotted"),
+                       panel.grid.major.x = element_blank(),
+                       panel.grid.minor.x = element_blank(),
+                       panel.border = element_blank(),
+                       strip.background = element_rect(linetype = 0),
+                       strip.text = element_blank(),
+                       strip.text.x = element_text(colour = "gray15",
+                                                  size = bs * .8),
+                       strip.text.y = element_text(colour = "gray15",
+                                                  size = bs * .8),
+                       legend.text = element_text(colour = "black",
+                                                  size = bs * .8),
+                       legend.background = element_rect(fill = NULL, 
+                                                        color = "#182125"),
+                       legend.title = element_text( face = "bold", 
+                                                    colour = "black",
+                                                    size = bs),
+                       legend.position = "right",
+                       legend.key = element_blank(),
+                       legend.spacing.y = unit(.125, 'cm'),
+                       #legend.background = element_blank(),
+                       plot.tag.position = c(.97,.97),
+                       plot.tag = element_text(size = bs *.66,
+                                               colour = "#8C9394"),
+                       plot.background = element_rect(fill = "#ffffff"),
+                       panel.background = element_rect(fill = "#f1f3f4"),
+                       plot.title = element_text(face = "bold", 
+                                                 colour = "black",
+                                                 size = bs*1.2),
+                       plot.subtitle = element_text(colour = "#8C9394",
+                                                    size = bs),
+                       plot.caption = element_text(size = bs *.8)
+                     )
+  )
+}
+
+
+```
+
+```{r nice colors}
+col <- brewer.pal(6,"Set2")
+green <- col[1]
+orange <- col[2]
+purple <- col[3]
+pink <- col[4]
+lime <- col[5]
+yellow <- col[6]
+
+#brewer pal
+col <- brewer.pal(6,"Set2")
+green <- col[1]
+orange <- col[2]
+purple <- col[3]
+pink <- col[4]
+lime <- col[5]
+yellow <- col[6]
+
+#pst 
+darkBlue <- "#003E59"
+midBlue <- "#00546F"
+bluGreen <- "#459197"
+liteGreen <- "#61A893"
+
+#pst contrast 
+#1
+honey <- "#FFAD05"
+lilac <- "#C297B8"
+crimson <- "#96140D"
+liteBlue <- "#5CCEFF"
+brown <- "#664400"
+
+
+richblack = "#182125"
+
+catAcs <- c("regAccess", "regDescription", "sitingRouting")
+catComm <- c("findSite","agencyCon", "companyCon")
+catData <- c("incData", "mapGT", "excavationData", 
+             "enforceRecs", "inpectRecs")
+allScores <- c(catAcs, catComm, catData)
+
+#pals 
+pstMax <- c(darkBlue, liteGreen, lilac, honey, liteBlue, brown, crimson, "gray55")
+```
+
+```{r load data }
+years <- excel_sheets("data/transparency-history.xlsx")
+
+
+
+western <- c("AK", "HI","WA", "OR", "MT", "ID", "WY", "UT","NV","CO","AZ", "CA-G", "CA-L")
+
+central <- c("MO", "MN", "ND", "SD", "NE", "IA", "KS", "IL", "MI", "WI", "IN")
+
+eastern <- c("NJ","ME", "NH", "VT", "MA","CT","RI","DC","NY","OH",
+             "PA","VA","MD","DE","WV")
+
+southern <- c("GA","FL","SC","NC","AL","MS","TN","KY","PR")
+
+southwest <- c("TX","NM","OK","AR","LA", "AR-OCG", "AR-O")
+
+# start faceting more by pipeline miles 
+
+dfRaw <- map_dfr(years, read_xlsx, 
+              path = "data/transparency-history.xlsx", .id = "sheet") %>%
+  mutate(year = parse_number(years[as.numeric(sheet)]),
+         average = coalesce(total, average),
+         score = select(., findSite:sitingRouting) %>% rowSums(na.rm = T))%>%
+  select(!c(total, sheet))%>%
+  rename(state = State) %>%
+  mutate(region = case_when(state.abb[match(state,state.name)] %in% western ~ "Western",
+                            state.abb[match(state,state.name)] %in% central ~ "Central",
+                            state.abb[match(state,state.name)] %in% eastern ~ "Eastern",
+                            state.abb[match(state,state.name)] %in% southern ~ "Southern",
+                            state.abb[match(state,state.name)] %in% southwest ~ "Southwest",
+                            state == "California Liquid" ~ "Western",
+                            state == "California Gas" ~ "Western",
+                            state == "Arkansas OGC" ~ "Southwest",
+                            state == "DC" ~ "Eastern",
+                            .default = NA),
+         score_per = average/3)
+
+
+df_23 <- read_xlsx("data/2023_draft2.xlsx", sheet = 1,
+                    skip = 0) %>%
+  select("State",matches("^[0-9]")) %>%
+  mutate(score = 0)%>%
+  rename(Column1 = State) 
+
+specs <- tibble(
+  oldName = colnames(df_23),
+  newName = colnames(dfRaw)[1:length(colnames(df_23))]
+)
+  
+df_wide <- df_23 %>%
+  rename_with(~specs$newName, specs$oldName) %>%
+  mutate(year = 2023,
+         score = select(., findSite:sitingRouting) %>% rowSums(),
+         score_per = score / ifelse( year == 2013, 
+                                     30, ifelse(year == 2012, 
+                                                27, 33)),
+         average = score / ifelse( year == 2013, 
+                                   10, ifelse(year == 2012, 
+                                              9, 11)),
+         state = str_remove(state, "\\*"),
+         region = case_when(state.abb[match(state,state.name)] %in% western ~ "Western",
+                            state.abb[match(state,state.name)] %in% central ~ "Central",
+                            state.abb[match(state,state.name)] %in% eastern ~ "Eastern",
+                            state.abb[match(state,state.name)] %in% southern ~ "Southern",
+                            state.abb[match(state,state.name)] %in% southwest ~ "Southwest",
+                            state == "California Liquid" ~ "Western",
+                            state == "California Gas" ~ "Western",
+                            state == "Arkansas OGC" ~ "Southwest",
+                            state == "DC" ~ "Eastern",
+                            .default = NA))%>%
+  bind_rows(dfRaw)%>%
+  mutate(class = case_when(
+    score_per == 1 ~ "Excellent",
+    between(score_per, 24.01/33, 32.99/33) ~ "Good",
+    between(score_per, 17/33, 24/33) ~ "Pass",
+    score_per < 16.99/33 ~ "Fail",
+    .default = "Not Rated"
+  ),
+  class_int = case_when(
+    score_per == 1 ~ 4,
+    between(score_per, 24.01/33, 32.99/33) ~ 3,
+    between(score_per, 17/33, 24/33) ~ 2,
+    score_per < 16.99/33 ~ 1,
+    .default = 0
+  ),
+  class = factor(
+    class,
+    levels = c("Not Rated","Fail", "Pass", "Good", "Excellent")
+  ),
+  state = if_else(state == "DC", "District of Columbia", state))
+
+df <- df_wide %>%
+  select(!class)%>%
+  pivot_longer(!c(state, year, region)) %>%
+  drop_na(value)
+
+state_list = df %>% filter(year == 2023) %>% pull(state) %>% unique()
+
+```
+
+```{r loading acs data }
+acs_result <- get_acs(geography = "state",
+                      year = 2022,
+                               variables = c(pop = "B25026_001",
+                                             white = "B01001A_001",
+                                             poverty_pop = "B05010_001",
+                                             poverty_100 = "B05010_002",
+                                             poverty_199 = "B05010_010",
+                                             poverty_200 = "B05010_018",
+                                             #gini
+                                             gini = "B19083_001"))
+
+
+
+acs_result <- rbind(
+  acs_result %>%
+    mutate(state = case_when(NAME == "California" ~ "California Liquid",
+                             .default = NAME)),
+  acs_result %>% 
+    filter(NAME %in% c("California", "Arkansas"))%>%
+    mutate(state = case_when(NAME == "California" ~ "California Gas",
+                              NAME == "Arkansas" ~ "Arkansas OGC",
+                             .default = NAME))
+    
+)
+
+
+```
+
+```{r}
+state_list = df %>% filter(year == 2023) %>% pull(state) %>% unique()
+
+valueLabs <- c("findSite" = "Find Website",
+               "mapGT" = "Trans. Pipe Maps",
+               "regDescription" = "Desc. Regulation",
+               "regAccess" = "Access Stat+Regs",
+               "agencyCon" = "Agency Contacts",
+               "companyCon" = "Comp. Contacts",
+               "excavationData" = "Excav. Dmg. Data",
+               "average" = "Avg. Score",
+               "incData" = "Incident Data",
+               "enforceRecs" = "Enforcement Data",
+               "inpectRecs" = "Inspection Records",
+               "sitingRouting" = "Siting + Routing",
+               "score" = "Score",
+               "score_per" = "Score (%)")
+valueLabsDf <- tibble(name = names(valueLabs), lName = valueLabs) %>%
+  mutate(name = factor(name, levels = c(allScores, "score", "score_per")))
+```
+
+
+```{r getting annual report data}
+# library(plyr)
+
+## read ar part H csvs <-
+#read following cols 
+# OPERATOR_ID, INTER_INTRA, PARTHONNTOTAL
+
+setwd("./data/reports") # set to location of annual reports 
+
+liqAR <- plyr::ldply(.data = list.files(pattern = "HL"),
+               .fun = read.csv
+               )
+gtrAR <- plyr::ldply(.data = list.files(pattern = "GT"),
+               .fun = read.csv
+               )
+
+gdsAR <- plyr::ldply(.data = list.files(pattern = "GD"),
+               .fun = read.csv
+               )
+# 
+# setwd("./old")
+# 
+# liqAROld <- ldply(.data = list.files(pattern = "_liquid_"),
+#                   .fun = read.csv
+#                   )
+# 
+# gtrAROld <- ldply(.data = list.files(pattern = "_transmission_"),
+#                   .fun = read.csv
+#                   )
+#    
+setwd("..")
+setwd("..")
+
+#detach("package:plyr", unload = T)
+```
+
+```{r annual reports to 202 miles}
+hl_miles <- liqAR %>%
+ # filter(REPORT_YEAR == 2022)%>%
+  group_by(STATE_NAME, INTER_INTRA, REPORT_YEAR) %>%
+  summarize(miles = sum(PARTHONTOTAL, na.rm = T)) %>% 
+  ungroup() %>%
+  mutate(SYS = "HL")
+
+gt_miles <- gtrAR %>%
+ # filter(REPORT_YEAR == 2022)%>%
+  group_by(STATE_NAME, INTER_INTRA, REPORT_YEAR) %>%
+  summarize(miles = sum(PARTHONTOTAL, na.rm = T))%>% 
+  ungroup() %>%
+  mutate(SYS = "GT")
+
+gd_miles <- gdsAR %>%
+  mutate(service_miles = (AVERAGE_LENGTH * NUM_SRVCS_TOTAL)/5280,
+         mileage = service_miles + MMILES_TOTAL)  %>%
+  group_by(STOP, REPORT_YEAR) %>%
+  summarize(miles = sum(mileage, na.rm = T))  %>%
+  rename(STATE = STOP) %>%
+  mutate(STATE_NAME = case_when(
+    STATE == "DC"  ~ "WASHINGTON, DC",
+    .default = str_to_upper(state.name[match(STATE, state.abb)])
+  ),
+  SYS = "GD"
+  )
+
+new_miles <- bind_rows(hl_miles, gt_miles, gd_miles)# %>%
+  # mutate(STATE = case_when(
+  #   STATE_NAME == "CALIFORNIA" ~ "CA-L",
+  #   STATE_NAME == "WASHINGTON DC"  ~ "DC",
+  #   .default = state.abb[match(str_to_title(STATE_NAME), state.name)]
+  # ))%>%
+  # bind_rows(gd_miles %>% 
+  #             mutate(STATE = ifelse(STATE == "CA", "CA-L",STATE),
+  #                    STATE_NAME = ifelse(STATE == "CALIFORNIA", 
+  #                                        "CALIFORNIA LIQUID",STATE_NAME))
+  #           ) %>%
+  # bind_rows(
+  #   bind_rows(hl_miles, gt_miles) %>%
+  #     filter(STATE_NAME %in% c( "ARKANSAS", "CALIFORNIA"))%>%
+  #     mutate(STATE = ifelse(STATE_NAME == "ARKANSAS", "AR-O", "CA-G"))%>%
+  #     bind_rows(gd_miles %>% filter(STATE %in% c("AR", "CA") )%>% 
+  #                 mutate(STATE = ifelse(STATE == "AR", "AR-O", "CA-G"),
+  #                        STATE_NAME = ifelse(STATE == "AR-O", 
+  #                                            "ARKANSAS OGC", "CALIFORNIA GAS")))
+  # ) 
+  
+
+new_miles <- new_miles %>%
+  rbind(new_miles %>% filter(REPORT_YEAR == 2022) %>% mutate(REPORT_YEAR = 2023))
+
+view(new_miles %>% filter(REPORT_YEAR == 2022) %>% group_by(STATE) %>% summarize(miles = sum(miles, na.rm = T)))  
+```
+
+
+```{r prog miles and other things}
+capt = "Source: PHMSA Incident and Mileage Data (2010-2022)"
+incdir = "https://raw.githubusercontent.com/jmceager/pst/main/phmsa-clean/data/"
+
+#read_csv(paste0(incdir, "clean/all_inc.csv")) %>%
+  # filter(MDY >= mdy("March 8, 2023")) %>% view
+  # pull(FATAL) %>% sum()
+ 
+inc <- read_csv(paste0(incdir, "clean/all_inc.csv")) %>% filter(IYEAR < 2024) %>%
+  filter(!(REPORT_NUMBER == 20230048 & SYS == "GD"))
+sum(inc$FATAL[inc$IYEAR > 2018])
+sum(inc$FATAL[inc$IYEAR > 2013])
+sum(inc$INJURE[inc$IYEAR > 2018])
+sum(inc$INJURE[inc$IYEAR > 2013])
+
+
+state_summ <- inc %>%
+  # mutate(STATE = case_when(
+  #   STATE == "CA"  ~ "CA-L",
+  #   .default = STATE
+  # )) %>%
+  # rbind(inc %>%
+  # mutate(STATE = case_when(
+  #   STATE == "CA"  ~ "CA-G",
+  #   STATE == "AR" ~ "AR-O",
+  #   .default = "no"
+  #   )) %>%
+  # filter(STATE != "no")
+  # ) %>%
+  filter(IYEAR >= 2019)%>%
+  group_by(STATE, IYEAR)%>%
+  summarize(
+    incidents = n(),
+    sig = sum(SIGNIFICANT == "YES", na.rm = T),
+    ser = sum(SERIOUS == "YES", na.rm = T),
+    fatal = sum(FATAL, na.rm = T),
+    injure = sum(INJURE, na.rm = T),
+    gas_release = sum(TOTAL_RELEASE[SYS %in% c("GD", "GT", "GG")],
+                      na.rm = T),
+    liquid_release = sum(TOTAL_RELEASE[SYS == "HL" ],
+                      na.rm = T),
+    damage_cost = sum(TOTAL_COST_CURRENT, na.rm = T)
+    ) %>%
+ right_join(
+    new_miles %>%
+      group_by(STATE, REPORT_YEAR)%>%
+      summarize(miles = sum(miles, na.rm = T)) %>%
+      ungroup(),
+    by = c("STATE" = "STATE","IYEAR" = "REPORT_YEAR")
+  )  %>%
+  filter(STATE != "OCS") %>%
+  mutate(sig_rate = sig / (miles/1000)#,
+    #      STATE_NAME = case_when(
+    #   STATE == "CA-G" ~ "California Gas",
+    #   STATE ==  "CA-L" ~ "California Liquid",
+    #   STATE == "AR-O" ~ "Arkansas OGC",
+    #   STATE == "DC" ~ "District of Columbia",
+    #   .default = state.name[match(STATE, state.abb)]
+    # )
+    ) %>%
+    mutate(across(incidents:sig_rate, ~ replace_na(.x,0))) %>%
+  filter(IYEAR > 2018) %>%
+  group_by(STATE) %>%
+  summarize(across(incidents:damage_cost, ~ sum(.x,na.rm = T)),
+            miles = miles[IYEAR == 2023],
+            sig_rate_5 = sum(sig) / (sum(miles)/1000)) #%>%
+  # left_join((acs_result) %>% filter(variable == "pop"), 
+  #           by = c("STATE_NAME" = "state")) %>%
+ # mutate(pop_miles =  miles / (estimate/100000))  # miles per 100k 
+ 
+
+
+
+gd_sum <- inc %>%
+  filter(SYS == "GD")%>%
+  # mutate(STATE = case_when(
+  #   STATE == "CA"  ~ "CA-L",
+  #   .default = STATE
+  # )) %>%
+  # rbind(inc %>%
+  # mutate(STATE = case_when(
+  #   STATE == "CA"  ~ "CA-G",
+  #   STATE == "AR" ~ "AR-O",
+  #   .default = "no"
+  #   )) %>%
+  # filter(STATE != "no")
+  # ) %>%
+  filter(IYEAR >= 2019)%>%
+  group_by(STATE, IYEAR)%>%
+  summarize(
+    incidents = n(),
+    sig = sum(SIGNIFICANT == "YES", na.rm = T),
+    ser = sum(SERIOUS == "YES", na.rm = T),
+    fatal = sum(FATAL, na.rm = T),
+    injure = sum(INJURE, na.rm = T),
+    gas_release = sum(TOTAL_RELEASE[SYS %in% c("GD", "GT", "GG")],
+                      na.rm = T),
+    liquid_release = sum(TOTAL_RELEASE[SYS == "HL" ],
+                      na.rm = T),
+    damage_cost = sum(TOTAL_COST_CURRENT, na.rm = T)
+    ) %>%
+ right_join(
+    new_miles %>%
+      group_by(STATE, REPORT_YEAR)%>%
+      summarize(miles = sum(miles, na.rm = T)) %>%
+      ungroup(),
+    by = c("STATE" = "STATE","IYEAR" = "REPORT_YEAR")
+  )  %>%
+  filter(STATE != "OCS") %>%
+  mutate(sig_rate = sig / (miles/1000)#,
+    #      STATE_NAME = case_when(
+    #   STATE == "CA-G" ~ "California Gas",
+    #   STATE ==  "CA-L" ~ "California Liquid",
+    #   STATE == "AR-O" ~ "Arkansas OGC",
+    #   STATE == "DC" ~ "District of Columbia",
+    #   .default = state.name[match(STATE, state.abb)]
+    # )
+    ) %>%
+    mutate(across(incidents:sig_rate, ~ replace_na(.x,0))) %>%
+  filter(IYEAR > 2018) %>%
+  group_by(STATE) %>%
+  summarize(across(incidents:damage_cost, ~ sum(.x,na.rm = T)),
+            miles = miles[IYEAR == 2023],
+            sig_rate_5 = sum(sig) / (sum(miles)/1000)) #%>%
+  # left_join((acs_result) %>% filter(variable == "pop"), 
+  #           by = c("STATE_NAME" = "state")) %>%
+ # mutate(pop_miles =  miles / (estimate/100000))  # miles per 100k 
+ 
+
+hl_summ <- inc %>%
+  filter(SYS== "HL")%>%
+  # mutate(STATE = case_when(
+  #   STATE == "CA"  ~ "CA-L",
+  #   .default = STATE
+  # )) %>%
+  # rbind(inc %>%
+  # mutate(STATE = case_when(
+  #   STATE == "CA"  ~ "CA-G",
+  #   STATE == "AR" ~ "AR-O",
+  #   .default = "no"
+  #   )) %>%
+  # filter(STATE != "no")
+  # ) %>%
+  filter(IYEAR >= 2019)%>%
+  group_by(STATE, IYEAR)%>%
+  summarize(
+    incidents = n(),
+    sig = sum(SIGNIFICANT == "YES", na.rm = T),
+    ser = sum(SERIOUS == "YES", na.rm = T),
+    fatal = sum(FATAL, na.rm = T),
+    injure = sum(INJURE, na.rm = T),
+    gas_release = sum(TOTAL_RELEASE[SYS %in% c("GD", "GT", "GG")],
+                      na.rm = T),
+    liquid_release = sum(TOTAL_RELEASE[SYS == "HL" ],
+                      na.rm = T),
+    damage_cost = sum(TOTAL_COST_CURRENT, na.rm = T)
+    ) %>%
+ right_join(
+    new_miles %>%
+      group_by(STATE, REPORT_YEAR)%>%
+      summarize(miles = sum(miles, na.rm = T)) %>%
+      ungroup(),
+    by = c("STATE" = "STATE","IYEAR" = "REPORT_YEAR")
+  )  %>%
+  filter(STATE != "OCS") %>%
+  mutate(sig_rate = sig / (miles/1000)#,
+    #      STATE_NAME = case_when(
+    #   STATE == "CA-G" ~ "California Gas",
+    #   STATE ==  "CA-L" ~ "California Liquid",
+    #   STATE == "AR-O" ~ "Arkansas OGC",
+    #   STATE == "DC" ~ "District of Columbia",
+    #   .default = state.name[match(STATE, state.abb)]
+    # )
+    ) %>%
+    mutate(across(incidents:sig_rate, ~ replace_na(.x,0))) %>%
+  filter(IYEAR > 2018) %>%
+  group_by(STATE) %>%
+  summarize(across(incidents:damage_cost, ~ sum(.x,na.rm = T)),
+            miles = miles[IYEAR == 2023],
+            sig_rate_5 = sum(sig) / (sum(miles)/1000)) #%>%
+  # left_join((acs_result) %>% filter(variable == "pop"), 
+  #           by = c("STATE_NAME" = "state")) %>%
+ # mutate(pop_miles =  miles / (estimate/100000))  # miles per 100k 
+ 
+
+gt_summ <- inc %>%
+  filter(SYS == "GT")%>%
+  # mutate(STATE = case_when(
+  #   STATE == "CA"  ~ "CA-L",
+  #   .default = STATE
+  # )) %>%
+  # rbind(inc %>%
+  # mutate(STATE = case_when(
+  #   STATE == "CA"  ~ "CA-G",
+  #   STATE == "AR" ~ "AR-O",
+  #   .default = "no"
+  #   )) %>%
+  # filter(STATE != "no")
+  # ) %>%
+  filter(IYEAR >= 2019)%>%
+  group_by(STATE, IYEAR)%>%
+  summarize(
+    incidents = n(),
+    sig = sum(SIGNIFICANT == "YES", na.rm = T),
+    ser = sum(SERIOUS == "YES", na.rm = T),
+    fatal = sum(FATAL, na.rm = T),
+    injure = sum(INJURE, na.rm = T),
+    gas_release = sum(TOTAL_RELEASE[SYS %in% c("GD", "GT", "GG")],
+                      na.rm = T),
+    liquid_release = sum(TOTAL_RELEASE[SYS == "HL" ],
+                      na.rm = T),
+    damage_cost = sum(TOTAL_COST_CURRENT, na.rm = T)
+    ) %>%
+ right_join(
+    new_miles %>%
+      group_by(STATE, REPORT_YEAR)%>%
+      summarize(miles = sum(miles, na.rm = T)) %>%
+      ungroup(),
+    by = c("STATE" = "STATE","IYEAR" = "REPORT_YEAR")
+  )  %>%
+  filter(STATE != "OCS") %>%
+  mutate(sig_rate = sig / (miles/1000)#,
+    #      STATE_NAME = case_when(
+    #   STATE == "CA-G" ~ "California Gas",
+    #   STATE ==  "CA-L" ~ "California Liquid",
+    #   STATE == "AR-O" ~ "Arkansas OGC",
+    #   STATE == "DC" ~ "District of Columbia",
+    #   .default = state.name[match(STATE, state.abb)]
+    # )
+    ) %>%
+    mutate(across(incidents:sig_rate, ~ replace_na(.x,0))) %>%
+  filter(IYEAR > 2018) %>%
+  group_by(STATE) %>%
+  summarize(across(incidents:damage_cost, ~ sum(.x,na.rm = T)),
+            miles = miles[IYEAR == 2023],
+            sig_rate_5 = sum(sig) / (sum(miles)/1000)) #%>%
+  # left_join((acs_result) %>% filter(variable == "pop"), 
+  #           by = c("STATE_NAME" = "state")) %>%
+ # mutate(pop_miles =  miles / (estimate/100000))  # miles per 100k 
+ 
+
+
+# state_summ %>% 
+#   rename(st_abb = STATE,
+#          state = STATE_NAME)%>%
+#   dplyr::select(state, st_abb, miles, pop_miles, sig, sig_rate_mu, sig_rate_5, fatal, injure)%>%
+#   right_join(
+#     df_wide %>%
+#       filter(year == 2023)%>%
+#       dplyr::select(state, score)%>%
+#       rename(score_23 = score)%>%
+#       left_join(df_wide %>% 
+#                   filter(year == 2018) %>%  
+#                   select(state, score) %>%
+#                   rename(score_18 = score)) %>%
+#       mutate(change_5_yr = score_23 - score_18) %>%
+#       dplyr::select(state, change_5_yr)
+#     ) %>% 
+#   filter(!is.na(change_5_yr)) %>% view() %>%
+#  write_csv("example_data_simple.csv")
+  
+
+write_csv(gt_summ, "gt.csv")
+write_csv(gd_sum, "gd.csv")
+write_csv(hl_summ, "hl.csv")
+write_csv(state_summ, "all.csv")
+  
+```  
+
+
+```{r hex data}
+hexes_new <- read_sf("/Users/jameseager/Documents/pst/phmsa-clean/data/gis/new_hex_st/HexStates.shp") %>%
+  mutate(State = if_else(grepl("OCG", State), "Arkansas OGC", State))
+
+#for abbr things
+stab_check <- hexes_new %>%
+  st_drop_geometry()%>% select(State, State_Abbr)
+
+stab_ab = stab_check$State_Abbr
+stab_name = stab_check$State
+
+hn_center <- hexes_new %>%
+  st_centroid() %>%
+  mutate(x = st_coordinates(.)[1],
+         y = st_coordinates(.)[2])%>%
+  rename(sa = State_Abbr)
+
+df23_hex <- df_wide%>%
+  filter(year == 2023)%>%
+  right_join(hexes_new, by = c("state" = "State")) %>%
+  replace_na(list(class = "Not Rated"))
+``` 
+
+
+## maps
+
+
+
+## radials / polars
+
+```{r radial horizontal }
+
+df %>%
+  filter(year == 2023, name %in% c(catAcs, catComm, catData)) %>%
+  group_by(state)%>%
+  mutate(average = mean(value))%>%
+  ungroup()%>%
+  mutate(nameCat = case_when(name %in% catAcs ~ agencyName,
+                             name %in% catComm ~ commsName,
+                             name %in% catData ~ dataName))%>%
+  arrange(state, average)%>%
+  mutate(name = factor(name, levels = c(catComm, catData, catAcs)),
+         state = str_wrap(state, 13))%>%
+  ggplot(aes(x = name, y = value, fill = as.factor(nameCat)))+
+  geom_hline(yintercept = 3, linewidth = .33)+
+  geom_hline(yintercept = 2, linetype = "dotted", color = "gray30",
+             linewidth = .33)+
+  geom_hline(yintercept = 1, linetype = "dotted", color = "gray30",
+             linewidth = .33)+
+  geom_bar(stat = "identity", alpha = .8)+
+  scale_fill_manual(values = pstMax, name = "Score Category:")+
+  theme_minimal()+
+  labs(title = "State Transparency Ratings:",
+       subtitle = "Criteria and Category Ratings by State",
+      # caption = capt,
+       tag = tag)+
+  theme(
+    text = element_text(family = pstFont),
+    axis.text = element_blank(),
+    axis.title = element_blank(),
+    panel.grid = element_blank(),
+    legend.background = element_rect(fill = NULL, 
+                                     color = "#182125"),
+    legend.title = element_text(face = "bold",hjust = .1,
+                                size = bs),
+    legend.key = element_blank(),
+    legend.text = element_text(size = bs*.8),
+    #legend.spacing.y = unit(.125, 'cm'), # why am i doing this in cm?
+    panel.spacing.x = unit(4.5,"pt"),
+    plot.tag.position = c(.97,.97),
+    panel.spacing.y = unit(-1,"pt"),
+    panel.background = element_blank(),
+    strip.text = element_text(size = bs*.8),
+    strip.text.x = element_text(vjust = 0, margin = margin(1.5,0,-.5,0),
+                                debug = F),
+    strip.clip = "off",
+    plot.tag = element_text(colour = "#8C9394", size = bs * .6),
+    plot.background = element_rect(fill =NA, color = NA),
+    plot.title = element_text(face = "bold", size = bs * 1.2),
+    plot.subtitle = element_text(colour = "#8C9394", size = bs),
+    plot.caption = element_text(size = bs *.8),
+    legend.position = "none",
+    legend.justification = "left",
+    plot.margin = ggplot2::margin(6, 3, 1.5, 3, "pt")
+    )+
+  coord_polar()+
+  facet_wrap(~reorder(state, -average), nrow = 5)
+
+plot_name = "all_states_horizontal_polar"
+ggsave(plot_name, device = "pdf", path =expo_dir,
+       width = 10, height = 10/1.62)
+```
+
+```{r radial horizontal }
+
+df %>%
+  filter(year == 2023, name %in% c(catAcs, catComm, catData)) %>%
+  group_by(state)%>%
+  mutate(average = mean(value))%>%
+  ungroup()%>%
+  mutate(nameCat = case_when(name %in% catAcs ~ agencyName,
+                             name %in% catComm ~ commsName,
+                             name %in% catData ~ dataName))%>%
+  arrange(state, average)%>%
+   mutate(name = factor(name, levels = c(catComm, catData, catAcs)),
+          state = str_wrap(state, 13))%>%
+  ggplot(aes(x = name, y = value, fill = as.factor(nameCat)))+
+  geom_hline(yintercept = 3, linewidth = .33)+
+  geom_hline(yintercept = 2, linetype = "dotted", color = "gray30",
+             linewidth = .33)+
+  geom_hline(yintercept = 1, linetype = "dotted", color = "gray30",
+             linewidth = .33)+
+  geom_bar(stat = "identity", alpha = .8)+
+  scale_fill_manual(values = pstMax, name = "Score Category:")+
+  theme_minimal()+
+  labs(title = "State Transparency Ratings:",
+       subtitle = "Criteria and Category Ratings by State",
+      # caption = capt,
+       tag = tag)+
+  theme(
+    text = element_text(family = pstFont),
+    axis.text = element_blank(),
+    axis.title = element_blank(),
+    panel.grid = element_blank(),
+    legend.background = element_rect(fill = NULL, 
+                                     color = "#182125"),
+    legend.title = element_text(face = "bold",hjust = .1,
+                                size = bs),
+    legend.key = element_blank(),
+    legend.text = element_text(size = bs*.8),
+    #legend.spacing.y = unit(.125, 'cm'), # why am i doing this in cm?
+    panel.spacing.x = unit(4.5,"pt"),
+    plot.tag.position = c(.97,.97),
+    panel.spacing.y = unit(-1,"pt"),
+    panel.background = element_blank(),
+    strip.text = element_text(size = bs*.8),
+    strip.text.x = element_text(vjust = 0, margin = margin(1.5,0,-.5,0),
+                                debug = F),
+    strip.clip = "off",
+    plot.tag = element_text(colour = "#8C9394", size = bs * .6),
+    plot.background = element_rect(fill =NA, color = NA),
+    plot.title = element_text(face = "bold", size = bs * 1.2),
+    plot.subtitle = element_text(colour = "#8C9394", size = bs),
+    plot.caption = element_text(size = bs *.8),
+    legend.position = "none",
+    legend.justification = "left",
+    plot.margin = ggplot2::margin(6, 3, 1.5, 3, "pt")
+    )+
+  coord_polar()+
+  facet_wrap(~state, nrow = 5)
+
+plot_name = "all_states_horizontal_polar_abc"
+ggsave(plot_name, device = "pdf", path =expo_dir,
+       width = 10, height = 10/1.62)
+```
+
+```{r radial vertical }
+
+df %>%
+  filter(year == 2023, name %in% c(catAcs, catComm, catData)) %>%
+  group_by(state)%>%
+  mutate(average = mean(value))%>%
+  ungroup()%>%
+  mutate(nameCat = case_when(name %in% catAcs ~ agencyName,
+                             name %in% catComm ~ commsName,
+                             name %in% catData ~ dataName))%>%
+  arrange(state, average)%>%
+  mutate(name = factor(name, levels = c(catComm, catData, catAcs)),
+         state = str_wrap(state, 13))%>%
+  ggplot(aes(x = name, y = value, fill = as.factor(nameCat)))+
+  geom_hline(yintercept = 3, linewidth = .33)+
+  geom_hline(yintercept = 2, linetype = "dotted", color = "gray30",
+             linewidth = .33)+
+  geom_hline(yintercept = 1, linetype = "dotted", color = "gray30",
+             linewidth = .33)+
+  geom_bar(stat = "identity", alpha = .8)+
+  scale_fill_manual(values = pstMax, name = "Score Category:")+
+  theme_minimal()+
+  labs(title = "State Transparency Ratings:",
+       subtitle = "Criteria and Category Ratings by State",
+      # caption = capt,
+       tag = tag)+
+  theme(
+    text = element_text(family = pstFont),
+    axis.text = element_blank(),
+    axis.title = element_blank(),
+    panel.grid = element_blank(),
+    legend.background = element_rect(fill = NULL, 
+                                     color = "#182125"),
+    legend.title = element_text(face = "bold",hjust = .1,
+                                size = bs),
+    legend.key = element_blank(),
+    legend.text = element_text(size = bs*.8),
+    #legend.spacing.y = unit(.125, 'cm'), # why am i doing this in cm?
+    panel.spacing.x = unit(9,"pt"),
+    plot.tag.position = c(.97,.97),
+    panel.spacing.y = unit(-3,"pt"),
+    panel.background = element_blank(),
+    strip.text = element_text(size = bs*.8),
+    strip.text.x = element_text(vjust = 0, margin = margin(1.5,0,-.5,0),
+                                debug = F),
+    strip.clip = "off",
+    plot.tag = element_text(colour = "#8C9394", size = bs * .6),
+    plot.background = element_rect(fill =NA, color = NA),
+    plot.title = element_text(face = "bold", size = bs * 1.2),
+    plot.subtitle = element_text(colour = "#8C9394", size = bs),
+    plot.caption = element_text(size = bs *.8),
+    legend.position = "none",
+    legend.justification = "left",
+    plot.margin = ggplot2::margin(6, 3, 1.5, 3, "pt")
+    )+
+  coord_polar()+
+  facet_wrap(~reorder(state, -average), ncol = 6)
+
+plot_name = "all_states_vertical_polar"
+ggsave(plot_name, device = "pdf", path =expo_dir,
+       height = 10, width = 10/1.62)
+```
+
+```{r iterative radials}
+state_list = df %>% filter(year == 2023) %>% pull(state) %>% unique()
+
+valueLabs <- c("findSite" = "Find Website",
+               "mapGT" = "Trans. Pipe Maps",
+               "regDescription" = "Desc. Regulation",
+               "regAccess" = "Access Stat+Regs",
+               "agencyCon" = "Agency Contacts",
+               "companyCon" = "Comp. Contacts",
+               "excavationData" = "Excav. Dmg. Data",
+               "average" = "Avg. Score",
+               "incData" = "Incident Data",
+               "enforceRecs" = "Enforcement Data",
+               "inpectRecs" = "Inspection Records",
+               "sitingRouting" = "Siting + Routing",
+               "score" = "Composite Score",
+               "score_per" = "Percentage Score")
+valueLabsDf <- tibble(name = names(valueLabs), lName = valueLabs) %>%
+  mutate(name = factor(name, levels = c(allScores, "score", "score_per")))
+
+# for each regulator in full list
+for(i in 1:length(state_list)) {
+  i_state = state_list[[i]]
+  #handle reddit state abbreviations not including certain regulators
+  i_stab = case_when(
+      i_state == "California Gas" ~ "CA-G",
+      i_state == "California Liquid" ~ "CA-L",
+      i_state == "Arkansas OGC" ~ "AR-O",
+      i_state == "District of Columbia" ~ "DC",
+      .default = state.abb[match(i_state, state.name)]
+    )
+  
+  #create small df of specific scores and label with criteria names
+  i_df <- df %>% 
+    filter(year == 2023, state == i_state, 
+           name %in% allScores) %>%
+    mutate(nameCat = case_when(name %in% catAcs ~ agencyName,
+                             name %in% catComm ~ commsName,
+                             name %in% catData ~ dataName),
+            name = factor(name, levels = c(catComm, catData, catAcs))) %>%
+    left_join(valueLabsDf)
+  
+  #create main ggplot 
+  i_gg <- i_df %>%
+  ggplot(aes(x = name, y = value, fill = as.factor(nameCat)))+
+    geom_hline(yintercept = 3.02, linewidth = .6)+
+    geom_bar(stat = "identity", alpha = .8)+
+    scale_fill_manual(values = pstMax)+
+    theme_minimal()+
+    #remove labeles for cut sheets
+    # labs(title = "State Transparency Ratings by Category",
+    #      caption = capt,
+    #      tag = tag)+
+    #adjust theme
+    theme(
+      text = element_text(family = pstFont),
+      axis.text = element_blank(),
+      axis.title = element_blank(),
+      panel.grid = element_blank(),
+      plot.background = element_rect(fill = NA, color = NA),
+      plot.title = element_text(face = "bold", size = bs * 1.2),
+      plot.subtitle = element_text(colour = "#8C9394", size = bs),
+      plot.caption = element_text(size = bs *.8),
+      legend.position = "none",
+      legend.justification = "left",
+      plot.margin = ggplot2::margin(0, 0, 0, 0, "pt")
+      )+
+    coord_polar()
+  # export unlabeled for cut sheet
+  i_expo = paste0(expo_dir, "radials/",i_stab, "_radial.pdf")
+  ggsave(plot = i_gg, filename = i_expo, 
+         width = 3, height = 3, units = "in",
+         dpi = 300, bg = NULL)
+  #add labels for QA/QC
+  i_gg_lab <- i_gg +
+    geom_text(aes(label = str_wrap(lName, 8), y = 3.7), 
+              lineheight = 1, size = 2.7)+
+    labs(tag = i_state)+
+    theme(plot.tag = element_text(face = "bold", size = 8, 
+                                  colour = "black"),
+          plot.tag.position = c(0.15,0.98))
+  #export labeled verison 
+  i_expo_lab = paste0(expo_dir,"radials/", i_stab, "_radial_label.pdf")
+  ggsave(plot = i_gg_lab, filename = i_expo_lab, 
+         width = 3, height = 3, units = "in",
+         dpi = 300)
+}
+
+```
+
+```{r iterative radials no line}
+
+#
+for(i in 1:length(state_list)) {
+  i_state = state_list[[i]]
+  i_stab = case_when(
+      i_state == "California Gas" ~ "CA-G",
+      i_state == "California Liquid" ~ "CA-L",
+      i_state == "Arkansas OGC" ~ "AR-O",
+      i_state == "District of Columbia" ~ "DC",
+      .default = state.abb[match(i_state, state.name)]
+    )
+  
+  i_df <- df %>% 
+    filter(year == 2023, state == i_state, 
+           name %in% allScores) %>%
+    mutate(nameCat = case_when(name %in% catAcs ~ agencyName,
+                             name %in% catComm ~ commsName,
+                             name %in% catData ~ dataName),
+            name = factor(name, levels = c(catComm, catData, catAcs))) %>%
+    left_join(valueLabsDf)
+  
+  i_gg <- i_df %>%
+  ggplot(aes(x = name, y = value, fill = as.factor(nameCat)))+
+    #geom_hline(yintercept = 3.02, linewidth = .6)+
+    # geom_hline(yintercept = 2, linetype = "dotted", color = "gray30",
+    #            linewidth = .8)+
+    # geom_hline(yintercept = 1, linetype = "dotted", color = "gray30",
+    #            linewidth = .8)+
+    geom_bar(stat = "identity", alpha = .8)+
+    scale_fill_manual(values = pstMax)+
+    theme_minimal()+
+    # labs(title = "State Transparency Ratings by Category",
+    #      caption = capt,
+    #      tag = tag)+
+    theme(
+      text = element_text(family = pstFont),
+      axis.text = element_blank(),
+      axis.title = element_blank(),
+      panel.grid = element_blank(),
+      plot.background = element_rect(fill = NA, color = NA),
+      plot.title = element_text(face = "bold", size = bs * 1.2),
+      plot.subtitle = element_text(colour = "#8C9394", size = bs),
+      plot.caption = element_text(size = bs *.8),
+      legend.position = "none",
+      legend.justification = "left",
+      plot.margin = ggplot2::margin(0, 0, 0, 0, "pt")
+      )+
+    coord_polar()
+  #unlabeled unmastered
+  i_expo = paste0(expo_dir,"radials/", i_stab, "_radial_nl.pdf")
+  ggsave(plot = i_gg, filename = i_expo, 
+         width = 3, height = 3, units = "in",
+         dpi = 300, bg = NULL)
+  #suited and booted
+  i_gg_lab <- i_gg +
+    geom_text(aes(label = str_wrap(lName, 8), y = 3.7), 
+              lineheight = 1, size = 2.7)+
+    labs(tag = i_state)+
+    theme(plot.tag = element_text(face = "bold", size = 8, 
+                                  colour = "black"),
+          plot.tag.position = c(0.15,0.98))
+  
+  i_expo_lab = paste0(expo_dir,"radials/", i_stab, "_radial_label_nl.pdf")
+  ggsave(plot = i_gg_lab, filename = i_expo_lab, 
+         width = 3, height = 3, units = "in",
+         dpi = 300)
+}
+
+```
+
+
+## maps
+
+```{r class  map}
+
+
+
+ggplot()+
+  layer_spatial(df23_hex, aes(fill = class), col = "#fffff0")+
+  geom_sf_text(data = hn_center, mapping = aes(label = sa), col = "#fffff0")+
+  scale_fill_manual(values = c( Excellent = new_pal[[4]],
+                                Good = new_pal[[3]],
+                                Pass = new_pal[[2]],
+                                Fail = new_pal[[1]],
+                                `Not Rated` = new_pal[[5]]), name = NULL,
+                    breaks = c("Excellent", "Good", "Pass", "Fail", "Not Rated"))+
+  theme_pst_map()+
+  theme(legend.position = "right",
+        legend.direction = "vertical",
+        plot.margin = margin(6,6,3,6))+
+  labs(tag = tag)
+
+plot_name = "class_hex.pdf"
+ggsave(plot_name, path= expo_dir, device = "pdf",
+       width = wdt, height = hgt)
+```
+
+```{r score  map}
+ggplot()+
+  layer_spatial(df23_hex, aes(fill = score), col = "#fffff0")+
+  geom_sf_text(data = hn_center, mapping = aes(label = sa), col = "#fffff0")+
+  scale_fill_viridis(option = "G", name = "Score", end = .8)+
+  theme_pst_map()+
+  labs(title = "State Transparency Scores",
+       tag = tag)+
+  theme(legend.title = element_text(vjust = .8),
+        legend.position = "right",
+        legend.direction = "vertical",
+        plot.margin = margin(6,6,3,6))
+
+plot_name = "score_hex.pdf"
+ggsave(plot_name, path= expo_dir, device = "pdf",
+       width = wdt, height = hgt)
+```
+
+```{r score  map bins}
+ggplot()+
+  layer_spatial(df23_hex, aes(fill = score), col = "#fffff0")+
+  geom_sf_text(data = hn_center, mapping = aes(label = sa), col = "#fffff0")+
+  scale_fill_viridis_b(option = "G", name = "Score", end = .8,
+                       breaks = c(0,12,18,24, 30),
+                       limits = c(0,33),
+                       labels = c("<12", "18" ,"24", "30", ">30"),
+                       show.limits = T)+
+  theme_pst_map()+
+  labs(title = "State Transparency Scores",
+       tag = tag)+
+  theme(legend.title = element_text(vjust = .8),
+        legend.position = "right",
+        legend.direction = "vertical",
+        legend.text = element_text(vjust = -.5),
+        plot.margin = margin(6,6,3,6))
+  
+plot_name = "score_hex_bins.pdf"
+ggsave(plot_name, path= expo_dir, device = "pdf",
+       width = wdt, height = hgt)
+```
+
+```{r maps by category}
+df_cat_hex<- df %>%
+  filter(year == 2023)%>%
+  mutate(
+    cat = case_when(
+      name %in% catAcs ~ agencyName,
+      name %in% catComm ~ commsName,
+      name %in% catData ~ dataName,
+      name == "score" ~ "Score",
+      .default = NA
+    )
+  )%>%
+  drop_na(cat)%>% 
+  filter(cat != "Score")%>%
+  group_by(state, cat)%>%
+  summarize(value = mean(value))%>%
+  mutate(
+    cat_class = case_when(
+    value == 3 ~ "Excellent",
+    value > 24/11 & value <= 32/11 ~ "Good",
+     value > 17/11 & value <= 24/11  ~ "Pass",
+    value <= 17/11 ~ "Fail",
+    .default = NA
+  ),
+    cat_class = factor(
+    cat_class,
+    levels = c("Fail", "Pass", "Good", "Excellent")
+  ))%>%
+  ungroup()%>%
+  bind_rows(tibble(state = c("Alaska", "Hawaii"),
+                   State_Abbr = c("AK", "HI")))%>%
+  complete(state, cat, fill = list(value = NA))%>%
+  drop_na(cat)%>%
+  right_join(hexes_new, by = c("state" = "State"))
+
+#### facet ####
+ggplot()+
+  layer_spatial(df_cat_hex %>% filter(cat != "Score"), 
+                aes(fill = cat_class), col = "#fffff0")+
+  geom_sf_text(data = hn_center, mapping = aes(label = sa), 
+               col = "#fffff0", size = 3)+
+  scale_fill_viridis_d(option = "G",end = .8 , 
+                       na.value = "gray65", name = NULL,
+                       breaks = c("Fail", "Pass", "Good", "Excellent"))+
+  #guides(fill = guide_legend(label.position = "bottom", show.limits = T))+
+  theme_pst_map()+
+  theme(panel.background = element_rect(colour = "gray45",
+                                        linewidth = .8),
+        strip.clip = "false",
+        strip.text = element_text(margin = margin(2,2,2,2,)),
+        plot.margin = margin(3,6,6,6),
+        legend.position = "right",
+        legend.direction = "vertical")+
+  facet_wrap(~cat, nrow = 3)+
+  labs(title = "Average State Score by Category", tag = tag)
+
+plot_name = "score_cat_hex.pdf"
+ggsave(plot_name, path= expo_dir, 
+       width = wdt, height = wdt*1.25)
+
+#### agency ####
+ggplot()+
+  layer_spatial(df_cat_hex %>% filter(cat == "Agency Authority"), 
+                aes(fill = cat_class), col = "#fffff0")+
+  geom_sf_text(data = hn_center, mapping = aes(label = sa), 
+               col = "#fffff0", size = 3)+
+  scale_fill_viridis_d(option = "G",end = .8 , na.value = "gray65",
+                       breaks = c("Fail", "Pass", "Good", "Excellent"),
+                       name = NULL)+
+  #guides(fill = guide_legend(label.position = "bottom", show.limits = T))+
+  theme_pst_map()+
+  theme(legend.position = "none",
+        legend.direction = "vertical",
+        plot.margin = margin(6,6,3,6))+
+  labs(caption = agencyName, tag = tag)
+
+plot_name = "score_agency_hex.pdf"
+ggsave(plot_name, path= expo_dir, 
+       width = wdt, height = hgt)
+
+#### communication ####
+ggplot()+
+  layer_spatial(df_cat_hex %>% filter(cat == commsName), 
+                aes(fill = cat_class), col = "#fffff0")+
+  geom_sf_text(data = hn_center, mapping = aes(label = sa), 
+               col = "#fffff0", size = 3)+
+  scale_fill_viridis_d(option = "G",end = .8 , na.value = "gray65",
+                       breaks = c("Fail", "Pass", "Good", "Excellent"),
+                       name = NULL)+
+  #guides(fill = guide_legend(label.position = "bottom", show.limits = T))+
+  theme_pst_map()+
+  theme(plot.margin = margin(6,6,3,6),
+        legend.position = "none",
+        legend.direction = "vertical")+
+  labs(caption = commsName, tag = tag)
+
+plot_name = "score_communication_hex.pdf"
+ggsave(plot_name, path= expo_dir, 
+       width = wdt, height = hgt)
+
+
+#### data ####
+ggplot()+
+  layer_spatial(df_cat_hex %>% filter(cat == dataName), 
+                aes(fill = cat_class), col = "#fffff0")+
+  geom_sf_text(data = hn_center, mapping = aes(label = sa), 
+               col = "#fffff0", size = 3)+
+  scale_fill_viridis_d(option = "G",end = .8 , na.value = "gray65",
+                       breaks = c("Fail", "Pass", "Good", "Excellent"),
+                       name = NULL)+
+  #guides(fill = guide_legend(label.position = "bottom", show.limits = T))+
+  theme_pst_map()+
+  theme(plot.margin = margin(6,6,3,6),
+        legend.position = "none",
+        legend.direction = "vertical")+
+  labs(caption = dataName, tag = tag)
+
+plot_name = "score_data_hex.pdf"
+ggsave(plot_name, path= expo_dir,
+       width = wdt, height = hgt)
+```
+
+
+
+## matrix 
+```{r all scores matrix avg}
+score_names = c("score", "score_per", "class", "class_int", "average")
+
+df %>%
+  filter(year == 2023, !name %in% score_names) %>%
+  bind_rows(df %>% filter(year == 2023, name == "score"))%>% 
+  left_join(df %>% filter(year == 2023, name == "score"), by = "state",
+            suffix = c("", ".j"))%>%
+  left_join(valueLabsDf)%>%
+  mutate(name = factor(name, 
+                       levels = c("score", catComm, catData, catAcs)))%>% 
+  ggplot(aes(y = name, x = reorder(state, value.j), fill = value))+
+  geom_tile(width = .8, height = .8)+
+  geom_text(data = (df %>%
+                      filter(year == 2023, name == "score")),
+            aes(x = state, y = name, label = round(value, 2)#,
+               # col = value >= 2.95
+                ),
+            fontface = "bold",  size = 3, color = "#fffff0")+
+  scale_y_discrete(position = "right", label = valueLabs)+
+  scale_fill_viridis(option = "G", end = .8, name = "Rating", limits = c(0,3))+
+  #scale_color_manual(values = c("#fffff0", "#141400"))+
+  theme_pst()+
+  coord_flip()+
+  labs(title = "State Transparency Ratings",
+       subtitle = "State, Average Score, and Category Matrix",
+       tag = tag,
+       x = NULL,
+       y = NULL)+
+  theme(axis.line.y = element_blank(),
+        axis.line.x = element_blank(),
+        axis.text = element_text(color = "#182125"),
+        axis.text.x = element_text(angle = -27, hjust = 1),
+        panel.grid.major.y = element_blank(),
+        legend.position = "none",
+        legend.justification = "left")
+
+plot_name = "matrix_tile_avg.pdf"
+ggsave(plot_name, path= expo_dir,
+       width = wdt, height = wdt * 1.25)
+
+```
+
+```{r all scores matrix score  }
+matrix_fun <- df %>%
+  filter(year == 2023, !name %in% score_names) %>%
+  bind_rows(df %>% filter(year == 2023, name == "score"))%>% 
+  left_join(df %>% filter(year == 2023, name == "score"), by = "state",
+            suffix = c("", ".j"))%>%
+  left_join(df %>% filter(year == 2023, name == "class_int"), by = "state",
+            suffix = c("", ".2"))%>% 
+  left_join(valueLabsDf)%>%
+  mutate(name = factor(name, 
+                       levels = c("score", catComm, catData, catAcs)),
+         class_fill = case_when(
+           value.2 == 4 ~ 3,
+           value.2 == 3 ~ 2,
+           value.2 == 2 ~ 1,
+           value.2 == 1 ~ 0,
+           .default = NA
+         ),
+         state = factor(state,
+                        levels = state_list[order(state_list)]))
+  
+ggplot()+
+  geom_tile(width = .8, height = .8,
+            data = matrix_fun %>% filter(name == "score"),
+            aes(y = name, x = fct_reorder(fct_rev(state), value.j), fill = class_fill))+
+  geom_tile(width = .8, height = .8,
+            data = matrix_fun %>% filter(name != "score"),
+            aes(y = name, x = fct_reorder(fct_rev(state), value.j), fill = value))+
+  geom_text(data = (df %>%
+                      filter(year == 2023, name == "score")),
+            aes(x = state, y = name, label = value),
+            fontface = "bold", color = "#fffff0", size = 3)+
+  scale_y_discrete(position = "right", label = valueLabs, limits = c("score", catComm, catData, catAcs))+
+  scale_fill_viridis(option = "G", end = .8, name = "Rating", limits = c(0,3))+
+  theme_pst(bs = 10)+
+  coord_flip()+
+  labs(tag = tag,
+       x = NULL,
+       y = NULL)+
+   theme(axis.line.y = element_blank(),
+        axis.line.x = element_blank(),
+        axis.text = element_text(color = "#182125"),
+        axis.text.x = element_text(angle = -27, hjust = 1),
+        axis.ticks.y = element_blank(),
+        panel.grid.major.y = element_blank(),
+        legend.position = "none",
+        legend.justification = "left")
+
+
+plot_name = "matrix_tile_score.pdf"
+ggsave(plot_name,plot = mts, path= expo_dir,
+       width = wdt, height = wdt * 1.25)
+```
+
+```{r matrix legend gradient}
+mts <- ggplot()+
+  geom_tile(width = .8, height = .8,
+            data = matrix_fun %>% filter(name == "score"),
+            aes(y = name, x = fct_reorder(fct_rev(state), value.j), fill = class_fill))+
+  geom_tile(width = .8, height = .8,
+            data = matrix_fun %>% filter(name != "score"),
+            aes(y = name, x = fct_reorder(fct_rev(state), value.j), fill = value))+
+  geom_text(data = (df %>%
+                      filter(year == 2023, name == "score")),
+            aes(x = state, y = name, label = value),
+            fontface = "bold", color = "#fffff0", size = 3)+
+  scale_y_discrete(position = "right", label = valueLabs, limits = c("score", catComm, catData, catAcs))+
+  scale_fill_viridis(option = "G", end = .8, name = "Rating  ", limits = c(0,3))+
+  theme_pst(bs = 10)+
+  coord_flip()+
+  labs(tag = tag,
+       x = NULL,
+       y = NULL)+
+   theme(axis.line.y = element_blank(),
+        axis.line.x = element_blank(),
+        axis.text = element_text(color = "#182125"),
+        axis.text.x = element_text(angle = -27, hjust = 1),
+        axis.ticks.y = element_blank(),
+        panel.grid.major.y = element_blank(),
+        legend.position = c(.05,.5),
+        legend.justification = "left",
+        legend.direction = "horizontal",
+        legend.title = element_text(vjust = .6))
+
+mts_leg = cowplot::get_legend(mts)
+mts_leg_p = cowplot::ggdraw(mts_leg)
+ggsave("mts_leg.pdf",plot = mts_leg_p, path= expo_dir,
+       width = 3, height = 2)
+```
+
+```{r matrix legend steps}
+mts2 <- ggplot()+
+  geom_tile(width = .8, height = .8,
+            data = df_wide %>% filter(year == 2023, class_int %in% seq(0,3,1)),
+            aes(y = name, x = state, fill = as.character(class_int)))+
+  scale_fill_viridis_d(option = "G", end = .8, name = "Rating", breaks = seq(3,0,-1))+
+  theme_pst(bs = 10)+
+  coord_flip()+
+  labs(tag = tag,
+       x = NULL,
+       y = NULL)+
+   theme(axis.line.y = element_blank(),
+        axis.line.x = element_blank(),
+        axis.text = element_text(color = "#182125"),
+        axis.text.x = element_text(angle = -27, hjust = 1),
+        axis.ticks.y = element_blank(),
+        panel.grid.major.y = element_blank(),
+        legend.position = c(.35,.5),
+        legend.justification = "left",
+        legend.direction = "vertical")
+
+mts_leg2 = cowplot::get_legend(mts2)
+mts_leg_v = cowplot::ggdraw(mts_leg2)
+ggsave("mts_leg_vert.pdf",plot = mts_leg_v, path= expo_dir,
+       width = 3, height = 2)
+
+mts3 <- ggplot()+
+  geom_tile(width = .8, height = .8,
+            data = df_wide %>% filter(year == 2023, class_int %in% seq(0,3,1)),
+            aes(y = name, x = state, fill = as.character(class_int)))+
+  scale_fill_viridis_d(option = "G", end = .8, name = "Rating ")+
+  theme_pst(bs = 10)+
+  coord_flip()+
+  labs(tag = tag,
+       x = NULL,
+       y = NULL)+
+   theme(axis.line.y = element_blank(),
+        axis.line.x = element_blank(),
+        axis.text = element_text(color = "#182125"),
+        axis.text.x = element_text(angle = -27, hjust = 1),
+        axis.ticks.y = element_blank(),
+        panel.grid.major.y = element_blank(),
+        legend.position = c(.15,.5),
+        legend.justification = "left",
+        legend.direction = "horizontal")
+
+mts_leg3 = cowplot::get_legend(mts3)
+mts_leg_h = cowplot::ggdraw(mts_leg3)
+ggsave("mts_leg_hrzl.pdf",plot = mts_leg_h, path= expo_dir,
+       width = 3, height = 2)
+```
+
+
+```{r average by region}
+df %>%
+  filter( year == 2023,
+         name == "score") %>% 
+  group_by(region) %>%
+  summarize(score = mean(value)) %>%
+  ggplot(aes(x = reorder(region, score), y =score, fill = region))+
+  geom_bar(stat = "identity", width = .8)+
+  geom_text(aes(label = round(score,1), y = score+.5), size = 6, hjust = 0,
+            family = "Montserrat")+
+  scale_fill_manual(values = pstMax)+
+  scale_y_continuous(limits = c(0,33), expand = expansion(0,0))+
+  coord_flip()+
+  theme_pst_flip()+
+  theme(legend.position = "none",
+        plot.tag.position = c(.97,.03),
+        axis.text.y = element_text(color = "#182125", size = 15),
+        axis.text.x = element_text(color = "#182125", size = 10))+
+  labs(tag = tag,x = NULL, y = "Average Score")
+
+plot_name = "avg_region_score.pdf"
+ggsave(plot_name, path= expo_dir,
+       width = wdt, height = hgt)
+
+df %>%
+  filter( year == 2023,
+         name == "score") %>% 
+  group_by(region) %>%
+  summarize(score = mean(value)) %>%
+  ggplot(aes(x = reorder(region, score), y =score, fill = region))+
+  geom_bar(stat = "identity", width = .8)+
+  geom_text(aes(label = region, y = .5, col = fct_reorder(region, -score)), 
+            size = 6.3, hjust = 0,alpha = 1,
+            family = "Montserrat", fontface = "bold")+
+  geom_text(aes(label = round(score,1), y = score+.5), size = 6, hjust = 0,
+            family = "Montserrat")+
+  scale_fill_manual(values = pstMax)+
+  scale_color_manual(values = c("#D6F3FF", "#014765",
+                                "#664100", "#D8E9E4",
+                                "#40263A"))+
+  scale_y_continuous(limits = c(0,33), expand = expansion(0,0))+
+  scale_x_discrete(breaks = NULL, name = "Region")+
+  coord_flip()+
+  theme_pst_flip()+
+  theme(legend.position = "none",
+        plot.tag.position = c(.97,.03),
+        axis.text.y = element_text(color = "#182125", size = 12),
+        axis.text.x = element_text(color = "#182125", size = 10))+
+  labs(tag = tag, y = "Average Score")
+
+plot_name = "avg_region_score_regin.pdf"
+ggsave(plot_name, path= expo_dir,
+       width = wdt, height = hgt)
+
+df %>%
+  filter( year == 2023,
+         name == "score") %>% 
+  group_by(region) %>%
+  summarize(score = mean(value)) %>%
+  ggplot(aes(x = reorder(region, score), y =score, fill = region))+
+  geom_bar(stat = "identity", width = .8)+
+  geom_text(aes(label = region, y = .5, col = fct_reorder(region, -score)), 
+            size = 6.3, hjust = 0,alpha = 1,
+            family = "Montserrat", fontface = "bold")+
+  geom_text(aes(label = round(score,1), y = score-.5,
+                 col = fct_reorder(region, -score)), size = 6, hjust = 1,
+            family = "Montserrat")+
+  scale_fill_manual(values = pstMax)+
+  scale_color_manual(values = c("#D6F3FF", "#014765",
+                                "#664100", "#D8E9E4",
+                                "#40263A"))+
+  scale_y_continuous(limits = c(0,33), expand = expansion(0,0))+
+  scale_x_discrete(breaks = NULL, name = "Region")+
+  coord_flip()+
+  theme_pst_flip()+
+  theme(legend.position = "none",
+        plot.tag.position = c(.97,.03),
+        axis.text.y = element_text(color = "#182125", size = 12),
+        axis.text.x = element_text(color = "#182125", size = 10))+
+  labs(tag = tag, y = "Average Score")
+
+plot_name = "avg_region_score_allin.pdf"
+ggsave(plot_name, path= expo_dir,
+       width = wdt, height = hgt)
+```
+
+## cleveland 
+```{r cleveland 5 and  10 yr}
+df %>%
+  filter(year == 2013 | year == 2018| year == 2023,
+         name == "average")%>%
+  pivot_wider(names_from = c("name", "year")) %>%
+  drop_na(average_2013, average_2018, average_2023)%>%
+  group_by(state)%>%
+  mutate(min = min(average_2013,average_2018,average_2023 ),
+         max = max(average_2013,average_2018,average_2023 ))%>% 
+  ungroup()%>%
+  mutate(state = factor(state),
+         state = fct_reorder(state, average_2023)) %>% 
+  ggplot()+
+  # geom_hline(yintercept = 17/11, alpha = .7, 
+  #            col = new_pal[2], linetype = "dashed")+
+  # geom_hline(yintercept = 24/11, alpha = .7, 
+  #            col = new_pal[3], linetype = "dashed")+
+  # geom_hline(yintercept = 32/11, alpha = .7, 
+  #            col = new_pal[4], linetype = "dashed")+
+  # geom_text(aes(y = 17/11, x = as.factor("Florida"), label = "Pass"),
+  #           alpha = .7, col = new_pal[2], angle = 90)+
+  # geom_text(aes(y = 24/11, x = as.factor("Florida"), label = "Good"),
+  #            alpha = .7, col = new_pal[3], angle = 90)+
+  # geom_text(aes(y = 32/11, x = as.factor("Florida"), label = "Excellent"), 
+             # alpha = .7,  col = new_pal[4], angle = 90)+
+  geom_segment(aes(x = state, 
+                   xend = state, 
+                   y=min, yend = max),
+               color = "gray30", alpha = .5)+
+  geom_point(aes(x = state, y = average_2013, color = "2013"),
+             size = 3, alpha = .9)+
+  geom_point(aes(x = state, y = average_2018, color = "2018"), 
+             size = 3, alpha = .9)+
+  geom_point(aes(x = state, y = average_2023, color = "2023"), 
+             size = 3, alpha = .9)+
+  # scale_color_manual(values = c(darkBlue,  bluGreen, liteGreen), name = "Year")+
+  scale_color_manual(values = c("#9DCED2", "#2494A8",darkBlue), 
+                     name = "Year",
+                    breaks = c(2013, 2018, 2023))+
+  scale_y_continuous(minor_breaks = seq(0,3,.5),
+                     limits = c(0,3.2),
+                     expand = expansion(0,0))+
+  coord_flip()+
+  theme_pst(bs = 10)+
+  theme(panel.grid.major.y = element_line(linetype = "dotted", 
+                                          colour = "gray90",
+                                          size = .33),
+        panel.grid.minor.x = element_line(linetype = "dotted", 
+                                          colour = "#C4C8C6",
+                                          size = .33),
+        panel.grid.major.x = element_line(colour = "#394C56", 
+                                          linetype = "dotted"),
+        panel.grid.minor.y = element_blank(),
+        legend.position = c(.9,.1),
+        plot.tag.position = c(.97,.995)) +
+  labs(x = "State / Regulator",
+       y = "Average Score",
+       tag = tag,
+       title = "State Transparency 5 & 10-Year Change")
+
+ggsave("23_plots/5_10_Year_Cleveland.pdf", width = wdt, height = wdt*1.25, units = "in")
+```
+
+```{r cleveland 5 and  10 yr by classes good states}
+
+#### good ####
+good_states <- df %>% filter(year == 2023, name == "class_int") %>%
+  filter(value == 3) %>% pull(state)
+
+df %>%
+  filter(year == 2013 | year == 2018| year == 2023,
+         name == "average", state %in% good_states)%>%
+  pivot_wider(names_from = c("name", "year")) %>%
+  drop_na(average_2013, average_2018, average_2023)%>%
+  group_by(state)%>%
+  mutate(min = min(average_2013,average_2018,average_2023 ),
+         max = max(average_2013,average_2018,average_2023 ))%>% 
+  ungroup()%>%
+  mutate(state = factor(state),
+         state = fct_reorder(state, average_2023)) %>% 
+  ggplot()+
+  # geom_hline(yintercept = 17/11, alpha = .7,
+  #            col = new_pal[2], linetype = "9393")+
+  # geom_hline(yintercept = 24/11, alpha = .7,
+  #            col = new_pal[3], linetype = "9393")+
+  # geom_hline(yintercept = 32/11, alpha = .7,
+  #            col = new_pal[4], linetype = "9393")+
+  # geom_text(aes(y = 17/11, x = as.factor("Florida"), label = "Pass"),
+  #           alpha = .7, col = new_pal[2], angle = 90)+
+  # geom_text(aes(y = 24/11, x = as.factor("Florida"), label = "Good"),
+  #            alpha = .7, col = new_pal[3], angle = 90)+
+  # geom_text(aes(y = 32/11, x = as.factor("Florida"), label = "Excellent"), 
+             # alpha = .7,  col = new_pal[4], angle = 90)+
+  geom_segment(aes(x = state, 
+                   xend = state, 
+                   y=min, yend = max),
+               color = "gray30", alpha = .5)+
+  geom_point(aes(x = state, y = average_2013, color = "2013"),
+             size = 3, alpha = .9)+
+  geom_point(aes(x = state, y = average_2018, color = "2018"), 
+             size = 3, alpha = .9)+
+  geom_point(aes(x = state, y = average_2023, color = "2023"), 
+             size = 3, alpha = .9)+
+  # scale_color_manual(values = c(darkBlue,  bluGreen, liteGreen), name = "Year")+
+  scale_color_manual(values = c("#9DCED2", "#2494A8",darkBlue), 
+                     name = "Year")+
+  scale_y_continuous(minor_breaks = seq(0,3,.5))+
+  coord_flip()+
+  theme_pst(bs = 10)+
+  theme(panel.grid.major.y = element_line(linetype = "dotted", 
+                                          colour = "gray90",
+                                          size = .33),
+        panel.grid.minor.x = element_line(linetype = "dotted", 
+                                          colour = "#C4C8C6",
+                                          size = .33),
+        panel.grid.major.x = element_line(colour = "#394C56", 
+                                          linetype = "dotted"),
+        panel.grid.minor.y = element_blank(),
+        legend.position = c(.9,.2),
+        plot.tag.position = c(.97,.995)) +
+  labs(x = "State / Regulator",
+       y = "Average Score",
+       tag = tag,
+       title = "State Transparency 5 & 10-Year Change",
+       subtitle = "States in 'Good' Score Category")
+
+ggsave("23_plots/5_10_Year_Cleveland_Good.pdf", width = wdt, height =  hgt, units = "in")
+
+
+#### pass ####
+pass_states <- df %>% filter(year == 2023, name == "class_int") %>%
+  filter(value == 2) %>% pull(state)
+
+df %>%
+  filter(year == 2013 | year == 2018| year == 2023,
+         name == "average", state %in% pass_states)%>%
+  pivot_wider(names_from = c("name", "year")) %>%
+  drop_na(average_2013, average_2018, average_2023)%>%
+  group_by(state)%>%
+  mutate(min = min(average_2013,average_2018,average_2023 ),
+         max = max(average_2013,average_2018,average_2023 ))%>% 
+  ungroup()%>%
+  mutate(state = factor(state),
+         state = fct_reorder(state, average_2023)) %>% 
+  ggplot()+
+  # geom_hline(yintercept = 17/11, alpha = .7,
+  #            col = new_pal[2], linetype = "9393")+
+  # geom_hline(yintercept = 24/11, alpha = .7,
+  #            col = new_pal[3], linetype = "9393")+
+  # geom_hline(yintercept = 32/11, alpha = .7,
+  #            col = new_pal[4], linetype = "9393")+
+  # geom_text(aes(y = 17/11, x = as.factor("Florida"), label = "Pass"),
+  #           alpha = .7, col = new_pal[2], angle = 90)+
+  # geom_text(aes(y = 24/11, x = as.factor("Florida"), label = "Good"),
+  #            alpha = .7, col = new_pal[3], angle = 90)+
+  # geom_text(aes(y = 32/11, x = as.factor("Florida"), label = "Excellent"), 
+             # alpha = .7,  col = new_pal[4], angle = 90)+
+  geom_segment(aes(x = state, 
+                   xend = state, 
+                   y=min, yend = max),
+               color = "gray30", alpha = .5)+
+  geom_point(aes(x = state, y = average_2013, color = "2013"),
+             size = 3, alpha = .9)+
+  geom_point(aes(x = state, y = average_2018, color = "2018"), 
+             size = 3, alpha = .9)+
+  geom_point(aes(x = state, y = average_2023, color = "2023"), 
+             size = 3, alpha = .9)+
+  # scale_color_manual(values = c(darkBlue,  bluGreen, liteGreen), name = "Year")+
+  scale_color_manual(values = c("#9DCED2", "#2494A8",darkBlue), 
+                     name = "Year")+
+  scale_y_continuous(minor_breaks = seq(0,3,.5), breaks = seq(0,3,1))+
+  coord_flip()+
+  theme_pst(bs = 10)+
+  theme(panel.grid.major.y = element_line(linetype = "dotted", 
+                                          colour = "gray90",
+                                          size = .33),
+        panel.grid.minor.x = element_line(linetype = "dotted", 
+                                          colour = "#C4C8C6",
+                                          size = .33),
+        panel.grid.major.x = element_line(colour = "#394C56", 
+                                          linetype = "dotted"),
+        panel.grid.minor.y = element_blank(),
+        legend.position = c(.9,.2),
+        plot.tag.position = c(.97,.995)) +
+  labs(x = "State / Regulator",
+       y = "Average Score",
+       tag = tag,
+       title = "State Transparency 5 & 10-Year Change",
+       subtitle = "States in 'Pass' Score Category")
+
+ggsave("23_plots/5_10_Year_Cleveland_Pass.pdf", width = wdt, height =  hgt, units = "in")
+
+
+#### fail ####
+
+fail_states <- df %>% filter(year == 2023, name == "class_int") %>%
+  filter(value == 1) %>% pull(state)
+
+df %>%
+  filter(year == 2013 | year == 2018| year == 2023,
+         name == "average", state %in% fail_states)%>%
+  pivot_wider(names_from = c("name", "year")) %>%
+  drop_na(average_2013, average_2018, average_2023)%>%
+  group_by(state)%>%
+  mutate(min = min(average_2013,average_2018,average_2023 ),
+         max = max(average_2013,average_2018,average_2023 ))%>% 
+  ungroup()%>%
+  mutate(state = factor(state),
+         state = fct_reorder(state, average_2023)) %>% 
+  ggplot()+
+  # geom_hline(yintercept = 17/11, alpha = .7,
+  #            col = new_pal[2], linetype = "9393")+
+  # geom_hline(yintercept = 24/11, alpha = .7,
+  #            col = new_pal[3], linetype = "9393")+
+  # geom_hline(yintercept = 32/11, alpha = .7,
+  #            col = new_pal[4], linetype = "9393")+
+  # geom_text(aes(y = 17/11, x = as.factor("Florida"), label = "Pass"),
+  #           alpha = .7, col = new_pal[2], angle = 90)+
+  # geom_text(aes(y = 24/11, x = as.factor("Florida"), label = "Good"),
+  #            alpha = .7, col = new_pal[3], angle = 90)+
+  # geom_text(aes(y = 32/11, x = as.factor("Florida"), label = "Excellent"), 
+             # alpha = .7,  col = new_pal[4], angle = 90)+
+  geom_segment(aes(x = state, 
+                   xend = state, 
+                   y=min, yend = max),
+               color = "gray30", alpha = .5)+
+  geom_point(aes(x = state, y = average_2013, color = "2013"),
+             size = 3, alpha = .9)+
+  geom_point(aes(x = state, y = average_2018, color = "2018"), 
+             size = 3, alpha = .9)+
+  geom_point(aes(x = state, y = average_2023, color = "2023"), 
+             size = 3, alpha = .9)+
+  # scale_color_manual(values = c(darkBlue,  bluGreen, liteGreen), name = "Year")+
+  scale_color_manual(values = c("#9DCED2", "#2494A8",darkBlue), 
+                     name = "Year")+
+  scale_y_continuous(minor_breaks = seq(0,3,.5),
+                     limits = c(0,3),
+                     expand = expansion(0,0))+
+  coord_flip()+
+  theme_pst(bs = 10)+
+  theme(panel.grid.major.y = element_line(linetype = "dotted", 
+                                          colour = "gray90",
+                                          size = .33),
+        panel.grid.minor.x = element_line(linetype = "dotted", 
+                                          colour = "#C4C8C6",
+                                          size = .33),
+        panel.grid.major.x = element_line(colour = "#394C56", 
+                                          linetype = "dotted"),
+        panel.grid.minor.y = element_blank(),
+        legend.position = c(.9,.2),
+        plot.tag.position = c(.97,.995)) +
+  labs(x = "State / Regulator",
+       y = "Average Score",
+       tag = tag,
+       title = "State Transparency 5 & 10-Year Change",
+       subtitle = "States in 'Fail' Score Category")
+
+ggsave("23_plots/5_10_Year_Cleveland_Fail.pdf", width = wdt, height =  hgt, units = "in")
+
+
+```
+
+
+```{r cleveland 10 yr}
+df %>%
+  filter(year == 2013 | year == 2018| year == 2023,
+         name == "average")%>%
+  pivot_wider(names_from = c("name", "year")) %>%
+  drop_na(average_2013, average_2018, average_2023)%>%
+  group_by(state)%>%
+  mutate(min = min(average_2013,average_2018,average_2023 ),
+         max = max(average_2013,average_2018,average_2023 ))%>% 
+  ungroup()%>%
+  mutate(state = factor(state),
+         state = fct_reorder(state, average_2023)) %>% 
+  ggplot()+
+  # geom_hline(yintercept = 17/11, alpha = .7, 
+  #            col = new_pal[2], linetype = "dashed")+
+  # geom_hline(yintercept = 24/11, alpha = .7, 
+  #            col = new_pal[3], linetype = "dashed")+
+  # geom_hline(yintercept = 32/11, alpha = .7, 
+  #            col = new_pal[4], linetype = "dashed")+
+  # geom_text(aes(y = 17/11, x = as.factor("Florida"), label = "Pass"),
+  #           alpha = .7, col = new_pal[2], angle = 90)+
+  # geom_text(aes(y = 24/11, x = as.factor("Florida"), label = "Good"),
+  #            alpha = .7, col = new_pal[3], angle = 90)+
+  # geom_text(aes(y = 32/11, x = as.factor("Florida"), label = "Excellent"), 
+             # alpha = .7,  col = new_pal[4], angle = 90)+
+  geom_segment(aes(x = state, 
+                   xend = state, 
+                   y=average_2013, yend = average_2023),
+               color = "gray30", alpha = .5)+
+  geom_point(aes(x = state, y = average_2013, color = "2013"),
+             size = 3, alpha = .9)+
+  # geom_point(aes(x = state, y = average_2018, color = "2018"), 
+  #            size = 3, alpha = .9)+
+  geom_point(aes(x = state, y = average_2023, color = "2023"), 
+             size = 3, alpha = .9)+
+  scale_color_manual(values = c("#9DCED2", darkBlue), 
+                     name = "Year")+
+  scale_y_continuous(minor_breaks = seq(0,3,.5), limits = c(0,3.2),
+                     expand = expansion(0,0))+
+  coord_flip()+
+  theme_pst(bs = 10)+
+  theme(panel.grid.major.y = element_line(linetype = "dotted", 
+                                          colour = "gray90",
+                                          size = .33),
+        panel.grid.minor.x = element_line(linetype = "dotted", 
+                                          colour = "#C4C8C6",
+                                          size = .33),
+        panel.grid.major.x = element_line(colour = "#394C56", 
+                                          linetype = "dotted"),
+        panel.grid.minor.y = element_blank(),
+        legend.position = c(.9,.1),
+        plot.tag.position = c(.97, .995)) +
+  labs(x = "State / Regulator",
+       y = "Average Score",
+       tag = tag,
+       title = "State Transparency 10-Year Change")
+
+ggsave("23_plots/10_Year_Cleveland.pdf", width = wdt, height = wdt*1.25, units = "in")
+```
+
+```{r cleveland 5 yr}
+df %>%
+  filter(year == 2018| year == 2023,
+         name == "score")%>%
+  pivot_wider(names_from = c("name", "year")) %>%
+  drop_na( score_2018, score_2023)%>%
+  group_by(state)%>%
+  mutate(min = min(score_2018, score_2023 ),
+         max = max(score_2018, score_2023))%>% 
+  ungroup()%>%
+  mutate(state = factor(state, 
+                        levels = state_list[order(state_list)] ),
+         state = fct_reorder(fct_rev(state), score_2023)) %>% 
+  ggplot()+
+  # geom_hline(yintercept = 17/11, alpha = .7, 
+  #            col = new_pal[2], linetype = "dashed")+
+  # geom_hline(yintercept = 24/11, alpha = .7, 
+  #            col = new_pal[3], linetype = "dashed")+
+  geom_hline(yintercept = 33, alpha = .7,
+             col = new_pal[4], linetype = "dashed")+
+  # geom_text(aes(y = 17/11, x = as.factor("Florida"), label = "Pass"),
+  #           alpha = .7, col = new_pal[2], angle = 90)+
+  # geom_text(aes(y = 24/11, x = as.factor("Florida"), label = "Good"),
+  #            alpha = .7, col = new_pal[3], angle = 90)+
+  geom_text(aes(y = 32.3, x = as.factor("Florida"), label = "Perfect Score"),
+  alpha = .7,  col = new_pal[4], angle = 90, hjust = 0)+
+  geom_segment(aes(x = state, 
+                   xend = state, 
+                   y=score_2018, yend = score_2023),
+               color = "#30424A", alpha = .5)+
+  # geom_point(aes(x = state, y = average_2013, color = "2013"),
+  #            size = 3, alpha = .9)+
+  geom_point(aes(x = state, y = score_2018, color = "2018"), 
+             size = 3, alpha = .9)+
+  geom_point(aes(x = state, y = score_2023, color = "2023"), 
+             size = 3, alpha = .9)+
+  # scale_color_manual(values = c(darkBlue,  bluGreen, liteGreen), name = "Year")+
+  scale_color_manual(values = c("#9DCED2", darkBlue), 
+                       name = "Year")+  scale_y_continuous(minor_breaks = seq(0,35,5), limits = c(0,34),
+                     expand = expansion(0,0))+
+  coord_flip()+
+  theme_pst(bs = 10)+
+  theme(panel.grid.major.y = element_line(linetype = "dotted", 
+                                          colour = "gray90",
+                                          size = .33),
+        panel.grid.minor.x = element_line(linetype = "dotted", 
+                                          colour = "#C4C8C6",
+                                          size = .33),
+        panel.grid.major.x = element_line(colour = "#394C56", 
+                                          linetype = "dotted"),
+        panel.grid.minor.y = element_blank(),
+        axis.text = element_text(color = richblack),
+        legend.position = c(.8,.05),
+        plot.tag.position = c(.97, .0075)) +
+  labs(x = NULL,
+       y = "Score",
+       tag = tag,
+       title = NULL)
+
+ggsave("23_plots/5_Year_Cleveland.pdf", width = wdt, height = wdt*1.25, units = "in")
+```
+
+```{r cleveland 5 yr lab 2}
+df %>%
+  filter(year == 2018| year == 2023,
+         name == "score")%>%
+  pivot_wider(names_from = c("name", "year")) %>%
+  drop_na( score_2018, score_2023)%>%
+  group_by(state)%>%
+  mutate(min = min(score_2018, score_2023 ),
+         max = max(score_2018, score_2023))%>% 
+  ungroup()%>%
+  mutate(state = factor(state, 
+                        levels = state_list[order(state_list)] ),
+         state = fct_reorder(fct_rev(state), score_2023)) %>% 
+  ggplot()+
+  # geom_hline(yintercept = 17/11, alpha = .7, 
+  #            col = new_pal[2], linetype = "dashed")+
+  # geom_hline(yintercept = 24/11, alpha = .7, 
+  #            col = new_pal[3], linetype = "dashed")+
+  geom_hline(yintercept = 33, alpha = .9,
+             col = new_pal[4], linetype = "dotted", linewidth = .5)+
+  # geom_text(aes(y = 17/11, x = as.factor("Florida"), label = "Pass"),
+  #           alpha = .7, col = new_pal[2], angle = 90)+
+  # geom_text(aes(y = 24/11, x = as.factor("Florida"), label = "Good"),
+  #            alpha = .7, col = new_pal[3], angle = 90)+
+  geom_text(aes(y = 32.3, x = as.factor("Florida"), label = "Perfect Score"),
+  alpha = .7,  col = new_pal[4], angle = 90, hjust = 0)+
+  geom_segment(aes(x = state, 
+                   xend = state, 
+                   y=score_2018, yend = score_2023),
+               color = "#30424A", alpha = .5)+
+  # geom_point(aes(x = state, y = average_2013, color = "2013"),
+  #            size = 3, alpha = .9)+
+  geom_point(aes(x = state, y = score_2018, color = "2018"), 
+             size = 3, alpha = .9)+
+  geom_point(aes(x = state, y = score_2023, color = "2023"), 
+             size = 3, alpha = .9)+
+  # scale_color_manual(values = c(darkBlue,  bluGreen, liteGreen), name = "Year")+
+  scale_color_manual(values = c("#9DCED2", darkBlue), 
+                       name = "Year")+  
+  scale_y_continuous(minor_breaks = seq(0,35,5), limits = c(0,34.5),
+                     expand = expansion(0,0))+
+  coord_flip()+
+  theme_pst(bs = 10)+
+  theme(panel.grid.major.y = element_line(linetype = "dotted", 
+                                          colour = "gray90",
+                                          size = .33),
+        panel.grid.minor.x = element_line(linetype = "dotted", 
+                                          colour = "#C4C8C6",
+                                          size = .33),
+        panel.grid.major.x = element_line(colour = "#394C56", 
+                                          linetype = "dotted"),
+        panel.grid.minor.y = element_blank(),
+        axis.text = element_text(color = richblack),
+        legend.position = c(.8,.05),
+        plot.tag.position = c(.97, .0075)) +
+  labs(x = NULL,
+       y = "Score",
+       tag = tag,
+       title = NULL)
+
+ggsave("23_plots/5_Year_Cleveland_lab2.pdf", width = wdt, height = wdt*1.25, units = "in")
+```
+
+
+
+## cut sheet viz and data
+
+### data
+
+```{r getting annual report data}
+library(plyr)
+
+## read ar part H csvs <-
+#read following cols 
+# OPERATOR_ID, INTER_INTRA, PARTHONNTOTAL
+
+setwd("./data/reports") # set to location of annual reports 
+
+liqAR <- ldply(.data = list.files(pattern = "HL"),
+               .fun = read.csv
+               )
+gtrAR <- ldply(.data = list.files(pattern = "GT"),
+               .fun = read.csv
+               )
+# 
+# setwd("./old")
+# 
+# liqAROld <- ldply(.data = list.files(pattern = "_liquid_"),
+#                   .fun = read.csv
+#                   )
+# 
+# gtrAROld <- ldply(.data = list.files(pattern = "_transmission_"),
+#                   .fun = read.csv
+#                   )
+#    
+setwd("..")
+setwd("..")
+
+detach("package:plyr", unload = T)
+```
+
+```{r annual reports to 202 miles}
+hl_miles <- liqAR %>%
+  filter(REPORT_YEAR == 2022)%>%
+  group_by(STATE_NAME, INTER_INTRA) %>%
+  summarize(miles = sum(PARTHONTOTAL, na.rm = T)) %>% 
+  ungroup() %>%
+  mutate(SYS = "HL")
+
+gt_miles <- gtrAR %>%
+  filter(REPORT_YEAR == 2022)%>%
+  group_by(STATE_NAME, INTER_INTRA) %>%
+  summarize(miles = sum(PARTHONTOTAL, na.rm = T))%>% 
+  ungroup() %>%
+  mutate(SYS = "GT")
+
+gd_miles <- miles %>%
+  distinct(IYEAR, OPERATOR_ID, SYS, STATE, mileage )%>%
+  filter(IYEAR == 2022)%>%
+  group_by(STATE)%>%
+  summarize(miles = sum(mileage,na.rm = T)) %>% 
+  ungroup() %>%
+  mutate(SYS = "GD",
+         INTER_INTRA = "INTRASTATE")
+
+new_miles <- bind_rows(hl_miles, gt_miles) %>%
+  mutate(STATE = case_when(
+    STATE_NAME == "CALIFORNIA" & SYS == "HL" ~ "CA-L",
+    STATE_NAME == "CALIFORNIA" & SYS != "HL" ~ "CA-G",
+    STATE_NAME == "WASHINGTON DC"  ~ "DC",
+    .default = state.abb[match(str_to_title(STATE_NAME), state.name)]
+  ))%>%
+  bind_rows(gd_miles) %>%
+  bind_rows(
+    bind_rows(hl_miles, gt_miles) %>%
+      filter(STATE_NAME == "ARKANSAS")%>%
+      mutate(STATE = "AR-O")%>%
+      bind_rows(gd_miles %>% filter(STATE == "AR") %>% mutate(STATE = "AR-O"))
+  ) 
+  
+
+view(new_miles %>% group_by(STATE) %>% summarize(miles = sum(miles, na.rm = T)))  
+```
+
+
+```{r prog miles and other things}
+capt = "Source: PHMSA Incident and Mileage Data (2010-2022)"
+incdir = "https://raw.githubusercontent.com/jmceager/pst/main/phmsa-clean/data/"
+ 
+inc <- read_csv(paste0(incdir, "clean/all_inc.csv")) %>% filter(IYEAR < 2024)
+
+miles <- read_csv(paste0(incdir, "clean/sys_miles.csv"))%>%
+  mutate(STATE = case_when(
+    STATE == "CA" & SYS == "HL" ~ "CA-L",
+    STATE == "CA" & SYS != "HL" ~ "CA-G",
+    .default = STATE
+  )) 
+
+#get miles by system 
+prog_miles<- miles %>%
+  filter(IYEAR == 2022)%>%
+  distinct(IYEAR, OPERATOR_ID, SYS, STATE, mileage )%>%
+  mutate(mainSys = if_else(SYS == "HL", "Liq", "Gas"))%>%
+  group_by(STATE, mainSys) %>%
+  summarize(miles = sum(mileage, na.rm = T)) %>%
+  ungroup()%>%
+  filter(STATE %in% c("CA-L", "CA-G", "AR")) %>%
+  mutate(
+    state = case_when(STATE == "CA-L"  ~ "California Liquid",
+                      STATE == "CA-G"  ~ "California Gas",
+                      STATE == "AR" ~ "Arkansas OGC",
+                      .default = STATE
+                      ),
+    STATE = if_else(STATE == "AR", "AR-O", STATE)
+    ) %>%
+  bind_rows(
+    miles %>%
+      filter(IYEAR == 2022, !STATE %in% c("CA-L", "CA-G"))%>%
+      mutate(mainSys = if_else(SYS == "HL", "Liq", "Gas"))%>%
+      distinct(IYEAR, OPERATOR_ID, SYS, STATE, mileage, mainSys )%>%
+      group_by(STATE, mainSys) %>%
+      summarize(miles = sum(mileage, na.rm = T)) %>%
+      ungroup()%>%
+      mutate(state = state.name[match(STATE, state.abb)],
+             state = case_when(
+               grepl("DC", STATE) ~ "District of Columbia",
+              grepl("PR", STATE) ~ "Puerto Rico",
+               .default = state
+               )
+             )  %>% 
+      filter(!is.na(state)) 
+  ) %>%
+  group_by(state,STATE) %>%
+  summarize(miles = sum(miles, na.rm = T)) %>%
+  mutate()
+
+state_summ <- inc %>%
+  mutate(STATE = case_when(
+    STATE == "CA" & SYS == "HL" ~ "CA-L",
+    STATE == "CA" & SYS != "HL" ~ "CA-G",
+    .default = STATE
+  )) %>%
+  filter(IYEAR >= 2019)%>%
+  group_by(STATE)%>%
+  summarize(
+    incidents = n(),
+    sig = sum(SIGNIFICANT == "YES", na.rm = T),
+    fatal = sum(FATAL, na.rm = T),
+    injure = sum(INJURE, na.rm = T)
+    ) %>%
+ rbind(
+   inc %>%
+     filter(STATE == "AR")%>%
+  mutate(STATE = "AR-O") %>%
+  filter(IYEAR >= 2019)%>%
+  group_by(STATE)%>%
+  summarize(
+    incidents = n(),
+    sig = sum(SIGNIFICANT == "YES", na.rm = T),
+    fatal = sum(FATAL, na.rm = T),
+    injure = sum(INJURE, na.rm = T)
+    )
+ )%>%  right_join(
+    new_miles %>%
+      group_by(STATE)%>%
+      summarize(miles = sum(miles, na.rm = T)) %>%
+      ungroup(),
+    by = "STATE"
+  )  %>%
+  filter(STATE != "OCS") %>%
+  mutate(sig_rate = sig / (miles/1000),
+         STATE_NAME = case_when(
+      STATE == "CA-G" ~ "California Gas",
+      STATE ==  "CA-L" ~ "California Liquid",
+      STATE == "AR-O" ~ "Arkansas OGC",
+      STATE == "DC" ~ "District of Columbia",
+      .default = state.name[match(STATE, state.abb)]
+    )) %>%
+    mutate(across(incidents:sig_rate, ~ replace_na(.x,0)))%>%
+  left_join((acs_result) %>% filter(variable == "pop"), 
+            by = c("STATE_NAME" = "state")) %>%
+  mutate(pop_miles =  miles / (estimate/100000))  # miles per 100k 
+ 
+
+
+
+state_summ %>% 
+  rename(st_abb = STATE,
+         state = STATE_NAME)%>%
+  dplyr::select(state, st_abb, miles, pop_miles, sig, sig_rate, fatal, injure)%>%
+  right_join(
+    df_wide %>%
+      filter(year == 2023)%>%
+      dplyr::select(state, score)%>%
+      rename(score_23 = score)%>%
+      left_join(df_wide %>% 
+                  filter(year == 2018) %>%  
+                  select(state, score) %>%
+                  rename(score_18 = score)) %>%
+      mutate(change_5_yr = score_23 - score_18) %>%
+      dplyr::select(state, change_5_yr)
+    ) %>% 
+  filter(!is.na(change_5_yr)) %>% 
+ write_csv("example_data_simple.csv")
+  
+  
+```  
+
+
+
+goals:
+5yr score change
+total miles
+total miles per 100,000 population (unless you usually use a different metric? open to changes)
+number of 5yr significant incidents
+5yr significant incident rate per 100,000 miles
+
+
+```{r putting table together, eval=FALSE}
+# get 5 yr change
+df_wide %>%
+  filter(year == 2023)%>%
+  select(state, any_of(allScores))%>%
+  left_join(df_wide %>% filter(year == 2018) %>%  select(state, any_of(allScores)), 
+            by = "state", suffix = c("_23", "_18"))%>%
+  pivot_longer(
+    cols = !state,
+    names_to = c("category", "year"),
+    names_sep = "_",
+    values_to = "score"
+  ) %>%
+   mutate(big_cat = case_when(category %in% catAcs ~ agencyName,
+                             category %in% catComm ~ commsName,
+                             category %in% catData ~ dataName)) %>%
+  group_by(state, year, big_cat)%>%
+  summarize(score = sum(score))%>% 
+  pivot_wider(id_cols = c("state", "big_cat"),
+              names_from = "year",
+              values_from = "score",
+              names_prefix = "yr_")%>%
+  mutate(change = yr_23-yr_18#,
+         # sig_change = change > 2,
+         # change_plus = change >0
+         ) 
+  # group_by(state)%>%
+  # summarize(most_improved = paste0(big_cat[change == max(change) & change_plus], collapse = ", "),
+  #           improve_change = max(change))%>%
+  # ungroup()%>%
+  # mutate(most_improved = str_replace(most_improved,"NA, ",""),
+  #        most_improved = str_replace(most_improved,"NA",""))%>%
+  # left_join(
+  #   #highest scores 2023
+  #   df %>%
+  #     filter(year == 2023, name %in% allScores)%>%
+  #      mutate(big_cat = case_when(name %in% catAcs ~ "Information Access",
+  #                            name %in% catComm ~ "Communications",
+  #                            name %in% catData ~ "Data + Maps")) %>%
+  #     group_by(state, big_cat)%>%
+  #     summarize(score = sum(value))%>%
+  #     ungroup()%>%
+  #     mutate(score_per = if_else(big_cat == "Communications", 
+  #                                score / 9, score/12))%>%
+  #     group_by(state)%>%
+  #     filter(score_per == max(score_per))%>%
+  #     summarize(good_cat = paste0(unique(big_cat), collapse = ", "),
+  #               good_score = max(score),
+  #               score_per = score_per[score == max(score)]) %>%
+  #     mutate(good_type = if_else(max(score_per) & score_per > .66,
+  #                                 "Exemplary", "Fine"))%>% view()
+  # )%>%
+  # left_join(
+  #   #lowest scores 2023
+  #   df %>%
+  #     filter(year == 2023, name %in% allScores)%>%
+  #      mutate(big_cat = case_when(name %in% catAcs ~ "Information Access",
+  #                            name %in% catComm ~ "Communications",
+  #                            name %in% catData ~ "Data + Maps")) %>%
+  #     group_by(state, big_cat)%>%
+  #     summarize(score = sum(value),
+  #               score_per = if_else(big_cat == "Communications", score / 9, score/12))%>%
+  #     ungroup()%>%
+  #     group_by(state)%>%
+  #     filter(score_per == min(score_per) & score_per <.5)%>%
+  #     summarize(bad_cat = paste0(unique(big_cat), collapse = ", "),
+  #               bad_score = max(score)) 
+  # )%>%
+  mutate(
+    stab = case_when(
+      state == "California Gas" ~ "CA-G",
+      state == "California Liquid" ~ "CA-L",
+      state == "Arkansas OGC" ~ "AR-O",
+      state == "District of Columbia" ~ "DC",
+      .default = state.abb[match(state, state.name)]
+    )
+  )%>%
+  left_join(
+    state_summ %>% select(STATE, incidents, miles),
+    by = c("stab" = "STATE")
+    )%>%
+  left_join(
+    states_df %>% select(NAME, size_acre) %>% rename(state = NAME, acreage = size_acre)
+    ) %>%
+  mutate(
+    mile_kacre = miles / (acreage/1000)
+  )
+```
+
+
+
+
+### pictograms 
+
+
+
+```{r waffle plot}
+
+
+
+
+df_set <- miles %>%
+  distinct(IYEAR, OPERATOR_ID, SYS, STATE, mileage )%>%
+  filter(STATE == "TX", IYEAR == max(IYEAR))%>%
+  group_by(SYS)%>%
+  summarize(miles = sum(mileage, na.rm = T))%>%
+  mutate(miles = round(miles/1000, 0))
+
+df_waf <- tibble( 
+  group = c(rep("GT", df_set[[which(df_set$SYS == "GT"), "miles"]]), 
+            rep("GD", df_set[[which(df_set$SYS == "GD"), "miles"]]), 
+            rep("HL", df_set[[which(df_set$SYS == "HL"), "miles"]])),
+  miles = c(rep(1, df_set[[which(df_set$SYS == "GT"), "miles"]]), 
+            rep(1, df_set[[which(df_set$SYS == "GD"), "miles"]]), 
+            rep(1, df_set[[which(df_set$SYS == "HL"), "miles"]]))
+  )
+
+waffled <- waffle_iron(df_waf, aes_d(group=group), rows = 11)
+waffled$label <- case_when(waffled$group == "GD" ~
+                             fontawesome("fa-circle"),
+                           waffled$group == "GT" ~ 
+                             fontawesome("fa-certificate"),
+                           waffled$group == "HL" ~ 
+                             fontawesome("fa-square"),
+                           )
+
+
+
+waffled %>%
+  ggplot(aes(x=x,y=y, label = label, col = group))+
+  geom_text(aes(label = label), family = "fontawesome-webfont", size = 2)+
+  scale_color_manual(values = pstMax)+
+  theme_pst_map()
+
+```
+
+```{r pictogram iteration}
+
+for(i in 1:length(state_list)){
+  state_i = state_list[[i]]
+  stab_i =case_when(state_i =="California Liquid" ~ "CA-L"  ,
+                    state_i == "California Gas" ~ "CA-G"  ,
+                    state_i == "Arkansas OGC" ~ "AR",
+                    state_i == "District of Columbia" ~ "DC",
+                    .default = state.abb[match(state_i, state.name)]
+                    )
+  
+  df_set <- miles %>%
+    distinct(IYEAR, OPERATOR_ID, SYS, STATE, mileage )%>%
+    filter(STATE == stab_i, IYEAR == max(IYEAR))%>%
+    group_by(SYS)%>%
+    summarize(miles = sum(mileage, na.rm = T))%>%
+    mutate(miles = round(miles/1000, 0))
+  
+  missing = 330-sum(df_set$miles)
+  
+  #lengths of rows 
+  # this is done outside of the tibble because
+  #'which' does not handle 0 lengths for regulators without a sys 
+  hls = ifelse("HL" %in% df_set$SYS, 
+               df_set[[which(df_set$SYS == "HL"), "miles"]],
+               0)
+  gds = ifelse("GD" %in% df_set$SYS, 
+               df_set[[which(df_set$SYS == "GD"), "miles"]],
+               0)
+  gts = ifelse("GT" %in% df_set$SYS, 
+               df_set[[which(df_set$SYS == "GT"), "miles"]],
+               0)
+  
+  #this is a mid-step table to calc how many pictos we need 
+  df_waf <- tibble( 
+  group = c(rep("GT", gts), 
+            rep("GD", gds), 
+            rep("HL", hls),
+            rep("None", missing)),
+  miles = c(rep(1, gts), 
+            rep(1, gds), 
+            rep(1, hls),
+            rep(1, missing))
+  )
+  
+  waffled <- waffle_iron(df_waf, aes_d(group=group), rows = 15)
+  waffled$label <- case_when(waffled$group == "GD" ~
+                               fontawesome("fa-circle"),
+                             waffled$group == "GT" ~ 
+                               fontawesome("fa-certificate"),
+                             waffled$group == "HL" ~ 
+                               fontawesome("fa-square"),
+                             waffled$group == "None" ~ 
+                               fontawesome("fa-circle-o")
+                             )
+  waffled %>%
+    ggplot(aes(x=x,y=y, label = label, col = group))+
+    geom_text(aes(label = label), 
+              family = "fontawesome-webfont", 
+              size = 1.66)+
+    scale_color_manual(values = c(
+      GT = darkBlue, 
+      GD = liteGreen, 
+      HL = lilac, 
+      None = "gray90"))+
+    theme_pst_map()+
+    theme(legend.position = "none")+
+    #scale_x_reverse()+ # use this to flip the flip 
+    coord_flip()
+  
+  name = paste0(expo_dir, "pictograms/",
+                if_else(grepl("OGC",state_i), "AR-O", stab_i),
+                "_picto.pdf")
+  
+  ggsave(name, width = 2, height = 3.2, units = "in", dpi = 300)
+  
+}
+
+```
+
+```{r pictogram iteration}
+
+for(i in 1:length(state_list)){
+  state_i = state_list[[i]]
+  stab_i =case_when(state_i =="California Liquid" ~ "CA-L"  ,
+                    state_i == "California Gas" ~ "CA-G"  ,
+                    state_i == "Arkansas OGC" ~ "AR",
+                    state_i == "District of Columbia" ~ "DC",
+                    .default = state.abb[match(state_i, state.name)]
+                    )
+  
+  
+  df_set <- new_miles %>%
+    filter(STATE == stab_i)%>%
+    mutate(miles = signif(miles/4500, 2),
+           type = paste0(SYS, "-", str_sub(INTER_INTRA, 4,5)))
+    
+    
+  missing = 100-sum(df_set$miles)
+    
+  #lengths of rows 
+  # this is done outside of the tibble because
+  #'which' does not handle 0 lengths for regulators without a sys 
+  hl_tra = ifelse("HL-RA" %in% df_set$type ,
+               df_set[[which(df_set$SYS == "HL" & df_set$INTER_INTRA == "INTRASTATE"),"miles"]],
+               0)
+  gt_tra = ifelse("GT-RA" %in% df_set$type ,
+               df_set[[which(df_set$type == "GT-RA"),"miles"]],
+               0)
+  hl_ter = ifelse("HL-ER" %in% df_set$type ,
+               df_set[[which(df_set$type == "HL-ER"),"miles"]],
+               0)
+  gt_ter = ifelse("GT-ER" %in% df_set$type,
+               df_set[[which(df_set$type == "GT-ER"),"miles"]],
+               0)
+  gds = ifelse("GD-RA" %in% df_set$type, 
+               df_set[[which(df_set$SYS == "GD"), "miles"]],
+               0)
+    
+  #this is a mid-step table to calc how many pictos we need 
+  df_waf <- tibble( 
+  group = c(rep("GT_A", gt_tra),
+            rep("GT_E", gt_ter),
+            rep("GD", gds), 
+            rep("HL_A", hl_tra),
+            rep("HL_E", hl_ter)),
+  miles = c(rep(1, gt_tra),
+            rep(1, gt_ter),
+            rep(1, gds), 
+            rep(1, hl_tra),
+            rep(1, hl_ter))
+  )
+  
+  df_fill <- df_waf %>%
+    bind_rows(
+      tibble(
+        group = rep("None", 100-nrow(df_waf)),
+        miles = rep(1, 100-nrow(df_waf))
+        )
+    )
+    
+  waffled <- waffle_iron(df_fill, aes_d(group=group), rows = 10)
+  waffled$label <- case_when(waffled$group == "GD" ~
+                               fontawesome("fa-circle"),
+                             grepl("GT", waffled$group) ~ 
+                               fontawesome("fa-certificate"),
+                             grepl("HL", waffled$group) ~ 
+                               fontawesome("fa-square"),
+                             waffled$group == "None" ~ 
+                               fontawesome("fa-circle-o")
+                             )
+  w_i <- waffled %>%
+    ggplot(aes(x=x,y=y, label = label, col = group, fill = group))+
+    geom_text(aes(label = label), 
+              family = "fontawesome-webfont", 
+              size = 2.5)+
+    scale_color_manual(values = c(
+      GT_A = darkBlue, 
+      GT_E = "#5CCEFF", 
+      GD = liteGreen, 
+      HL_A = lilac, 
+      HL_E = "#C297B8", 
+      None = "gray90"))+
+    scale_fill_manual(values = c(
+      GT_A = darkBlue, 
+      GT_E = "#5CCEFF", 
+      GD = liteGreen, 
+      HL_A = lilac, 
+      HL_E = "#C297B8",
+      None = "gray90"))+
+    theme_pst_map()+
+    theme(legend.position = "none")+
+    scale_x_reverse()+ # use this to flip the flip 
+    coord_flip()
+  
+  name = paste0(expo_dir, "pictograms/",
+                if_else(grepl("OGC",state_i), "AR-O", stab_i),
+                "_picto.pdf")
+  
+  ggsave(name, plot = w_i, width = 2, height = 2, units = "in", dpi = 300)
+  
+  w_i_l = w_i+
+    labs(subtitle = state_i)
+  
+  name = paste0(expo_dir, "pictograms/",
+                if_else(grepl("OGC",state_i), "AR-O", stab_i),
+                "_picto_lab.pdf")
+  
+  ggsave(name, plot = w_i_l, width = 2, height = 2.2, units = "in", dpi = 300)
+  
+}
+
+```
+
+```{r example pictogram}
+
+df_set <- new_miles %>%
+  filter(STATE == "TX")%>%
+  mutate(miles = signif(miles/4500, 2))
+  
+missing = 100-sum(df_set$miles)
+  
+#lengths of rows 
+# this is done outside of the tibble because
+#'which' does not handle 0 lengths for regulators without a sys 
+hl_tra = ifelse("HL" %in% df_set$SYS ,#& df_set$INTER_INTRA == "INTRASTATE", 
+             df_set[[which(df_set$SYS == "HL" & df_set$INTER_INTRA == "INTRASTATE"),
+                     "miles"]],
+             0)
+gt_tra = ifelse("GT" %in% df_set$SYS ,#& df_set$INTER_INTRA == "INTRASTATE", 
+             df_set[[which(df_set$SYS == "GT"& df_set$INTER_INTRA == "INTRASTATE"),
+                     "miles"]],
+             0)
+hl_ter = ifelse("HL" %in% df_set$SYS ,#& df_set$INTER_INTRA == "INTERSTATE", 
+             df_set[[which(df_set$SYS == "HL"& df_set$INTER_INTRA == "INTERSTATE"),
+                     "miles"]],
+             0)
+gt_ter = ifelse("GT" %in% df_set$SYS,#& df_set$INTER_INTRA == "INTERSTATE", 
+             df_set[[which(df_set$SYS == "GT"& df_set$INTER_INTRA == "INTERSTATE"),
+                     "miles"]],
+             0)
+gds = ifelse("GD" %in% df_set$SYS, 
+             df_set[[which(df_set$SYS == "GD"), "miles"]],
+             0)
+  
+#this is a mid-step table to calc how many pictos we need 
+df_waf <- tibble( 
+group = c(rep("GT_A", gt_tra),
+          rep("GT_E", gt_ter),
+          rep("GD", gds), 
+          rep("HL_A", hl_tra),
+          rep("HL_E", hl_ter),
+          rep("None", missing)),
+miles = c(rep(1, gt_tra),
+          rep(1, gt_ter),
+          rep(1, gds), 
+          rep(1, hl_tra),
+          rep(1, hl_ter),
+          rep(1, missing))
+)
+  
+waffled <- waffle_iron(df_waf, aes_d(group=group), rows = 10)
+waffled$label <- case_when(waffled$group == "GD" ~
+                             fontawesome("fa-circle"),
+                           grepl("GT", waffled$group) ~ 
+                             fontawesome("fa-certificate"),
+                           grepl("HL", waffled$group) ~ 
+                             fontawesome("fa-square"),
+                           waffled$group == "None" ~ 
+                             fontawesome("fa-circle-o")
+                           )
+waffled %>%
+  ggplot(aes(x=x,y=y, label = label, col = group, fill = group))+
+  geom_text(aes(label = label), 
+            family = "fontawesome-webfont", 
+            size = 1.33)+
+  scale_color_manual(values = c(
+    GT_A = darkBlue, 
+    GT_E = "#5CCEFF", 
+    GD = liteGreen, 
+    HL_A = lilac, 
+    HL_E = "#C297B8", 
+    None = "gray90"))+
+  scale_fill_manual(values = c(
+    GT_A = darkBlue, 
+    GT_E = "#5CCEFF", 
+    GD = liteGreen, 
+    HL_A = lilac, 
+    HL_E = "#C297B8",
+    None = "gray90"))+
+  theme_pst_map()+
+  #guides(fill = "colorsteps")+
+  theme(legend.position = "bottom")+
+  scale_x_reverse()+ # use this to flip the flip 
+  coord_flip()
+  
+  name = paste0(expo_dir, "pictograms/",
+                "Example_LA",
+                "_picto.pdf")
+  
+  ggsave(name, width = 2, height = 2, units = "in", dpi = 300)
+
+```
+
+
+
+### rating bar 
+```{r rating bar plot }
+
+for(i in 1:length(state_list)){
+  state_i = state_list[[i]]
+  stab_i =case_when(state_i =="California Liquid" ~ "CA-L"  ,
+                    state_i == "California Gas" ~ "CA-G"  ,
+                    state_i == "Arkansas OGC" ~ "AR",
+                    state_i == "District of Columbia" ~ "DC",
+                    .default = state.abb[match(state_i, state.name)]
+                    )
+  bar <- df %>%
+    filter(year == 2023, name == "score", state == state_i) %>%
+    ggplot(aes(x = state))+
+      geom_linerange(aes(ymin = 0, ymax = 33), col = "white")+
+      # geom_errorbar(aes(ymin = 17, ymax = 17), width = .2)+
+      # geom_errorbar(aes(ymin = 24, ymax = 24), width = .2)+
+      # geom_errorbar(aes(ymin = 32, ymax = 32), width = .2)+
+      geom_point(aes(y = value), position = position_nudge(x = .1),
+                 shape = 6, size = 1.5, col = "white")+
+      coord_flip()+
+      theme_void()
+  
+  name = paste0(expo_dir, "bars/",
+                  if_else(grepl("OGC",state_i), "AR-O", stab_i),
+                  "_bar.pdf")
+  ggsave(name, plot = bar, width = 1.5, height = 1, units = "in", dpi = 300)
+  
+  b_l <- bar + 
+    geom_errorbar(aes(ymin = 16.5, ymax = 16.5), width = .2)+
+    geom_errorbar(aes(ymin = 24.5, ymax = 24.5), width = .2)+
+    geom_errorbar(aes(ymin = 32.5, ymax = 32.5), width = .2)+
+    labs(title = if_else(grepl("OGC",state_i),
+                                    "AR-O", stab_i))+
+    theme(plot.background = element_rect(fill = "black"),
+          plot.title = element_text(color = "white"))
+  
+  name = paste0(expo_dir, "bars/",
+                  if_else(grepl("OGC",state_i), "AR-O", stab_i),
+                  "_bar_lab.pdf")
+  ggsave(name, plot = b_l, width = 1.5, height = 1, units = "in", dpi = 300)
+}
+
+## one for context
+df %>%
+    filter(year == 2023, name == "score", 
+           state == "North Dakota") %>%
+    ggplot(aes(x = state))+
+      geom_linerange(aes(ymin = 0, ymax = 33), col = "white")+
+      geom_errorbar(aes(ymin = 17, ymax = 24), 
+                    width = .2, col = "white")+
+      geom_errorbar(aes(ymin = 24, ymax = 24), 
+                    width = .2,  col = "white")+
+      geom_errorbar(aes(ymin = 32, ymax = 32), 
+                    width = .2, col = "white")+
+      geom_point(aes(y = value), position = position_nudge(x = .1),
+                 shape = 6, size = 1.5, col = "white")+
+      coord_flip()+
+      theme_void()
+
+  ggsave(paste0(expo_dir, "bars/ND_example.pdf"), width = 1.5, height = 1, units = "in", dpi = 300)
+
+```
+
+
+
+
+### pictogram pipe 2 
+```{r}
+
+max_mi = new_miles %>%
+  filter(STATE == "TX") %>%
+  pull(miles) %>% sum()
+
+new_miles %>%
+  filter(STATE == "TX") %>%
+  group_by(SYS)%>%
+  mutate(max = sum(miles, na.rm = T),
+         max_i = ifelse(length(unique(INTER_INTRA))>1, 
+         "ER", "RA"))%>%
+  ungroup() %>% 
+  mutate(lab_q = ifelse(max >= (sum(miles)/2),sum(miles)*.01 , max + sum(miles)*.01),
+         long_sys = case_when(SYS == "GD" ~ "Gas Distribution Lines",
+                              SYS == "GT" ~ "Gas Transmission Lines",
+                              SYS == "HL" ~ "Hazardous Liquid Lines",
+                              .default = ""),
+         lab = paste0(format(round(miles, 0), big.mark = ",", trim = T),
+                      " miles of ", long_sys)) %>% 
+  ggplot(aes(x = SYS, y = miles, fill = paste0(str_sub(INTER_INTRA,4,5), SYS)))+
+  # geom_errorbar(aes(x = "HL", ymin = 0, ymax = sum(miles)),
+  #               position = position_nudge(x = .6), width = .2)+
+  geom_errorbar(aes(x = SYS, ymin = max, ymax = max, 
+                    col = paste0(max_i, SYS)),
+                stat = "identity", linewidth = 2, width =.6,show.legend = T)+
+  geom_errorbar(aes(x = SYS, ymin = 0, ymax = 0, col = paste0("RA", SYS)),
+                stat = "identity", linewidth = 3, width =.6, show.legend = T)+
+  geom_bar(stat = "identity", position = "stack", width = .5, show.legend = T)+
+  # geom_text(aes(x = "HL", y = sum(miles)/2, 
+  #               label = scales::comma(sum(miles), accuracy =  1, suffix = " Total Miles of Pipeline")),
+  #           hjust = .5, fontface = "bold", position = position_nudge(x = .45))+
+  geom_text(aes(x = SYS, y = lab_q, label = lab),
+            data = . %>% distinct(SYS, .keep_all = T), 
+            hjust = 0)+
+  scale_y_continuous(limits = c(0,max_mi), expand = expansion(0,0), breaks = c())+
+  scale_x_discrete(expand=expansion(.5,.3), 
+                   breaks = NULL)+
+  coord_flip()+
+  scale_color_manual(values = c(RAGT = darkBlue, 
+                                ERGT = "#A8D3D7", 
+                                RAHL = lilac, 
+                                ERHL = "#DABFD8", RAGD = liteGreen))+
+  scale_fill_manual(values = c(RAGT = darkBlue, 
+                                ERGT = "#A8D3D7", 
+                                RAHL = lilac, 
+                                ERHL = "#DABFD8", RAGD = liteGreen))+
+  theme_pst_flip()+
+  theme(panel.grid.major.x = element_blank(),
+        legend.position = "none",
+        panel.grid.minor.x = element_blank(),
+        axis.line.x = element_blank(),
+        axis.line.y = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.ticks.y = element_blank(),
+        plot.margin = margin(0,0,0,0),
+    axis.ticks.length = unit(0, "pt"))+
+  labs(x = NULL, y = NULL, title =NULL)
+
+ggsave("23_plots/test_miles.png", width = 4, height = 2.5, units = "in")
+
+```
+
+```{r}
+
+max_mi = new_miles %>%
+  filter(STATE == "NJ") %>%
+  pull(miles) %>% sum()
+
+new_miles %>%
+  filter(STATE == "NJ") %>%
+  mutate(INTER_INTRA = factor(INTER_INTRA, 
+                              levels = c("INTRASTATE", "INTERSTATE")))%>%
+  arrange(INTER_INTRA)%>%
+  group_by(SYS)%>%
+  mutate(max = sum(miles, na.rm = T),
+         min_i = str_sub(first(INTER_INTRA),4,5),
+         max_i = str_sub(last(INTER_INTRA),4,5))%>%
+  ungroup() %>% 
+  mutate(lab_q = ifelse(max >= (sum(miles)/2),sum(miles)*.01 , max + sum(miles)*.01),
+         long_sys = case_when(SYS == "GD" ~ "Gas Distribution Lines",
+                              SYS == "GT" ~ "Gas Transmission Lines",
+                              SYS == "HL" ~ "Hazardous Liquid Lines",
+                              .default = ""),
+         lab = paste0(format(round(max, 0), big.mark = ",", trim = T),
+                      " miles of ", long_sys)) %>% 
+  ggplot(aes(x = SYS, y = miles, fill = paste0(str_sub(INTER_INTRA,4,5), SYS)))+
+  geom_errorbar(aes(x = "HL", ymin = 0, ymax = sum(miles)),
+                position = position_nudge(x = .6), width = .2)+
+  geom_errorbar(aes(x = SYS, ymin = max, ymax = max, 
+                    col = paste0(max_i, SYS)),
+                stat = "identity", linewidth = 2, width =.8,show.legend = T)+
+  geom_errorbar(aes(x = SYS, ymin = 0, ymax = 0, col = paste0(min_i, SYS)),
+               position = position_nudge(y = max_mi*.001), stat = "identity", linewidth = 2, width =.75, show.legend = T)+
+  geom_bar(stat = "identity", position = "stack", width = .7, show.legend = T)+
+  geom_text(aes(x = "HL", y = sum(miles)/2, 
+                label = scales::comma(sum(miles), accuracy =  1, suffix = " Total Miles of Pipeline")),
+            hjust = .5, fontface = "bold", position = position_nudge(x = .45))+
+  geom_text(aes(x = SYS, y = lab_q, label = lab),
+            data = . %>% distinct(SYS, .keep_all = T), 
+            hjust = 0)+
+  scale_y_continuous(limits = c(0,max_mi), expand = expansion(0,0), breaks = c())+
+  scale_x_discrete(breaks = c())+
+  coord_flip()+
+  scale_color_manual(values = c(RAGT = darkBlue, 
+                                ERGT = "#A8D3D7", 
+                                RAHL = lilac, 
+                                ERHL = "#DABFD8", RAGD = liteGreen))+
+  scale_fill_manual(values = c(RAGT = darkBlue, 
+                                ERGT = "#A8D3D7", 
+                                RAHL = lilac, 
+                                ERHL = "#DABFD8", RAGD = liteGreen))+
+  theme_pst_flip()+
+  theme(panel.grid.major.x = element_blank(),
+        legend.position = "none",
+        panel.grid.minor.x = element_blank(),
+        axis.line.x = element_blank(),
+        axis.line.y = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.ticks.y = element_blank())+
+  labs(x = NULL, y = NULL, title = "NE")
+
+#ggsave("23_plots/test_miles_dc.png", width = 5, height = 2.5, units = "in")
+
+```
+
+```{r}
+
+max_mi = new_miles %>%
+  filter(STATE == "AR") %>%
+  pull(miles) %>% sum()
+
+new_miles %>%
+  filter(STATE == "AR") %>%
+  group_by(SYS)%>%
+  mutate(max = sum(miles, na.rm = T),
+         max_i = ifelse(length(unique(INTER_INTRA))>1, 
+         "ER", "RA"))%>%
+  ungroup() %>% 
+  mutate(lab_q = ifelse(max >= (sum(miles)/2),sum(miles)*.01 , max + sum(miles)*.01),
+         long_sys = case_when(SYS == "GD" ~ "Gas Distribution Lines",
+                              SYS == "GT" ~ "Gas Transmission Lines",
+                              SYS == "HL" ~ "Hazardous Liquid Lines",
+                              .default = ""),
+         lab = paste0(format(round(miles, 0), big.mark = ",", trim = T),
+                      " miles of ", long_sys)) %>%
+  ggplot(aes(x = SYS, y = miles, fill = paste0(str_sub(INTER_INTRA,4,5), SYS)))+
+  geom_errorbar(aes(x = "HL", ymin = 0, ymax = sum(miles)),
+                position = position_nudge(x = .6), width = .2)+
+  geom_errorbar(aes(x = SYS, ymin = max, ymax = max, 
+                    col = paste0(max_i, SYS)),
+                stat = "identity", linewidth = 2, width =.8,show.legend = T)+
+  geom_errorbar(aes(x = SYS, ymin = 0, ymax = 0, col = paste0("RA", SYS)),
+                stat = "identity", linewidth = 3, width =.8, show.legend = T)+
+  geom_bar(stat = "identity", position = "stack", width = .7, show.legend = T)+
+  geom_text(aes(x = "HL", y = sum(miles)/2, 
+                label = scales::comma(sum(miles), accuracy =  1, suffix = " Total Miles of Pipeline")),
+            hjust = .5, fontface = "bold", position = position_nudge(x = .45))+
+  geom_text(aes(x = SYS, y = lab_q, label = lab),
+            data = . %>% distinct(SYS, .keep_all = T), 
+            hjust = 0)+
+  scale_y_continuous(limits = c(0,max_mi), expand = expansion(0,0), breaks = c())+
+  scale_x_discrete(breaks = c())+
+  coord_flip()+
+  scale_color_manual(values = c(RAGT = darkBlue, 
+                                ERGT = "#A8D3D7", 
+                                RAHL = lilac, 
+                                ERHL = "#DABFD8", RAGD = liteGreen))+
+  scale_fill_manual(values = c(RAGT = darkBlue, 
+                                ERGT = "#A8D3D7", 
+                                RAHL = lilac, 
+                                ERHL = "#DABFD8", RAGD = liteGreen))+
+  theme_pst_flip()+
+  theme(panel.grid.major.x = element_blank(),
+        legend.position = "none",
+        panel.grid.minor.x = element_blank(),
+        axis.line.x = element_blank(),
+        axis.line.y = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.ticks.y = element_blank())+
+  labs(x = NULL, y = NULL, title = "Arkansas")
+
+ggsave("23_plots/test_miles_ar.png", width = 5, height = 2.5, units = "in")
+
+```
+
+```{r}
+
+for(i in 1:length(state_list)){
+  state_i = state_list[[i]]
+  stab_i =case_when(state_i =="California Liquid" ~ "CA-L"  ,
+                    state_i == "California Gas" ~ "CA-G"  ,
+                    state_i == "Arkansas OGC" ~ "AR",
+                    state_i == "District of Columbia" ~ "DC",
+                    .default = state.abb[match(state_i, state.name)]
+                    )
+  
+  #get state mileage maximum
+  max_mi = new_miles %>%
+    filter(STATE == stab_i) %>%
+    pull(miles) %>% sum()
+  
+  pipe <- new_miles %>%
+    filter(STATE == stab_i) %>%
+    mutate(INTER_INTRA = factor(INTER_INTRA, 
+                                levels = c("INTRASTATE", "INTERSTATE")))%>%
+    arrange(INTER_INTRA)%>%
+    group_by(SYS)%>%
+    mutate(max = sum(miles, na.rm = T),
+           min_i = str_sub(first(INTER_INTRA),4,5),
+           max_i = str_sub(last(INTER_INTRA),4,5))%>%
+    ungroup() %>% 
+    mutate(lab_q = ifelse(max >= (sum(miles)/2),sum(miles)*.01 , max + sum(miles)*.01),
+           long_sys = case_when(SYS == "GD" ~ "Gas Distribution Lines",
+                                SYS == "GT" ~ "Gas Transmission Lines",
+                                SYS == "HL" ~ "Hazardous Liquid Lines",
+                                .default = ""),
+           lab = paste0(format(round(max, 0), big.mark = ",", trim = T),
+                        " miles of ", long_sys)) %>% 
+    ggplot(aes(x = SYS, y = miles, fill = paste0(str_sub(INTER_INTRA,4,5), SYS)))+
+    geom_bar(stat = "identity", position = "stack", width = .3, show.legend = T)+
+    geom_errorbar(aes(x = SYS, ymin = max, ymax = max, col = paste0(max_i, SYS)),
+                  stat = "identity", linewidth = 2, width =.4,show.legend = T)+
+    geom_errorbar(aes(x = SYS, ymin = 0, ymax = 0, col = paste0(min_i, SYS)),
+                  stat = "identity", linewidth = 3, width =.4, show.legend = T)+
+    geom_text(aes(x = SYS, y = lab_q, label = lab),
+              data = . %>% distinct(SYS, .keep_all = T), 
+              hjust = 0)+
+    scale_y_continuous(limits = c(0,max_mi), expand = expansion(0,0))+
+    scale_x_discrete(expand=expansion(0,0), breaks = NULL)+
+    coord_flip()+
+    scale_color_manual(values = c(RAGT = darkBlue, 
+                                  ERGT = "#A8D3D7", 
+                                  RAHL = lilac, 
+                                  ERHL = "#DABFD8", RAGD = liteGreen))+
+    scale_fill_manual(values = c(RAGT = darkBlue, 
+                                  ERGT = "#A8D3D7", 
+                                  RAHL = lilac, 
+                                  ERHL = "#DABFD8", RAGD = liteGreen))+
+    theme_pst_flip()+
+    theme(panel.grid.major.x = element_blank(),
+          legend.position = "none",
+          panel.grid.minor.x = element_blank(),
+          axis.line.x = element_blank(),
+          axis.line.y = element_blank(),
+          axis.ticks.x = element_blank(),
+          axis.ticks.y = element_blank(),
+          plot.margin = margin(0,0,0,0),
+      axis.ticks.length = unit(0, "pt"))+
+    labs(x = NULL, y = NULL, title =NULL)
+      
+
+  name = paste0(expo_dir, "pipes/",
+                if_else(grepl("OGC",state_i), "AR-O", stab_i),
+                "_pipe.pdf")
+  
+  ggsave(name, plot = pipe, width = 4, height = 2.5, units = "in", dpi = 300)
+  
+pipe_n <- new_miles %>%
+  filter(STATE == stab_i) %>%
+  mutate(INTER_INTRA = factor(INTER_INTRA, 
+                              levels = c("INTRASTATE", "INTERSTATE")))%>%
+  arrange(INTER_INTRA)%>%
+  group_by(SYS)%>%
+  mutate(max = sum(miles, na.rm = T),
+         min_i = str_sub(first(INTER_INTRA),4,5),
+         max_i = str_sub(last(INTER_INTRA),4,5))%>%
+  ungroup() %>% 
+  mutate(lab_q = ifelse(max >= (sum(miles)/2),sum(miles)*.01 , max + sum(miles)*.01),
+         long_sys = case_when(SYS == "GD" ~ "Gas Distribution Lines",
+                              SYS == "GT" ~ "Gas Transmission Lines",
+                              SYS == "HL" ~ "Hazardous Liquid Lines",
+                              .default = ""),
+         lab = paste0(format(round(max, 0), big.mark = ",", trim = T),
+                      " miles of ", long_sys)) %>% 
+  ggplot(aes(x = SYS, y = miles, fill = paste0(str_sub(INTER_INTRA,4,5), SYS)))+
+  # geom_errorbar(aes(x = "HL", ymin = 0, ymax = sum(miles)),
+  #               position = position_nudge(x = .6), width = .2)+
+  geom_bar(stat = "identity", position = "stack", width = .5, show.legend = T)+
+  geom_errorbar(aes(x = SYS, ymin = max, ymax = max, 
+                    col = paste0(max_i, SYS)),
+                stat = "identity", linewidth = 2, width =.6,show.legend = T)+
+  geom_errorbar(aes(x = SYS, ymin = 0, ymax = 0, col = paste0(min_i, SYS)),
+                stat = "identity", linewidth = 3, width =.6, show.legend = T)+
+  # geom_text(aes(x = "HL", y = sum(miles)/2, 
+  #               label = scales::comma(sum(miles), accuracy =  1, suffix = " Total Miles of Pipeline")),
+  #           hjust = .5, fontface = "bold", position = position_nudge(x = .45))+
+  geom_text(aes(x = SYS, y = lab_q, label = lab),
+            data = . %>% distinct(SYS, .keep_all = T), 
+            hjust = 0)+
+  scale_y_continuous(limits = c(0,max_mi), expand = expansion(0,0), breaks = c())+
+  scale_x_discrete(expand=expansion(.5,.1), breaks = NULL)+
+  coord_flip()+
+  scale_color_manual(values = c(RAGT = darkBlue, 
+                                ERGT = "#A8D3D7", 
+                                RAHL = lilac, 
+                                ERHL = "#DABFD8", RAGD = liteGreen))+
+  scale_fill_manual(values = c(RAGT = darkBlue, 
+                                ERGT = "#A8D3D7", 
+                                RAHL = lilac, 
+                                ERHL = "#DABFD8", RAGD = liteGreen))+
+  theme_pst_flip()+
+  theme(panel.grid.major.x = element_blank(),
+        legend.position = "none",
+        panel.grid.minor.x = element_blank(),
+        axis.line.x = element_blank(),
+        axis.line.y = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.ticks.y = element_blank(),
+        plot.margin = margin(0,0,0,0),
+    axis.ticks.length = unit(0, "pt"))+
+  labs(x = NULL, y = NULL, title =NULL)
+  
+  
+  name = paste0(expo_dir, "pipes/",
+                if_else(grepl("OGC",state_i), "AR-O", stab_i),
+                "_pipe_narrow.pdf")
+  
+  ggsave(name, plot = pipe_n, width = 4, height = 1.5, units = "in", dpi = 300)
+  
+pipe_c <- new_miles %>%
+  filter(STATE == stab_i) %>%
+  mutate(INTER_INTRA = factor(INTER_INTRA, 
+                              levels = c("INTRASTATE", "INTERSTATE")))%>%
+  arrange(INTER_INTRA)%>%
+  group_by(SYS)%>%
+  mutate(max = sum(miles, na.rm = T),
+         min_i = str_sub(first(INTER_INTRA),4,5),
+         max_i = str_sub(last(INTER_INTRA),4,5),
+         sysi = paste0(unique(INTER_INTRA), collapse= " & "),
+         mili = paste0(round(unique(miles), 0), collapse = " & "),
+         syslab = paste0(mili," -- ", sysi))%>%
+  ungroup() %>% 
+  mutate(lab_q = ifelse(max >= (sum(miles)/2),sum(miles)*.01 , max + sum(miles)*.01),
+         long_sys = case_when(SYS == "GD" ~ "Gas Distribution Lines",
+                              SYS == "GT" ~ "Gas Transmission Lines",
+                              SYS == "HL" ~ "Hazardous Liquid Lines",
+                              .default = ""),
+         lab = paste0(format(round(max, 0), big.mark = ",", trim = T),
+                      " miles of ", long_sys, "\n",
+                      syslab)) %>% 
+  ggplot(aes(x = SYS, y = miles, fill = paste0(str_sub(INTER_INTRA,4,5), SYS)))+
+  # geom_errorbar(aes(x = "HL", ymin = 0, ymax = sum(miles)),
+  #               position = position_nudge(x = .6), width = .2)+
+  geom_bar(stat = "identity", position = "stack", width = .5, show.legend = T)+
+  geom_errorbar(aes(x = SYS, ymin = max, ymax = max, 
+                    col = paste0(max_i, SYS)),
+                stat = "identity", linewidth = 2, width =.6,show.legend = T)+
+  geom_errorbar(aes(x = SYS, ymin = 0, ymax = 0, col = paste0(min_i, SYS)),
+                stat = "identity", linewidth = 3, width =.6, show.legend = T)+
+  # geom_text(aes(x = "HL", y = sum(miles)/2, 
+  #               label = scales::comma(sum(miles), accuracy =  1, suffix = " Total Miles of Pipeline")),
+  #           hjust = .5, fontface = "bold", position = position_nudge(x = .45))+
+  geom_text(aes(x = SYS, y = lab_q, label = lab),
+            data = . %>% distinct(SYS, .keep_all = T), 
+            hjust = 0)+
+  scale_y_continuous(limits = c(0,max_mi), expand = expansion(0,0), breaks = c())+
+  scale_x_discrete(expand=expansion(.1,.1), breaks = NULL)+
+  coord_flip()+
+  scale_color_manual(values = c(RAGT = darkBlue, 
+                                ERGT = "#A8D3D7", 
+                                RAHL = lilac, 
+                                ERHL = "#DABFD8", RAGD = liteGreen))+
+  scale_fill_manual(values = c(RAGT = darkBlue, 
+                                ERGT = "#A8D3D7", 
+                                RAHL = lilac, 
+                                ERHL = "#DABFD8", RAGD = liteGreen))+
+  theme_pst_flip()+
+  theme(panel.grid.major.x = element_blank(),
+        legend.position = "none",
+        panel.grid.minor.x = element_blank(),
+        axis.line.x = element_blank(),
+        axis.line.y = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.ticks.y = element_blank(),
+        plot.margin = margin(0,0,0,0),
+    axis.ticks.length = unit(0, "pt"))+
+  labs(x = NULL, y = NULL, title =NULL)
+  
+  
+  name = paste0(expo_dir, "pipes/",
+                if_else(grepl("OGC",state_i), "AR-O", stab_i),
+                "_pipe_check.pdf")
+  
+  ggsave(name, plot = pipe_c, width = 4, height = 1.5, units = "in", dpi = 300)
+  
+}
+
+```
+
+
+```{r use this}
+state_list = state_list[!state_list %in% c(NA, "Inidividual Audit Requested")]
+
+
+
+
+for(i in 1:length(state_list)){
+  state_i = state_list[[i]]
+  stab_i =case_when(state_i =="California Liquid" ~ "CA-L"  ,
+                    state_i == "California Gas" ~ "CA-G"  ,
+                    state_i == "Arkansas OGC" ~ "AR",
+                    state_i == "District of Columbia" ~ "DC",
+                    .default = state.abb[match(state_i, state.name)]
+                    )
+  
+  #get state mileage maximum
+  max_mi = new_miles %>%
+    filter(STATE == stab_i & REPORT_YEAR == 2022) %>%
+    pull(miles) %>% sum()
+  
+  if (stab_i == "RI") {
+    extra = tibble(
+      STATE_NAME = "RHODE ISLAND",
+      INTER_INTRA = NA,
+      REPORT_YEAR = 2022,
+      miles = 0,
+      STATE = "RI",
+      SYS = "HL"
+    )
+     new_miles <- new_miles %>% bind_rows(extra)
+  }
+  
+  # 
+  # fixsys = ifelse(stab_i == "RI" , "HL",NULL)
+  # sifmi = ifelse(stab_i == "RI" , "HL",NULL)
+  
+
+pipe_n <- new_miles %>%
+  filter(STATE == stab_i& REPORT_YEAR == 2022) %>%
+  mutate(INTER_INTRA = ifelse(is.na(INTER_INTRA)& 
+                                SYS == "GD",
+                              "INTRASTATE", INTER_INTRA),
+         INTER_INTRA = factor(INTER_INTRA, 
+                              levels = c("INTRASTATE", "INTERSTATE")))%>%
+  arrange(INTER_INTRA)%>%
+  group_by(SYS)%>%
+  mutate(max = sum(miles, na.rm = T),
+         min_i = str_sub(first(INTER_INTRA),4,5),
+         max_i = str_sub(last(INTER_INTRA),4,5))%>%
+  ungroup() %>%
+  mutate(lab_q = ifelse(max >= (sum(miles)/3.5),
+                        ifelse(stab_i == "LA" & SYS != "GD",
+                               6600,sum(miles)*.01) , 
+                        max + sum(miles)*.01),
+         long_sys = case_when(SYS == "GD" ~ "Gas Distribution Lines",
+                              SYS == "GT" ~ "Gas Transmission Lines",
+                              SYS == "HL" ~ "Hazardous Liquid Lines",
+                              .default = ""),
+         lab = paste0(format(round(max, 0), big.mark = ",", trim = T),
+                      " mi. ", long_sys)) %>% 
+  ggplot(aes(x = SYS, y = miles, fill = paste0(str_sub(INTER_INTRA,4,5), SYS)))+
+  # geom_errorbar(aes(x = "HL", ymin = 0, ymax = sum(miles)),
+  #               position = position_nudge(x = .6), width = .2)+
+  geom_bar(stat = "identity", position = "stack", width = .5, show.legend = T, color = NA)+
+  geom_errorbar(aes(x = SYS, ymin = max, ymax = max, 
+                    col = ifelse(max > 0,paste0(max_i, SYS), "None")),
+                stat = "identity", linewidth = 2, width =.6,show.legend = T)+
+  geom_errorbar(aes(x = SYS, ymin = 0, ymax = 0, 
+                    col = ifelse(max > 0,paste0(min_i, SYS), "None")),
+                stat = "identity", linewidth = 3, width =.6, show.legend = T)+
+  # geom_text(aes(x = "HL", y = sum(miles)/2, 
+  #               label = scales::comma(sum(miles), accuracy =  1, suffix = " Total Miles of Pipeline")),
+  #           hjust = .5, fontface = "bold", position = position_nudge(x = .45))+
+  geom_text(aes(x = SYS, y = lab_q, label = lab),
+            data = . %>% distinct(SYS, .keep_all = T), 
+            hjust = 0, family = pstFont, size = 3.3)+
+  scale_y_continuous(limits = c(0,max_mi), expand = expansion(0,0), breaks = c())+
+  scale_x_discrete(expand=expansion(.5,.1), breaks = c("GD", "GT", "HL"), limits = c("GD", "GT","HL"), labels = NULL)+
+  coord_flip()+
+  scale_color_manual(values = c(RAGT = darkBlue, 
+                                ERGT = "#A8D3D7", 
+                                RAHL = lilac, 
+                                ERHL = "#DABFD8", RAGD = liteGreen,
+                                None = "gray95"))+
+  scale_fill_manual(values = c(RAGT = darkBlue, 
+                                ERGT = "#A8D3D7", 
+                                RAHL = lilac, 
+                                ERHL = "#DABFD8", RAGD = liteGreen))+
+  theme_pst_flip()+
+  theme(panel.grid.major.x = element_blank(),
+        legend.position = "none",
+        panel.grid.minor.x = element_blank(),
+        axis.line.x = element_blank(),
+        axis.line.y = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.text.y = element_blank(),
+        plot.margin = margin(0,0,0,0),
+    axis.ticks.length = unit(0, "pt"))+
+  labs(x = NULL, y = NULL, title =NULL)
+  
+  
+  name = paste0(expo_dir, "npipes/",
+                if_else(grepl("OGC",state_i), "AR-O", stab_i),
+                "_pipe_narrow.pdf")
+  
+  ggsave(name, plot = pipe_n, width = 4, height = 1.5, units = "in", dpi = 300)
+  
+}
+
+```
+
+```{r fixing states}
+state_list = state_list[!state_list %in% c(NA, "Inidividual Audit Requested")]
+
+m1 = 1.05
+m2 = .95
+
+max_set = tibble(
+  state = c("MS", "MT", "ND", "NM", "OK", "TX", "WY", "LA"),
+  mult = c(m2,m2,m1,m2,m2,m2,m1,m2)
+)
+
+
+for(i in 1:length(max_set$state)){
+  
+  stab_i = max_set$state[[i]]
+  ms = max_set$mult[[i]]
+  state_i = state.abb[match(state_i, state.name)]
+  
+  #get state mileage maximum
+  max_mi = new_miles %>%
+    filter(STATE == stab_i & REPORT_YEAR == 2022) %>%
+    pull(miles) %>% sum()
+  
+
+pipe_n <- new_miles %>%
+  filter(STATE == stab_i& REPORT_YEAR == 2022) %>%
+  mutate(INTER_INTRA = ifelse(is.na(INTER_INTRA)& 
+                                SYS == "GD",
+                              "INTRASTATE", INTER_INTRA),
+         INTER_INTRA = factor(INTER_INTRA, 
+                              levels = c("INTRASTATE", "INTERSTATE")))%>%
+  arrange(INTER_INTRA)%>%
+  group_by(SYS)%>%
+  mutate(max = sum(miles, na.rm = T),
+         min_i = str_sub(first(INTER_INTRA),4,5),
+         max_i = str_sub(last(INTER_INTRA),4,5))%>%
+  ungroup() %>% #view
+  mutate(lab_q = ifelse(max >= (sum(miles)/2),
+                        sum(miles)*.01 , # in 
+                        max + sum(miles)*.01), #out 
+         long_sys = case_when(SYS == "GD" ~ "Gas Distribution Lines",
+                              SYS == "GT" ~ "Gas Transmission Lines",
+                              SYS == "HL" ~ "Hazardous Liquid Lines",
+                              .default = ""),
+         lab = paste0(format(round(max, 0), big.mark = ",", trim = T),
+                      " mi. ", long_sys)) %>% 
+  ggplot(aes(x = SYS, y = miles, fill = paste0(str_sub(INTER_INTRA,4,5), SYS)))+
+  # geom_errorbar(aes(x = "HL", ymin = 0, ymax = sum(miles)),
+  #               position = position_nudge(x = .6), width = .2)+
+  geom_bar(stat = "identity", position = "stack", width = .5, show.legend = T, color = NA)+
+  geom_errorbar(aes(x = SYS, ymin = max, ymax = max, 
+                    col = ifelse(max > 0,paste0(max_i, SYS), "None")),
+                stat = "identity", linewidth = 2, width =.6,show.legend = T)+
+  geom_errorbar(aes(x = SYS, ymin = 0, ymax = 0, 
+                    col = ifelse(max > 0,paste0(min_i, SYS), "None")),
+                stat = "identity", linewidth = 3, width =.6, show.legend = T)+
+  # geom_text(aes(x = "HL", y = sum(miles)/2, 
+  #               label = scales::comma(sum(miles), accuracy =  1, suffix = " Total Miles of Pipeline")),
+  #           hjust = .5, fontface = "bold", position = position_nudge(x = .45))+
+  geom_text(aes(x = SYS, y = lab_q, label = lab),
+            data = . %>% distinct(SYS, .keep_all = T), 
+            hjust = 0, family = pstFont, size = 3.3)+
+  scale_y_continuous(limits = c(0,max_mi*ms), expand = expansion(0,0), breaks = c())+
+  scale_x_discrete(expand=expansion(.5,.1), breaks = c("GD", "GT", "HL"), limits = c("GD", "GT","HL"), labels = NULL)+
+  coord_flip()+
+  scale_color_manual(values = c(RAGT = darkBlue, 
+                                ERGT = "#A8D3D7", 
+                                RAHL = lilac, 
+                                ERHL = "#DABFD8", RAGD = liteGreen,
+                                None = "gray95"))+
+  scale_fill_manual(values = c(RAGT = darkBlue, 
+                                ERGT = "#A8D3D7", 
+                                RAHL = lilac, 
+                                ERHL = "#DABFD8", RAGD = liteGreen))+
+  theme_pst_flip()+
+  theme(panel.grid.major.x = element_blank(),
+        legend.position = "none",
+        panel.grid.minor.x = element_blank(),
+        axis.line.x = element_blank(),
+        axis.line.y = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.text.y = element_blank(),
+         plot.margin = margin(0,0,0,0),
+    axis.ticks.length = unit(0, "pt"))+
+  labs(x = NULL, y = NULL, title =NULL)
+  
+  
+  name = paste0(expo_dir, "fixed/",
+                if_else(grepl("OGC",state_i), "AR-O", stab_i),
+                "_pipe_narrow.pdf")
+  
+  ggsave(name, plot = pipe_n, width = 4, height = 1.5, units = "in", dpi = 300)
+  
+}
+
+```
+
+
+
+```{r}
+
+max_manual = tibble(
+  states= c("NM", "MS", "MT", "WY")
+)
+
+for(i in 1:length(state_list)){
+  state_i = state_list[[i]]
+  stab_i =case_when(state_i =="California Liquid" ~ "CA-L"  ,
+                    state_i == "California Gas" ~ "CA-G"  ,
+                    state_i == "Arkansas OGC" ~ "AR",
+                    state_i == "District of Columbia" ~ "DC",
+                    .default = state.abb[match(state_i, state.name)]
+                    )
+  stab_mi = new_miles %>%
+    filter(!is.na(STATE_NAME), STATE_NAME != "", REPORT_YEAR== 2022,
+           STATE_NAME != "WASHINGTON, DC", REPORT_YEAR == 2022)%>%
+    mutate(STATE = ifelse(STATE_NAME == "WASHINGTON DC", "DC", STATE))%>%
+    complete(STATE_NAME,  nesting(SYS, INTER_INTRA ), 
+             fill = list(miles = 0, REPORT_YEAR = 2022)) %>% 
+    filter(STATE == stab_i ) 
+  
+  #get state mileage maximum
+  max_mi = stab_mi %>%
+    pull(miles) %>% sum()
+  
+  #### pipe two width ####
+  pipe <- stab_mi %>%
+    mutate(INTER_INTRA = ifelse(SYS == "GD", "INTRASTATE", INTER_INTRA),
+           INTER_INTRA = factor(INTER_INTRA, 
+                                levels = c("INTRASTATE", "INTERSTATE")),
+           )%>% 
+    arrange(INTER_INTRA)%>%
+    group_by(SYS) %>%
+    mutate(max = sum(miles, na.rm = T),
+           min_i = str_sub(first(INTER_INTRA),4,5),
+           max_i = str_sub(last(INTER_INTRA),4,5))%>%
+    ungroup() %>%
+    mutate(lab_q = ifelse(max >= (sum(miles)/2),sum(miles)*.01 , max + sum(miles)*.01),
+           long_sys = case_when(SYS == "GD" ~ "Gas Distribution Lines",
+                                SYS == "GT" ~ "Gas Transmission Lines",
+                                SYS == "HL" ~ "Hazardous Liquid Lines",
+                                .default = ""),
+           lab = paste0(format(round(max, 0), big.mark = ",", trim = T),
+                        " mi. ", long_sys)) %>% 
+    ggplot(aes(x = SYS, y = miles, fill = paste0(str_sub(INTER_INTRA,4,5), SYS)))+
+    geom_bar(stat = "identity", position = "stack", width = .3, show.legend = T)+
+    #non GD
+    geom_errorbar(aes(x = SYS, ymin = max, ymax = max, 
+                      col = paste0(max_i, SYS)),
+                  stat = "identity", linewidth = 2, 
+                  show.legend = T, width = .35,
+                  data = . %>% filter(SYS != "GD"))+
+    geom_errorbar(aes(x = SYS, ymin = 0, ymax = 0, col = paste0(min_i, SYS)),
+                  stat = "identity", linewidth = 3, 
+                  width =.35, show.legend = T,
+                  data = . %>% filter(SYS != "GD"))+
+    #GD
+    geom_errorbar(aes(x = SYS, ymin = max, ymax = max, 
+                      col = paste0(max_i, SYS)),
+                  stat = "identity", linewidth = 2, 
+                  show.legend = T, width = .4,
+                  data = . %>% filter(SYS == "GD"))+
+    geom_errorbar(aes(x = SYS, ymin = 0, ymax = 0, col = paste0(min_i, SYS)),
+                  stat = "identity", linewidth = 3, 
+                  width =.4, show.legend = T,
+                  data = . %>% filter(SYS == "GD"))+
+    geom_text(aes(x = SYS, y = lab_q, label = lab),
+              data = . %>% distinct(SYS, .keep_all = T), 
+              hjust = 0, size = 2.7, family = pstFont)+
+    scale_y_continuous(limits = c(0,max_mi), expand = expansion(0,0), breaks = c())+
+    scale_x_discrete(expand=expansion(0,0), breaks = NULL)+
+    coord_flip()+
+    scale_color_manual(values = c(RAGT = darkBlue, 
+                                  ERGT = "#A8D3D7", 
+                                  RAHL = lilac, 
+                                  ERHL = "#DABFD8", RAGD = liteGreen))+
+    scale_fill_manual(values = c(RAGT = darkBlue, 
+                                  ERGT = "#A8D3D7", 
+                                  RAHL = lilac, 
+                                  ERHL = "#DABFD8", RAGD = liteGreen))+
+    theme_pst_flip()+
+    theme(panel.grid.major.x = element_blank(),
+          legend.position = "none",
+          panel.grid.minor.x = element_blank(),
+          axis.line.x = element_blank(),
+          axis.line.y = element_blank(),
+          axis.ticks.x = element_blank(),
+          axis.ticks.y = element_blank(),
+          plot.margin = margin(0,0,0,0),
+      axis.ticks.length = unit(0, "pt"))+
+    labs(x = NULL, y = NULL, title =NULL)
+      
+
+  name = paste0(expo_dir, "test_pipe/",
+                if_else(grepl("OGC",state_i), "AR-O", stab_i),
+                "_pipe_2.pdf")
+  
+  ggsave(name, plot = pipe, width = 4, height = 2.5, units = "in", dpi = 300)
+  
+  #### pipe var width  ####
+  width2 = .325 + 
+    ((1-stab_mi[[which(stab_mi$SYS == "GD"),"miles"]]/max_mi)*.075)
+  
+  
+  pipe_v = new_miles %>%
+    filter(STATE == stab_i, REPORT_YEAR == 2022) %>%
+    mutate(INTER_INTRA = ifelse(SYS == "GD", "INTRASTATE", INTER_INTRA),
+           INTER_INTRA = factor(INTER_INTRA, 
+                                levels = c("INTRASTATE", "INTERSTATE")),
+           )%>% 
+    arrange(INTER_INTRA)%>%
+    group_by(SYS) %>%
+    mutate(max = sum(miles, na.rm = T),
+           min_i = str_sub(first(INTER_INTRA),4,5),
+           max_i = str_sub(last(INTER_INTRA),4,5))%>%
+    ungroup() %>%
+    mutate(lab_q = ifelse(max >= (sum(miles)/2),sum(miles)*.01 , max + sum(miles)*.01),
+           long_sys = case_when(SYS == "GD" ~ "Gas Distribution Lines",
+                                SYS == "GT" ~ "Gas Transmission Lines",
+                                SYS == "HL" ~ "Hazardous Liquid Lines",
+                                .default = ""),
+           lab = paste0(format(round(max, 0), big.mark = ",", trim = T),
+                        " miles of ", long_sys)) %>% 
+    ggplot(aes(x = SYS, y = miles, fill = paste0(str_sub(INTER_INTRA,4,5), SYS)))+
+    geom_bar(stat = "identity", position = "stack", width = .3, show.legend = T)+
+    #non GD
+    geom_errorbar(aes(x = SYS, ymin = max, ymax = max, 
+                      col = paste0(max_i, SYS), width = ifelse(SYS == "GD", .4, .2)),
+                  stat = "identity", linewidth = 2, 
+                  show.legend = T, width = width2,
+                  data = . %>% filter(SYS != "GD"))+
+    geom_errorbar(aes(x = SYS, ymin = 0, ymax = 0, col = paste0(min_i, SYS)),
+                  stat = "identity", linewidth = 3, 
+                  width =width2, show.legend = T,
+                  data = . %>% filter(SYS != "GD"))+
+    #GD
+    geom_errorbar(aes(x = SYS, ymin = max, ymax = max, 
+                      col = paste0(max_i, SYS), width = ifelse(SYS == "GD", .4, .2)),
+                  stat = "identity", linewidth = 2, 
+                  show.legend = T, width = .4,
+                  data = . %>% filter(SYS == "GD"))+
+    geom_errorbar(aes(x = SYS, ymin = 0, ymax = 0, col = paste0(min_i, SYS)),
+                  stat = "identity", linewidth = 3, 
+                  width =.4, show.legend = T,
+                  data = . %>% filter(SYS == "GD"))+
+    geom_text(aes(x = SYS, y = lab_q, label = lab),
+              data = . %>% distinct(SYS, .keep_all = T), 
+              hjust = 0, size = 2.7, family = pstFont)+
+    scale_y_continuous(limits = c(0,max_mi), expand = expansion(0,0), breaks = c())+
+    scale_x_discrete(expand=expansion(0,0), breaks = NULL)+
+    coord_flip()+
+    scale_color_manual(values = c(RAGT = darkBlue, 
+                                  ERGT = "#A8D3D7", 
+                                  RAHL = lilac, 
+                                  ERHL = "#DABFD8", RAGD = liteGreen))+
+    scale_fill_manual(values = c(RAGT = darkBlue, 
+                                  ERGT = "#A8D3D7", 
+                                  RAHL = lilac, 
+                                  ERHL = "#DABFD8", RAGD = liteGreen))+
+    theme_pst_flip()+
+    theme(panel.grid.major.x = element_blank(),
+          legend.position = "none",
+          panel.grid.minor.x = element_blank(),
+          axis.line.x = element_blank(),
+          axis.line.y = element_blank(),
+          axis.ticks.x = element_blank(),
+          axis.ticks.y = element_blank(),
+          plot.margin = margin(0,0,0,0),
+      axis.ticks.length = unit(0, "pt"))+
+    labs(x = NULL, y = NULL, title =NULL)
+      
+
+  name = paste0(expo_dir, "test_pipe/",
+                if_else(grepl("OGC",state_i), "AR-O", stab_i),
+                "_pipe_v.pdf")
+  
+  ggsave(name, plot = pipe_v, width = 4, height = 2.5, units = "in", dpi = 300)
+  
+  
+  
+  
+  
+   #### pipe var 2  width  ####
+  sys_mi <- stab_mi%>% group_by(SYS) %>% summarize(miles = sum(miles))
+  widthGT = .325 + (sys_mi[which(sys_mi$SYS == "GT"), "miles"]/max_mi)*.075
+  widthHL = .325 + (sys_mi[which(sys_mi$SYS == "HL"), "miles"]/max_mi)*.075
+  
+ pipe_v2 <- new_miles %>%
+    filter(STATE == stab_i, REPORT_YEAR == 2022) %>%
+    mutate(INTER_INTRA = ifelse(SYS == "GD", "INTRASTATE", INTER_INTRA),
+           INTER_INTRA = factor(INTER_INTRA, 
+                                levels = c("INTRASTATE", "INTERSTATE")),
+           )%>% 
+    arrange(INTER_INTRA)%>%
+    group_by(SYS) %>%
+    mutate(max = sum(miles, na.rm = T),
+           min_i = str_sub(first(INTER_INTRA),4,5),
+           max_i = str_sub(last(INTER_INTRA),4,5))%>%
+    ungroup() %>%
+    mutate(lab_q = ifelse(max >= (sum(miles)/2),sum(miles)*.01 , max + sum(miles)*.01),
+           long_sys = case_when(SYS == "GD" ~ "Gas Distribution Lines",
+                                SYS == "GT" ~ "Gas Transmission Lines",
+                                SYS == "HL" ~ "Hazardous Liquid Lines",
+                                .default = ""),
+           lab = paste0(format(round(max, 0), big.mark = ",", trim = T),
+                        " miles of ", long_sys)) %>%
+    ggplot(aes(x = SYS, y = miles, fill = paste0(str_sub(INTER_INTRA,4,5), SYS)))+
+    geom_bar(stat = "identity", position = "stack", width = .3, show.legend = T)+
+    #GT
+    geom_errorbar(aes(x = SYS, ymin = max, ymax = max, 
+                      col = paste0(max_i, SYS)),
+                  stat = "identity", linewidth = 2, 
+                  show.legend = T, width = widthGT[[1]],
+                  data = . %>% filter(SYS == "GT"))+
+    geom_errorbar(aes(x = SYS, ymin = 0, ymax = 0, col = paste0(min_i, SYS)),
+                  stat = "identity", linewidth = 3, 
+                  width =widthGT[[1]], show.legend = T,
+                  data = . %>% filter(SYS == "GT"))+
+    #HL
+    geom_errorbar(aes(x = SYS, ymin = max, ymax = max, 
+                      col = paste0(max_i, SYS), width = ifelse(SYS == "GD", .4, .2)),
+                  stat = "identity", linewidth = 2, 
+                  show.legend = T, width = widthHL[[1]],
+                  data = . %>% filter(SYS =="HL"))+
+    geom_errorbar(aes(x = SYS, ymin = 0, ymax = 0, col = paste0(min_i, SYS)),
+                  stat = "identity", linewidth = 3, 
+                  width =widthHL[[1]], show.legend = T,
+                  data = . %>% filter(SYS =="HL"))+
+    #GD
+    geom_errorbar(aes(x = SYS, ymin = max, ymax = max, 
+                      col = paste0(max_i, SYS), width = ifelse(SYS == "GD", .4, .2)),
+                  stat = "identity", linewidth = 2, 
+                  show.legend = T, width = .4,
+                  data = . %>% filter(SYS == "GD"))+
+    geom_errorbar(aes(x = SYS, ymin = 0, ymax = 0, col = paste0(min_i, SYS)),
+                  stat = "identity", linewidth = 3, 
+                  width =.4, show.legend = T,
+                  data = . %>% filter(SYS == "GD"))+
+    geom_text(aes(x = SYS, y = lab_q, label = lab),
+              data = . %>% distinct(SYS, .keep_all = T), 
+              hjust = 0, size = 2.7, family = pstFont)+
+    scale_y_continuous(limits = c(0,max_mi), expand = expansion(0,0), breaks = c())+
+    scale_x_discrete(expand=expansion(0,0), breaks = NULL)+
+    coord_flip()+
+    scale_color_manual(values = c(RAGT = darkBlue, 
+                                  ERGT = "#A8D3D7", 
+                                  RAHL = lilac, 
+                                  ERHL = "#DABFD8", RAGD = liteGreen))+
+    scale_fill_manual(values = c(RAGT = darkBlue, 
+                                  ERGT = "#A8D3D7", 
+                                  RAHL = lilac, 
+                                  ERHL = "#DABFD8", RAGD = liteGreen))+
+    theme_pst_flip()+
+    theme(panel.grid.major.x = element_blank(),
+          legend.position = "none",
+          panel.grid.minor.x = element_blank(),
+          axis.line.x = element_blank(),
+          axis.line.y = element_blank(),
+          axis.ticks.x = element_blank(),
+          axis.ticks.y = element_blank(),
+          plot.margin = margin(0,0,0,0),
+      axis.ticks.length = unit(0, "pt"))+
+    labs(x = NULL, y = NULL, title =NULL)
+      
+
+  name = paste0(expo_dir, "test_pipe/",
+                if_else(grepl("OGC",state_i), "AR-O", stab_i),
+                "_pipe_v2.pdf")
+  
+  ggsave(name, plot = pipe_v2, width = 4, height = 2.5, units = "in", dpi = 300)
+  
+  
+  
+  
+  #### pipe narrow og ####
+  
+  
+pipe_n <- new_miles %>%
+    filter(STATE == stab_i, REPORT_YEAR == 2022) %>%
+    mutate(INTER_INTRA = ifelse(SYS == "GD", "INTRASTATE", INTER_INTRA),
+           INTER_INTRA = factor(INTER_INTRA, 
+                                levels = c("INTRASTATE", "INTERSTATE")),
+           )%>% 
+    arrange(INTER_INTRA)%>%
+    group_by(SYS) %>%
+    mutate(max = sum(miles, na.rm = T),
+           min_i = str_sub(first(INTER_INTRA),4,5),
+           max_i = str_sub(last(INTER_INTRA),4,5))%>%
+    ungroup() %>%
+    mutate(lab_q = ifelse(max >= (sum(miles)/2),sum(miles)*.01 , max + sum(miles)*.01),
+           long_sys = case_when(SYS == "GD" ~ "Gas Distribution Lines",
+                                SYS == "GT" ~ "Gas Transmission Lines",
+                                SYS == "HL" ~ "Hazardous Liquid Lines",
+                                .default = ""),
+           lab = paste0(format(round(max, 0), big.mark = ",", trim = T),
+                        " miles of ", long_sys)) %>%
+  ggplot(aes(x = SYS, y = miles, fill = paste0(str_sub(INTER_INTRA,4,5), SYS)))+
+  # geom_errorbar(aes(x = "HL", ymin = 0, ymax = sum(miles)),
+  #               position = position_nudge(x = .6), width = .2)+
+  geom_bar(stat = "identity", position = "stack", width = .5, show.legend = T)+
+  geom_errorbar(aes(x = SYS, ymin = max, ymax = max, 
+                    col = paste0(max_i, SYS)),
+                stat = "identity", linewidth = 2, width =.6,show.legend = T)+
+  geom_errorbar(aes(x = SYS, ymin = 0, ymax = 0, col = paste0(min_i, SYS)),
+                stat = "identity", linewidth = 3, width =.6, show.legend = T)+
+  # geom_text(aes(x = "HL", y = sum(miles)/2, 
+  #               label = scales::comma(sum(miles), accuracy =  1, suffix = " Total Miles of Pipeline")),
+  #           hjust = .5, fontface = "bold", position = position_nudge(x = .45))+
+  geom_text(aes(x = SYS, y = lab_q, label = lab),
+            data = . %>% distinct(SYS, .keep_all = T), 
+            hjust = 0, size = 2.7, family = pstFont)+
+  scale_y_continuous(limits = c(0,max_mi), expand = expansion(0,0), breaks = c())+
+  scale_x_discrete(expand=expansion(.5,.1), breaks = NULL)+
+  coord_flip()+
+  scale_color_manual(values = c(RAGT = darkBlue, 
+                                ERGT = "#A8D3D7", 
+                                RAHL = lilac, 
+                                ERHL = "#DABFD8", RAGD = liteGreen))+
+  scale_fill_manual(values = c(RAGT = darkBlue, 
+                                ERGT = "#A8D3D7", 
+                                RAHL = lilac, 
+                                ERHL = "#DABFD8", RAGD = liteGreen))+
+  theme_pst_flip()+
+  theme(panel.grid.major.x = element_blank(),
+        legend.position = "none",
+        panel.grid.minor.x = element_blank(),
+        axis.line.x = element_blank(),
+        axis.line.y = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.ticks.y = element_blank(),
+        plot.margin = margin(0,0,0,0),
+    axis.ticks.length = unit(0, "pt"))+
+  labs(x = NULL, y = NULL, title =NULL)
+  
+  
+  name = paste0(expo_dir, "test_pipe/",
+                if_else(grepl("OGC",state_i), "AR-O", stab_i),
+                "_pipe_narrow.pdf")
+  
+  ggsave(name, plot = pipe_n, width = 4, height = 1.5, units = "in", dpi = 300)
+  
+  
+  #### pipe narrowtwo width ####
+  
+  
+pipe_n2 <- new_miles %>%
+    filter(STATE == stab_i, REPORT_YEAR == 2022) %>%
+    mutate(INTER_INTRA = ifelse(SYS == "GD", "INTRASTATE", INTER_INTRA),
+           INTER_INTRA = factor(INTER_INTRA, 
+                                levels = c("INTRASTATE", "INTERSTATE")),
+           )%>% 
+    arrange(INTER_INTRA)%>%
+    group_by(SYS) %>%
+    mutate(max = sum(miles, na.rm = T),
+           min_i = str_sub(first(INTER_INTRA),4,5),
+           max_i = str_sub(last(INTER_INTRA),4,5))%>%
+    ungroup() %>%
+    mutate(lab_q = ifelse(max >= (sum(miles)/2),sum(miles)*.01 , max + sum(miles)*.01),
+           long_sys = case_when(SYS == "GD" ~ "Gas Distribution Lines",
+                                SYS == "GT" ~ "Gas Transmission Lines",
+                                SYS == "HL" ~ "Hazardous Liquid Lines",
+                                .default = ""),
+           lab = paste0(format(round(max, 0), big.mark = ",", trim = T),
+                        " miles of ", long_sys)) %>%
+  ggplot(aes(x = SYS, y = miles, fill = paste0(str_sub(INTER_INTRA,4,5), SYS)))+
+  # geom_errorbar(aes(x = "HL", ymin = 0, ymax = sum(miles)),
+  #               position = position_nudge(x = .6), width = .2)+
+  geom_bar(stat = "identity", position = "stack", width = .5, show.legend = T)+
+  #non GD
+    geom_errorbar(aes(x = SYS, ymin = max, ymax = max, 
+                      col = paste0(max_i, SYS)),
+                  stat = "identity", linewidth = 2, 
+                  show.legend = T, width = .55,
+                  data = . %>% filter(SYS != "GD"))+
+    geom_errorbar(aes(x = SYS, ymin = 0, ymax = 0, col = paste0(min_i, SYS)),
+                  stat = "identity", linewidth = 3, 
+                  width =.55, show.legend = T,
+                  data = . %>% filter(SYS != "GD"))+
+    #GD
+    geom_errorbar(aes(x = SYS, ymin = max, ymax = max, 
+                      col = paste0(max_i, SYS)),
+                  stat = "identity", linewidth = 2, 
+                  show.legend = T, width = .6,
+                  data = . %>% filter(SYS == "GD"))+
+    geom_errorbar(aes(x = SYS, ymin = 0, ymax = 0, col = paste0(min_i, SYS)),
+                  stat = "identity", linewidth = 3, 
+                  width =.6, show.legend = T,
+                  data = . %>% filter(SYS == "GD"))+
+  # geom_text(aes(x = "HL", y = sum(miles)/2, 
+  #               label = scales::comma(sum(miles), accuracy =  1, suffix = " Total Miles of Pipeline")),
+  #           hjust = .5, fontface = "bold", position = position_nudge(x = .45))+
+  geom_text(aes(x = SYS, y = lab_q, label = lab),
+            data = . %>% distinct(SYS, .keep_all = T), 
+            hjust = 0, size = 2.7, family = pstFont)+
+  scale_y_continuous(limits = c(0,max_mi), expand = expansion(0,0), breaks = c())+
+  scale_x_discrete(expand=expansion(.5,.1), breaks = NULL)+
+  coord_flip()+
+  scale_color_manual(values = c(RAGT = darkBlue, 
+                                ERGT = "#A8D3D7", 
+                                RAHL = lilac, 
+                                ERHL = "#DABFD8", RAGD = liteGreen))+
+  scale_fill_manual(values = c(RAGT = darkBlue, 
+                                ERGT = "#A8D3D7", 
+                                RAHL = lilac, 
+                                ERHL = "#DABFD8", RAGD = liteGreen))+
+  theme_pst_flip()+
+  theme(panel.grid.major.x = element_blank(),
+        legend.position = "none",
+        panel.grid.minor.x = element_blank(),
+        axis.line.x = element_blank(),
+        axis.line.y = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.ticks.y = element_blank(),
+        plot.margin = margin(0,0,0,0),
+    axis.ticks.length = unit(0, "pt"))+
+  labs(x = NULL, y = NULL, title =NULL)
+  
+  
+  name = paste0(expo_dir, "test_pipe/",
+                if_else(grepl("OGC",state_i), "AR-O", stab_i),
+                "_pipe_narrow2.pdf")
+  
+  ggsave(name, plot = pipe_n2, width = 4, height = 1.5, units = "in", dpi = 300)
+  
+  
+  #### pipe narrow variable ####
+    sys_mi <- stab_mi%>% group_by(SYS) %>% summarize(miles = sum(miles))
+  widthGT = .525 + (sys_mi[[which(sys_mi$SYS == "GT"), "miles"]]/max_mi)*.085
+  widthHL = .525 + (sys_mi[[which(sys_mi$SYS == "HL"), "miles"]]/max_mi)*.085
+  lineGT = 2-  (1-( sys_mi[[which(sys_mi$SYS == "GT"), "miles"]]/max_mi))*1
+  lineHL = 2-  (1-(sys_mi[[which(sys_mi$SYS == "HL"), "miles"]]/max_mi))*1
+  
+pipe_nv <- new_miles %>%
+    filter(STATE == stab_i, REPORT_YEAR == 2022) %>%
+    mutate(INTER_INTRA = ifelse(SYS == "GD", "INTRASTATE", INTER_INTRA),
+           INTER_INTRA = factor(INTER_INTRA, 
+                                levels = c("INTRASTATE", "INTERSTATE")),
+           )%>% 
+    arrange(INTER_INTRA)%>%
+    group_by(SYS) %>%
+    mutate(max = sum(miles, na.rm = T),
+           min_i = str_sub(first(INTER_INTRA),4,5),
+           max_i = str_sub(last(INTER_INTRA),4,5))%>%
+    ungroup() %>%
+    mutate(lab_q = ifelse(max >= (sum(miles)/2),sum(miles)*.01 , max + sum(miles)*.01),
+           long_sys = case_when(SYS == "GD" ~ "Gas Distribution Lines",
+                                SYS == "GT" ~ "Gas Transmission Lines",
+                                SYS == "HL" ~ "Hazardous Liquid Lines",
+                                .default = ""),
+           lab = paste0(format(round(max, 0), big.mark = ",", trim = T),
+                        " miles of ", long_sys)) %>%
+  ggplot(aes(x = SYS, y = miles, fill = paste0(str_sub(INTER_INTRA,4,5), SYS)))+
+  # geom_errorbar(aes(x = "HL", ymin = 0, ymax = sum(miles)),
+  #               position = position_nudge(x = .6), width = .2)+
+  geom_bar(stat = "identity", position = "stack", width = .5, show.legend = T)+
+ #non GD
+    geom_errorbar(aes(x = SYS, ymin = max, ymax = max, 
+                      col = paste0(max_i, SYS)),
+                  stat = "identity", linewidth = lineGT, 
+                  show.legend = T, width = widthGT,
+                  data = . %>% filter(SYS =="GT"))+
+    geom_errorbar(aes(x = SYS, ymin = 0, ymax = 0, col = paste0(min_i, SYS)),
+                  stat = "identity", linewidth = lineGT+1, 
+                  width = widthGT, show.legend = T,
+                  data = . %>% filter(SYS =="GT"))+
+    geom_errorbar(aes(x = SYS, ymin = max, ymax = max, 
+                      col = paste0(max_i, SYS)),
+                  stat = "identity", linewidth = lineHL, 
+                  show.legend = T, width = widthHL,
+                  data = . %>% filter(SYS =="HL"))+
+    geom_errorbar(aes(x = SYS, ymin = 0, ymax = 0, col = paste0(min_i, SYS)),
+                  stat = "identity", linewidth = lineHL+1, 
+                  width =widthHL, show.legend = T,
+                  data = . %>% filter(SYS == "HL"))+
+    #GD
+    geom_errorbar(aes(x = SYS, ymin = max, ymax = max, 
+                      col = paste0(max_i, SYS)),
+                  stat = "identity", linewidth = 2, 
+                  show.legend = T, width = .6,
+                  data = . %>% filter(SYS == "GD"))+
+    geom_errorbar(aes(x = SYS, ymin = 0, ymax = 0, col = paste0(min_i, SYS)),
+                  stat = "identity", linewidth = 3, 
+                  width =.6, show.legend = T,
+                  data = . %>% filter(SYS == "GD"))+
+  # geom_text(aes(x = "HL", y = sum(miles)/2, 
+  #               label = scales::comma(sum(miles), accuracy =  1, suffix = " Total Miles of Pipeline")),
+  #           hjust = .5, fontface = "bold", position = position_nudge(x = .45))+
+  geom_text(aes(x = SYS, y = lab_q, label = lab),
+            data = . %>% distinct(SYS, .keep_all = T), 
+            hjust = 0, family = pstFont, size = 2.7)+
+  scale_y_continuous(limits = c(0,max_mi), expand = expansion(0,0), breaks = c())+
+  scale_x_discrete(expand=expansion(.5,.1), breaks = NULL)+
+  coord_flip()+
+  scale_color_manual(values = c(RAGT = darkBlue, 
+                                ERGT = "#A8D3D7", 
+                                RAHL = lilac, 
+                                ERHL = "#DABFD8", RAGD = liteGreen))+
+  scale_fill_manual(values = c(RAGT = darkBlue, 
+                                ERGT = "#A8D3D7", 
+                                RAHL = lilac, 
+                                ERHL = "#DABFD8", RAGD = liteGreen))+
+  theme_pst_flip()+
+  theme(panel.grid.major.x = element_blank(),
+        legend.position = "none",
+        panel.grid.minor.x = element_blank(),
+        axis.line.x = element_blank(),
+        axis.line.y = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.ticks.y = element_blank(),
+        plot.margin = margin(0,0,0,0),
+    axis.ticks.length = unit(0, "pt"))+
+  labs(x = NULL, y = NULL, title =NULL)
+  
+  
+  name = paste0(expo_dir, "test_pipe/",
+                if_else(grepl("OGC",state_i), "AR-O", stab_i),
+                "_pipe_narrowV.pdf")
+  
+  ggsave(name, plot = pipe_nv, width = 4, height = 1.5, units = "in", dpi = 300)
+  
+  
+
+  
+    #### pipe check ####
+pipe_c <- new_miles %>%
+  filter(STATE == stab_i) %>%
+  mutate(INTER_INTRA = factor(INTER_INTRA, 
+                              levels = c("INTRASTATE", "INTERSTATE")))%>%
+  arrange(INTER_INTRA)%>%
+  group_by(SYS)%>%
+  mutate(max = sum(miles, na.rm = T),
+         min_i = str_sub(first(INTER_INTRA),4,5),
+         max_i = str_sub(last(INTER_INTRA),4,5),
+         sysi = paste0(unique(INTER_INTRA), collapse= " & "),
+         mili = paste0(round(unique(miles), 0), collapse = " & "),
+         syslab = paste0(mili," -- ", sysi))%>%
+  ungroup() %>% 
+  mutate(lab_q = ifelse(max >= (sum(miles)/2),sum(miles)*.01 , max + sum(miles)*.01),
+         long_sys = case_when(SYS == "GD" ~ "Gas Distribution Lines",
+                              SYS == "GT" ~ "Gas Transmission Lines",
+                              SYS == "HL" ~ "Hazardous Liquid Lines",
+                              .default = ""),
+         lab = paste0(format(round(max, 0), big.mark = ",", trim = T),
+                      " miles of ", long_sys, "\n",
+                      syslab)) %>% 
+  ggplot(aes(x = SYS, y = miles, fill = paste0(str_sub(INTER_INTRA,4,5), SYS)))+
+  # geom_errorbar(aes(x = "HL", ymin = 0, ymax = sum(miles)),
+  #               position = position_nudge(x = .6), width = .2)+
+  geom_bar(stat = "identity", position = "stack", width = .5, show.legend = T)+
+  geom_errorbar(aes(x = SYS, ymin = max, ymax = max, 
+                    col = paste0(max_i, SYS)),
+                stat = "identity", linewidth = 2, width =.6,show.legend = T)+
+  geom_errorbar(aes(x = SYS, ymin = 0, ymax = 0, col = paste0(min_i, SYS)),
+                stat = "identity", linewidth = 3, width =.6, show.legend = T)+
+  # geom_text(aes(x = "HL", y = sum(miles)/2, 
+  #               label = scales::comma(sum(miles), accuracy =  1, suffix = " Total Miles of Pipeline")),
+  #           hjust = .5, fontface = "bold", position = position_nudge(x = .45))+
+  geom_text(aes(x = SYS, y = lab_q, label = lab),
+            data = . %>% distinct(SYS, .keep_all = T), 
+            hjust = 0)+
+  scale_y_continuous(limits = c(0,max_mi), expand = expansion(0,0), breaks = c())+
+  scale_x_discrete(expand=expansion(.1,.1), breaks = NULL)+
+  coord_flip()+
+  scale_color_manual(values = c(RAGT = darkBlue, 
+                                ERGT = "#A8D3D7", 
+                                RAHL = lilac, 
+                                ERHL = "#DABFD8", RAGD = liteGreen))+
+  scale_fill_manual(values = c(RAGT = darkBlue, 
+                                ERGT = "#A8D3D7", 
+                                RAHL = lilac, 
+                                ERHL = "#DABFD8", RAGD = liteGreen))+
+  theme_pst_flip()+
+  theme(panel.grid.major.x = element_blank(),
+        legend.position = "none",
+        panel.grid.minor.x = element_blank(),
+        axis.line.x = element_blank(),
+        axis.line.y = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.ticks.y = element_blank(),
+        plot.margin = margin(0,0,0,0),
+    axis.ticks.length = unit(0, "pt"))+
+  labs(x = NULL, y = NULL, title =NULL)
+  
+  
+  name = paste0(expo_dir, "pipes/",
+                if_else(grepl("OGC",state_i), "AR-O", stab_i),
+                "_pipe_check.pdf")
+  
+  ggsave(name, plot = pipe_c, width = 4, height = 1.5, units = "in", dpi = 300)
+  
+
+  }
+
+```
+
+## other info =  possible for in-text use 
+
+```{r count by class}
+df_wide %>%
+  filter(year %in% c(2023,2022,2018,2013)) %>%
+  count(class, year) %>%
+  drop_na(class) %>%
+  pivot_wider(names_from = "year",
+              values_from = n) %>%
+  write_csv("23_plots/summaries/class_count_year.csv")
+```
+
+```{r difference summary}
+df %>%
+  filter(year == 2013 | year == 2022| year == 2023,
+         name %in% c("average")) %>% 
+  pivot_wider(names_from = c("name", "year")) %>%
+  drop_na(average_2013, average_2022, average_2023) %>%
+  mutate(diff_1 = average_2023-average_2022,
+         diff_10 = average_2023 - average_2013) %>%
+  summarize(diff_1_mu = mean(diff_1),
+            diff_10_mu = mean(diff_10),
+            diff_1_sd = sd(diff_1),
+            diff_10_sd = sd(diff_10),
+            diff_1_med = median(diff_1),
+            diff_10_med = median(diff_10),
+            diff_1_max = max(abs(diff_1)),
+            diff_10_max = max(abs(diff_10))#,
+            # state_1_max = state[abs(diff_1) == max(abs(diff_1))],
+            # state_10_max = state[abs(diff_10) == max(abs(diff_10))]
+  )  %>%
+  pivot_longer(
+    !starts_with("state"),
+    names_to = c("type", "years", "thing"),
+    names_sep = "_"
+  ) %>%
+  pivot_wider(id_cols = "years",
+              names_from = "thing",
+              values_from = "value") %>%
+  mutate(state_max = ifelse(years == 1, "MI", "CA-G"))%>%
+  write_csv("23_plots/summaries/diff_1_10_avgscore.csv")
+
+
+```
+
+```{r scores by category}
+df %>%
+  filter(year == 2023 | year == 2018, name %in% c(catAcs, catComm, catData)) %>%
+  mutate(nameCat = case_when(name %in% catAcs ~ agencyName,
+                             name %in% catComm ~ commsName,
+                             name %in% catData ~ dataName)) %>%
+  group_by(state, nameCat, year)%>%
+  summarize(score = mean(value))%>%
+  left_join(df_wide %>% filter(year == 2023) %>% select(state, class)) %>%
+  ggplot(aes(x = state, y = score, group = nameCat, fill = nameCat))+
+  geom_bar(stat = "identity", position = "stack")+
+  facet_wrap(~class, scales = "free_x")
+
+df_class_cat_means <- df %>%
+  filter(year == 2023, name %in% c(catAcs, catComm, catData)) %>%
+  mutate(nameCat = case_when(name %in% catAcs ~ agencyName,
+                             name %in% catComm ~ commsName,
+                             name %in% catData ~ dataName)) %>%
+  group_by(state, nameCat)%>%
+  summarize(score = mean(value))%>%
+  left_join(df_wide %>% filter(year == 2023) %>% select(state, class)) %>%
+  mutate(stab = stab_ab[match(state,stab_name)]) %>%
+  group_by(class, nameCat) %>%
+  summarize(score = mean(score))
+
+df_class_means <- df %>%
+  filter(year == 2023, name %in% c(catAcs, catComm, catData)) %>%
+  mutate(nameCat = case_when(name %in% catAcs ~ agencyName,
+                             name %in% catComm ~ commsName,
+                             name %in% catData ~ dataName)) %>%
+  group_by(nameCat)%>%
+  summarize(score = mean(value))
+
+
+df %>%
+  filter(year == 2023, name %in% c(catAcs, catComm, catData)) %>%
+  mutate(nameCat = case_when(name %in% catAcs ~ agencyName,
+                             name %in% catComm ~ commsName,
+                             name %in% catData ~ dataName)) %>%
+  group_by(state, nameCat)%>%
+  summarize(score = mean(value))%>%
+  left_join(df_wide %>% filter(year == 2023) %>% select(state, class)) %>%
+  mutate(stab = stab_ab[match(state,stab_name)])%>%
+  ggplot(aes(y = stab, x = score, group = nameCat, fill = nameCat))+
+  geom_bar(stat = "identity", position = "stack")+
+  geom_vline(aes(xintercept = score), data = df_class_cat_means,
+             col = crimson, linetype = "dashed")+
+  facet_grid(rows = vars(class), cols = vars(nameCat), scales = "free")+
+  scale_x_continuous(limits = c(0,3), expand = expansion(0,0))+
+  theme_pst_facet()+
+  scale_fill_manual(values = pstMax)+
+  theme(legend.position = "none",
+        panel.grid.major.y = element_line(colour = "#394C56", 
+                                                         linetype = "dotted"))
+
+df %>%
+  filter(year == 2023, name %in% c(catAcs, catComm, catData)) %>%
+  mutate(nameCat = case_when(name %in% catAcs ~ agencyName,
+                             name %in% catComm ~ commsName,
+                             name %in% catData ~ dataName)) %>%
+  group_by(state, nameCat)%>%
+  summarize(score = mean(value))%>%
+  left_join(df_wide %>% filter(year == 2023) %>% select(state, class)) %>%
+  mutate(stab = stab_ab[match(state,stab_name)])%>%
+  ggplot(aes(x = stab, y = score,  col = nameCat))+
+  geom_point(size = 2, alpha = .8)+
+  scale_color_manual(values = pstMax)+
+  coord_flip()+
+  facet_wrap(~class, scales= "free_y")+
+  theme_pst_facet()+
+  theme(panel.grid.major.x = element_line(colour = "#394C56", 
+                                                         linetype = "dotted"),
+        panel.grid.major.y = element_line(colour = "gray75", 
+                                          linetype = "dotted"))
+
+df %>%
+  filter(year == 2023, name %in% c(catAcs, catComm, catData)) %>%
+  mutate(nameCat = case_when(name %in% catAcs ~ agencyName,
+                             name %in% catComm ~ commsName,
+                             name %in% catData ~ dataName)) %>%
+  group_by(state, nameCat)%>%
+  summarize(score = mean(value))%>%
+  left_join(df_wide %>% filter(year == 2023) %>% select(state, class)) %>%
+  mutate(stab = stab_ab[match(state,stab_name)])%>%
+  pivot_wider(id_cols = c("stab", "class"),
+              names_from = "nameCat",
+              values_from = "score") %>%
+  janitor::clean_names()%>%
+  ggplot(aes(x = data_maps, size = communications, 
+             y = agency_authority , col = class))+
+  geom_hline(yintercept = df_class_means[[1,2]], 
+             col = "gray35", linetype = "dashed")+
+  geom_vline(xintercept = df_class_means[[3,2]], 
+             col = "gray35", linetype = "dashed")+
+  geom_point(alpha = .8)+
+  geom_text_repel(aes(label = stab, x = data_maps, y = agency_authority), size = 3)+
+  scale_color_manual(values = pstMax)+
+  scale_size_binned(range = c(1,9))+
+  coord_flip()+
+  theme_pst()
+```
+
+```{r avg cat score}
+#### overall ####
+df %>%
+  filter(year == 2023 | year == 2018, name %in% c(catAcs, catComm, catData)) %>%
+  mutate(nameCat = case_when(name %in% catAcs ~ agencyName,
+                             name %in% catComm ~ commsName,
+                             name %in% catData ~ dataName)) %>%
+  group_by(nameCat, year)%>%
+  summarize(score = mean(value)) %>%
+  pivot_wider(id_cols = "nameCat",
+              names_from = "year",
+              names_prefix = "score_",
+              values_from = "score") %>%
+  ggplot()+
+  geom_segment(aes(x = nameCat, xend = nameCat,
+                   y = score_2018, yend = score_2023),
+                col = richblack)+
+  geom_point(aes(x = nameCat, y = score_2018, col = "2018"), size = 3)+
+  geom_point(aes(x = nameCat, y = score_2023, col = "2023"), size = 3)+
+  scale_color_manual(values = pstMax, name = "Year")+
+  coord_flip()+
+  scale_x_discrete(labels = function(x) str_wrap(x, 6))+
+  scale_y_continuous(limits = c(0, 3), 
+                     expand = expansion(0,0))+
+  theme_pst_flip()+
+  theme(axis.text.y = element_text(color = "gray5"),
+        plot.tag.position = c(.97,.03),
+        legend.position = c(0.85,0.2))+
+  labs(x = NULL, y = "Average Score",
+       title = NULL,
+       tag = tag)
+
+ggsave("23_plots/Category_Avg_5yr.pdf", width = wdt, height = hgt, units = "in")
+
+#### multiple ####
+df_class_cat_means %>%
+  mutate(nameCat = str_wrap(nameCat, 10),
+         nameCat = ifelse(nameCat == "Communications", "Comms.", nameCat))%>%
+  ggplot(aes(x = nameCat, y = score, fill = nameCat))+
+  geom_bar(stat = "identity", width = .7)+
+  scale_fill_manual(values = pstMax, name = "Category")+
+  coord_flip()+
+  facet_wrap(~class)+
+  scale_y_continuous(limits = c(0, 3), 
+                     expand = expansion(0,0))+
+  theme_pst_facet()+
+  theme(axis.text.y = element_text(color = "gray5"),
+        panel.grid.minor.x = element_line(linetype = "dotted", 
+                                          colour = "#C4C8C6"),
+        panel.grid.major.x = element_line(colour = "#394C56", 
+                                          linetype = "dotted"),
+        panel.grid.major.y = element_blank(),
+        panel.grid.minor.y = element_blank())+
+  labs(x = NULL, y = "Average Score",
+       title = "Average Scores by Category",
+       tag = tag)
+
+ggsave("23_plots/Category_Avg_multiple.pdf", width = wdt, height = hgt, units = "in")
+
+
+#### over time ####
+df %>%
+  filter(name %in% c(catAcs, catComm, catData)) %>%
+  mutate(nameCat = case_when(name %in% catAcs ~ agencyName,
+                             name %in% catComm ~ commsName,
+                             name %in% catData ~ dataName)) %>%
+  group_by(nameCat, year)%>%
+  summarize(score = mean(value))%>%
+  mutate(nameCat = ifelse(nameCat == "Connection", "Find and Connect", nameCat))%>%
+  ggplot(aes(x = year, y = score, col = nameCat))+
+  geom_line(linewidth = .85)+
+  scale_color_manual(values = pstMax, name = "Category")+
+  scale_x_continuous(limits = c(2014, 2023))+
+  scale_y_continuous(limits = c(0, 2.3), 
+                     expand = expansion(0,0))+
+  theme_pst()+
+  theme(axis.text.y = element_text(color = "gray5"),
+        legend.position = c(.8,.2))+
+  labs(x = NULL, y = "Average Score",
+       title = NULL,
+       tag = tag)
+
+ggsave("23_plots/Category_Avg_time.pdf", width = wdt, height = hgt, units = "in")
+
+#### over time ####
+df %>%
+  filter(name %in% c(catAcs, catComm, catData)) %>%
+  mutate(nameCat = case_when(name %in% catAcs ~ agencyName,
+                             name %in% catComm ~ commsName,
+                             name %in% catData ~ dataName),
+         nameCat = factor(nameCat, 
+                          levels = c(commsName, agencyName, dataName))) %>%
+  group_by(nameCat, year)%>%
+  summarize(score = mean(value))%>%
+  ggplot(aes(x = year, y = score, col = nameCat))+
+  geom_line(linewidth = .85)+
+  scale_color_manual(values = pstMax, name = "Category")+
+  scale_x_continuous(limits = c(2014, 2023))+
+  scale_y_continuous(limits = c(0, 3), 
+                     expand = expansion(0,0))+
+  theme_pst()+
+  theme(axis.text.y = element_text(color = "gray5"),
+        legend.position = c(.8,.2),
+        plot.tag.position = c(.97,.97))+
+  labs(x = NULL, y = "Average Score",
+       title = NULL,
+       tag = tag)
+
+ggsave("23_plots/Category_Avg_time_3.pdf", width = wdt, height = hgt, units = "in")
+```
+
+## by mileage? jurisdiction? 
+```{r}
+juris <- read_xlsx("data/analysis.xlsx", sheet = 5)[,c(1:3,6,8)] %>%
+  rename("STATE_NAME" = 1,
+         "GT_INTRASTATE" = 2,
+         "GT_INTERSTATE" = 3,
+         "HL_INTRASTATE" = 4,
+         "HL_INTERSTATE" = 5)
+
+jb <- juris %>%
+  mutate(across(2:5, ~ if_else(is.na(.x), F,T)),
+         STATE_NAME = str_to_upper(STATE_NAME),
+         STATE_NAME = ifelse(grepl("LIQUID", STATE_NAME), 
+                             "CALIFORNIA LIQUID", STATE_NAME)) %>%
+  pivot_longer(!STATE_NAME,
+               names_to = c("SYS", "INTER_INTRA"),
+               names_sep = "_",
+               values_to = "bool")
+```
+
+```{r}
+j_mi <- new_miles %>%
+  mutate(
+    STATE_NAME = case_when(
+      grepl("CALIFORNIA", STATE_NAME) & SYS == "HL" ~ "CALIFORNIA LIQUID",
+      grepl("CALIFORNIA", STATE_NAME) & SYS != "HL" ~ "CALIFORNIA GAS",
+      STATE_NAME == "WASHINGTON DC" ~ "DC",
+      STATE == "AR-O" ~ "ARKANSAS OGC",
+      .default = STATE_NAME
+  ),
+  STATE = ifelse(STATE_NAME == "CALIFORNIA GAS"  & !is.na(STATE_NAME), "CA-G", STATE))%>%
+  left_join(jb, by = c("STATE_NAME", "SYS", "INTER_INTRA"))%>%
+  mutate(bool = if_else(SYS == "GD", T, bool)) %>%
+  filter(bool)%>%
+  group_by(STATE)%>%
+  summarize(miles = sum(miles, na.rm = T))
+```
+
+```{r}
+sum_miles <- new_miles %>%
+  filter(REPORT_YEAR == max(2023))%>%
+      group_by(STATE) %>%
+      summarize(miles = sum(miles, na.rm = T))
+
+df %>%
+  filter(year == 2023, name == "score") %>%
+  mutate(stab = state.abb[match(state, state.name)],
+             stab = case_when(
+               grepl("District", state) ~ "DC",
+               grepl("Liquid", state) ~ "CA-L",
+               grepl("Gas", state) ~ "CA-G",
+               grepl("OGC", state) ~ "AR-O",
+               .default = stab
+               )
+  ) %>%
+ # left_join(j_mi, by = c("stab" = "STATE")) %>%
+  left_join(
+    state_summ, by = c("stab" = "STATE")
+  )%>%
+  #we mutate(quant = cut(miles, 
+  #                    breaks = quantile(j_mi$miles, seq(0,1,.25))))%>%
+  # mutate(quant = cut(miles, 
+  #                     breaks = quantile(sum_miles$miles, seq(0,1,.25))))%>%
+  # filter(!is.na(quant))%>%
+  ggplot(aes(x = miles, y = value))+
+  geom_smooth(method= "loess")+
+  geom_point()+
+  geom_text_repel(aes(label=stab))+
+  #facet_wrap(~quant, scales="free_x")+
+  theme_pst_facet()
+
+df %>%
+  filter(year == 2023, name == "score") %>%
+  mutate(stab = state.abb[match(state, state.name)],
+             stab = case_when(
+               grepl("District", state) ~ "DC",
+               grepl("Liquid", state) ~ "CA-L",
+               grepl("Gas", state) ~ "CA-G",
+               grepl("OGC", state) ~ "AR-O",
+               .default = stab
+               )
+  ) %>%
+ left_join(j_mi, by = c("stab" = "STATE")) %>%
+  mutate(quant = cut(miles,
+                     breaks = quantile(j_mi$miles, seq(0,1,.25))))%>%
+  filter(!is.na(quant))%>%
+  ggplot(aes(x = miles, y = value))+
+  geom_point()+
+  geom_text_repel(aes(label=stab))+
+  facet_wrap(~quant, scales="free_x")+
+  theme_pst_facet()
+```
+
+
+```{r mile state bars }
+
+sum_miles %>%
+  mutate(quant = cut(miles, 
+                     breaks = c(0,20000,45000,70000,300000),
+                     labels = c("Under 20k miles", "20k-45K miles",
+                                "45k-70k miles", "Over 70k miles")),
+         state = factor(STATE, 
+                        levels = sum_miles$STATE[order(sum_miles$STATE)]),
+         
+         c = 1) %>% 
+  filter(!is.na(state))%>%
+  left_join(st_drop_geometry(df23_hex),
+            by = c("state" = "State_Abbr")) %>% 
+  mutate(class = ifelse(is.na(class), "Not Rated", as.character(class)),
+         class = factor(class, 
+                        levels = c("Not Rated", "Fail", 
+                                   "Pass", "Good", "Excellent")),
+         class = fct_rev(class),
+         class_int = ifelse(class == "Not Rated", 0,class_int),
+         state = fct_reorder(state, class_int))%>%
+  arrange(class_int)%>%
+  group_by(quant)%>%
+  mutate(pos = cumsum(c) )%>%
+  ungroup()%>%
+  ggplot(aes(x = quant, y = c, fill = class))+
+  geom_bar(stat = "identity", col = "#fffff0", width = .5)+
+  geom_text(aes(label = state, y = pos-.5), col = "#fffff0",
+            hjust = .5, size = 2.75)+
+  scale_y_continuous(limits = c(0, 19), expand = expansion(0,0))+
+  scale_fill_manual(values = c( Fail = new_pal[[1]],
+                                Pass = new_pal[[2]],
+                                Good = new_pal[[3]],
+                                Excellent = new_pal[[4]],
+                                `Not Rated` = new_pal[[5]]), name = NULL)+
+  coord_flip()+
+  theme_pst_flip()+
+  theme(#legend.position = c(0.825,0.775),
+        legend.position = "none",
+        axis.text = element_text(color = richblack))+
+  labs(x = NULL, y = NULL, tag = tag)
+
+
+ggsave("23_plots/mile_bin.pdf", width = wdt, height = hgt, units = "in")
+
+```
+
+
+## acs work
+
+
+
+```{r score and white per}
+acs_result %>%
+  pivot_wider(id_cols = "state", 
+              names_from = "variable", 
+              values_from = "estimate")%>%
+  mutate(per_poc =  (pop-white) / pop ,
+            per_p200 =  (pop - poverty_200) / pop, # % living over 200%
+            per_p100 =  poverty_100 / pop) %>% #% under 100
+  left_join( 
+    df_wide %>% 
+      filter(year == 2023),
+    by = c("state")
+    ) %>% 
+  drop_na(class) %>%
+  ggplot(aes(x = class, y = per_poc, col = class))+
+  geom_boxplot()+
+  scale_color_manual(values = pstMax)+
+  theme_pst()
+
+ggsave("23_plots/acs/poverty_rating_box.pdf", width = wdt, height = hgt)
+
+
+acs_result %>%
+  pivot_wider(id_cols = "state", 
+              names_from = "variable", 
+              values_from = "estimate")%>%
+  mutate(per_poc =  (pop-white) / pop ,
+            per_p200 =  poverty_200 / poverty_pop, # % living over 200%
+            per_p100 =  poverty_100 / pop) %>% #% under 100
+  left_join( 
+    df_wide %>% 
+      filter(year == 2023),
+    by = c("state")
+    ) %>% 
+  drop_na(class) %>%
+  ggplot(aes(y = score, x = per_poc, col = per_p200))+
+  geom_point()+
+  geom_text_repel(aes(label=state))+
+  scale_color_viridis()+
+  #scale_color_manual(values = pstMax)+
+  theme_pst_facet()+
+  facet_wrap(~region)+
+  labs(title = "Score by State x % POC",
+       subtitle = "Facet by region, color by % of households over 200% poverty line")
+    
+ggsave("23_plots/acs/poverty_poc_scatter.pdf", width = wdt, height = hgt)
+
+  
+```
+
+```{r score and poverty}
+#boxes 
+acs_result %>%
+  pivot_wider(id_cols = "state", 
+              names_from = "variable", 
+              values_from = "estimate")%>%
+  mutate(per_poc =  (pop-white) / pop ,
+            per_p200 =  poverty_200 / poverty_pop,
+            per_p100 =  poverty_100 / poverty_pop) %>%
+  left_join( 
+    df_wide %>% 
+      filter(year == 2023),
+    by = c("state")
+    ) %>% 
+  drop_na(class) %>%
+  ggplot(aes(x = class, y = per_p200, col = class))+
+  #geom_point(size = 2)+
+  geom_boxplot()+
+  scale_color_manual(values = pstMax)+
+  theme_pst()
+
+ggsave("23_plots/acs/poverty_rating.pdf", width = wdt, height = hgt)
+
+# facet by quantile
+acs_result %>%
+  pivot_wider(id_cols = "state", 
+              names_from = "variable", 
+              values_from = "estimate")%>%
+  mutate(per_poc =  (pop-white)/pop  ,
+            per_p200 =  poverty_200 / poverty_pop,
+            per_p100 =  poverty_100 / poverty_pop) %>%
+  left_join( 
+    df_wide %>% 
+      filter(year == 2023),
+    by = c("state")
+    ) %>% 
+  mutate(quant = cut(per_poc, 
+                     breaks = c(0,.15,.25, .4,1),
+                     labels = c("<15%", "15-25%", "25-40%", ">40%")),
+         state = factor(state),
+         state = fct_reorder(state, score))%>% 
+  drop_na(class) %>%
+  filter(state != "Vermont")%>%
+  ggplot(aes(x = state, y = score, fill = per_p200))+
+  geom_bar(stat = "identity")+
+  scale_fill_viridis(option = "G")+
+ # geom_text_repel(aes(label = state), show.legend = F)+
+ # scale_color_manual(values = pstMax)+
+  facet_wrap(~quant, scales = "free_y")+
+  theme_pst_facet()+
+  coord_flip()+
+  labs(title = "Score by State",
+       subtitle = "Facet by % POC, Color by % households over 200% poverty line")
+
+ggsave("23_plots/acs/poverty_race_rating.pdf", width = wdt, height = hgt)
+
+```
+ 
+```{r swarm plot poverty}
+acs_result %>%
+  pivot_wider(id_cols = "state", 
+              names_from = "variable", 
+              values_from = "estimate")%>%
+  mutate(per_poc =  (pop-white)/pop  ,
+            per_p200 =  poverty_200 / poverty_pop,
+            per_p100 =  poverty_100 / poverty_pop) %>%
+  left_join( 
+    df_wide %>% 
+      filter(year == 2023),
+    by = c("state")
+    ) %>% 
+  mutate(quant = cut(per_p200, 
+                     breaks = quantile(per_p200, probs = seq(0,1,.25))))%>% 
+  drop_na(class) %>%
+  filter(state != "Vermont")%>% 
+  ggplot(aes(x = quant, y = score, col = region))+
+  geom_point(size = 3, position = position_jitter(width = .2))+
+  #scale_fill_viridis(option = "G")+
+  geom_text_repel(aes(label = state), show.legend = F,position = position_jitter(width = .2))+
+  scale_color_manual(values = pstMax)+
+  #facet_wrap(~quant, scales = "free_y")+
+  theme_pst()#+
+  # coord_flip()+
+  # labs(title = "Score by State",
+  #      subtitle = "Facet by % POC, Color by % households over 200% poverty line")
+```
+ 
+ 
+ ## state density
+ 
+```{r}
+states <- sf::st_read("/Users/jameseager/Documents/pst/phmsa-clean/data/gis/us_states.shp") 
+
+states_df <- states%>%
+  mutate(size_acre = units::set_units(st_area(states), "acre")) %>%
+  st_drop_geometry()
+```
+
+```{r}
+new_miles %>%
+  filter(STATE %in% unique(df_cat_hex$State_Abbr.y))%>% 
+  pivot_wider(id_cols= c("STATE"),
+              names_from = c( "SYS", "INTER_INTRA"),
+              values_from = "miles")%>% 
+  mutate(across(2:6, ~ replace_na(.x, 0))) %>% 
+  left_join(
+    states_df %>%
+  mutate(stab = state.abb[match(NAME, state.name)],
+         stab = case_when(
+               grepl("California", NAME) ~ "CA-L",
+               grepl("Columbia", NAME) ~ "DC",
+               grepl("Arkansas", NAME) ~ "AR-O",
+               grepl("Hazai'i", NAME) ~ "HI",
+               .default = stab
+               ) ) %>%
+  rbind(
+    states_df %>%
+      filter(NAME %in% c("California", "Arkansas")) %>%
+      mutate(stab = state.abb[match(NAME, state.name)],
+             stab = case_when(
+               grepl("California", NAME) ~ "CA-G",
+               .default = stab
+               ) ) 
+  ) %>%
+  select(stab, NAME, size_acre, ALAND) %>%
+    drop_na(stab),
+  by = c("STATE" = "stab")
+  ) %>% view()
+  write_csv("mileage_acres.csv")
+
+
+  left_join(new_miles, by = c("stab" = "STATE")) %>% 
+  pivot_wider(everything(),
+              id_cols = c("stab", "NAME"),
+              names_from)
+
+```
+ 
+```{r}
+
+
+
+
+```
+ 
+ 
+## energy 
+
+```{r loading energy data}
+tab <- rvest::html_table(
+  xml2::read_html("https://www.eia.gov/state/seds/sep_sum/html/sum_btu_totcb.html")
+  ) 
+#from eia
+
+stab_check <- hexes_new %>%
+  st_drop_geometry()%>% select(State, State_Abbr)
+
+stab_ab = stab_check$State_Abbr
+stab_name = stab_check$State
+
+energy <- tab[[1]][-c(1,2,3, seq(56,66,1)),] %>%
+  janitor::row_to_names(1) %>%
+  janitor::clean_names() %>%
+  select(!starts_with("na_"))%>%
+  rename(
+    total_petrol = total_e,
+    total_ff = total_e_2,
+    total_biomass = total_j,
+    total_renew = total_j_2,
+    total_energy = total_j_n,
+    total_ng = 3
+  ) %>% 
+  mutate(across(!state, parse_number),
+         across(!state, ~ replace_na(.x, 0))) %>%
+  mutate(
+    ng_per = total_ng/total_energy,
+    petro_per = total_petrol / total_energy,
+    hl_per = (total_petrol + fuel_ethanol_h + biodiesel + renewable_diesel)
+             /total_energy,
+    total_per = (total_ng + total_petrol + fuel_ethanol_h + 
+                   biodiesel + renewable_diesel) / total_energy,
+    imp_exp = ifelse(net_interstate_flow_of_electricity_l > 0, "I", "E"),
+    state = stringi::stri_enc_toutf8(state,validate = T)
+  )
+
+energy_fix <- rbind(
+  energy %>%
+    mutate(state = ifelse(state == "California", "California Gas", state),
+           state = ifelse(grepl("Dist.", state), 
+                          "District of Columbia", state)),
+  energy %>%
+    filter(state %in% c("California", "Arkansas"))%>%
+    mutate(state = ifelse(state == "California", 
+                          "California Liquid", "Arkansas OGC"))
+) %>%
+  write_csv("energy_fix.csv")
+
+```
+
+```{r}
+df_wide %>%
+  filter(year == 2023)%>%
+  full_join(read_csv("energy_fix.csv"), by = "state") %>%
+  ggplot(aes(x = total_per, y = score, col = imp_exp))+
+  geom_point()+
+  geom_text(aes(label = state))
+
+
+
+```
+
+
+
+```{r}
+enforce = read_tsv("~/Downloads/enforcement.txt")
+```
