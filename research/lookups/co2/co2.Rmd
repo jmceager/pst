@@ -44,7 +44,9 @@ options(tigris_use_cache = TRUE)
 wdt = 7.25
 hgt = wdt/1.62
 bs= 10
-capt = paste0("Source: PHMSA Incident and Mileage Data (", lubridate::year(Sys.Date()),")")
+capt = paste0("Source: PHMSA Incident and Mileage Data (",
+              lubridate::year(Sys.Date()),
+              ")")
 datadir = "https://raw.githubusercontent.com/jmceager/pst/main/phmsa-clean/data/"
 tag = paste("PST", lubridate::year(Sys.Date()))
 
@@ -52,6 +54,8 @@ pstFont = "Montserrat"
 font_add_google(pstFont)
 showtext_opts(dpi=300) 
 showtext_auto()# theme clean adjustments to apply to ggplot
+
+extrafont::font_import("/Users/jameseager/Library/Fonts/")
 
 ```
 
@@ -61,17 +65,17 @@ theme_pst <- function(baseSize=bs) {
   (theme(
                        axis.line.x = element_line(
                          colour = "#182125",
-                         size = 0.5,
+                         linewidth = 0.5,
                          linetype = "solid"
                        ),
                        axis.line.y = element_line(
                          colour = "#182125",
-                         size = 0.5,
+                         linewidth = 0.5,
                          linetype = "solid"
                        ),
                        axis.ticks.y = element_line(
                          colour = "#182125",
-                         size = 0.5,
+                         linewidth = 0.5,
                          linetype = "solid"
                        ),
                        text = element_text(family = pstFont),
@@ -102,7 +106,9 @@ theme_pst <- function(baseSize=bs) {
                        legend.key = element_blank(),
                        legend.spacing.y = unit(.125, 'cm'),
                        #legend.background = element_blank(),
-                       plot.tag.position = c(.97,.97),
+                       plot.tag.location = "plot",
+                       plot.title.position = "plot",
+                       plot.tag.position = "topright",
                        plot.tag = element_text(size = baseSize *.66,
                                                colour = "#8C9394"),
                        plot.background = element_rect(fill = "#ffffff"),
@@ -116,13 +122,17 @@ theme_pst <- function(baseSize=bs) {
   )
 }
 
+
+
 #### map theme ####
 theme_pst_map <- function(baseSize=bs) {
   (theme_void() + 
      theme(
        legend.direction = "horizontal",
        legend.position = "bottom",
-       plot.tag.position = c(.97,.97),
+       plot.tag.location = "plot",
+       plot.title.position = "plot",
+       plot.tag.position = "topright",
        text = element_text(family = pstFont),
        legend.text = element_text(colour = "black",
                                    size = baseSize * .8),
@@ -154,17 +164,17 @@ theme_pst_flip <- function(baseSize=bs) {
   (theme(
                        axis.line.y = element_line(
                          colour = "#182125",
-                         size = 0.5,
+                         linewidth = 0.5,
                          linetype = "solid"
                        ),
                        axis.line.x = element_line(
                          colour = "#182125",
-                         size = 0.5,
+                         linewidth = 0.5,
                          linetype = "solid"
                        ),
                        axis.ticks.y = element_line(
                          colour = "#182125",
-                         size = 0.5,
+                         linewidth = 0.5,
                          linetype = "solid"
                        ),
                        text = element_text(family = pstFont),
@@ -194,7 +204,9 @@ theme_pst_flip <- function(baseSize=bs) {
                        legend.position = "right",
                        legend.key = element_blank(),
                        #legend.background = element_blank(),
-                       plot.tag.position = c(.97,.97),
+                       plot.tag.location = "plot",
+                       plot.title.position = "plot",
+                       plot.tag.position = "topright",
                        plot.tag = element_text(size = baseSize *.66,
                                                colour = "#8C9394"),
                        plot.background = element_rect(fill = "#ffffff"),
@@ -213,17 +225,17 @@ theme_pst_facet <- function(baseSize=bs) {
   (theme(
                        axis.line.x = element_line(
                          colour = "#182125",
-                         size = 0.5,
+                         linewidth = 0.5,
                          linetype = "solid"
                        ),
                        axis.line.y = element_line(
                          colour = "#182125",
-                         size = 0.5,
+                         linewidth = 0.5,
                          linetype = "solid"
                        ),
                        axis.ticks.y = element_line(
                          colour = "#182125",
-                         size = 0.5,
+                         linewidth = 0.5,
                          linetype = "solid"
                        ),
                        text = element_text(family = pstFont),
@@ -256,7 +268,9 @@ theme_pst_facet <- function(baseSize=bs) {
                        legend.key = element_blank(),
                        legend.spacing.y = unit(.125, 'cm'),
                        #legend.background = element_blank(),
-                       plot.tag.position = c(.97,.97),
+                       plot.tag.location = "plot",
+                       plot.title.position = "plot",
+                       plot.tag.position = "topright",
                        plot.tag = element_text(size = baseSize *.66,
                                                colour = "#8C9394"),
                        plot.background = element_rect(fill = "#ffffff"),
@@ -284,6 +298,9 @@ pink <- col[4]
 lime <- col[5]
 yellow <- col[6]
 
+ecru = "#FFEEDB"
+
+
 #pst 
 darkBlue <- "#003E59"
 midBlue <- "#00546F"
@@ -293,7 +310,7 @@ liteGreen <- "#61A893"
 
 #pst contrast 
 #1
-honey <- "#FFAD05"
+honey <- "#F2AA18"
 lilac <- "#C297B8"
 # 2
 hunterGrn <- "#315C2B"
@@ -308,10 +325,25 @@ liteBlu2 <- "#0AC2FF"
 darkGreen <- "#3C685A"
 brown <- "#664400"
 
+## coolors
+purp = "#644695"
+
+# pst pairs
+blu_p = "#A8E5FF"
+crim_p = "#F27069"
+purp_p = "#9E86C6"
+lil_p = "#673C5D"
+green_p1 = "#3E7061"
+green_p2 = "#90C2B3"
+ecru_p = "#241300"
+
+
 #pals 
 pst1 <- c(darkBlue, liteGreen, lilac, honey, bluGreen, crimson)
 pst2 <- c(darkBlue, liteGreen, lilac, brown, maize, midBlue)
-pstMax <- c(darkBlue, liteGreen, lilac, honey, liteBlue, brown, crimson, "gray55")
+pstMax <- c(darkBlue, liteGreen, lilac, honey, purp, brown, crimson, liteBlu2)
+pstPaired <- c(darkBlue, blu_p, green_p1, green_p2, lilac, lil_p, 
+               crimson, crim_p, ecru_p, ecru)
 
 ```
 
@@ -343,9 +375,11 @@ hl <- read_csv(paste0(datadir, "clean/hl_inc.csv") )
 #setwd("/Users/jameseager/Documents/pst/research/state-transparency/data/reports") # set to location of annual reports 
 
 
-liqAR <- plyr::ldply(.data = list.files(pattern = "GT",
-                                        path = "/Users/jameseager/Downloads/annual_gas_transmission_gathering_2010_present"),
-               .fun = read.csv
+liqAR <- plyr::ldply(.data = list.files(pattern = "hazardous_liquid",
+                                        path = "/Users/jameseager/Downloads/annual_hazardous_liquid_2010_present/",
+                                        full.name = T),
+               .fun = read_xlsx,
+               skip = 2
                )
 
 # setwd("./old")
@@ -363,15 +397,13 @@ liqAR <- plyr::ldply(.data = list.files(pattern = "GT",
 ```
 
 ```{r}
-gt_ar <- read_xlsx("/Users/jameseager/Downloads/annual_gas_transmission_gathering_2010_present/annual_gas_transmission_gathering_2023.xlsx", skip = 2)
+# gt_ar <- read_xlsx("/Users/jameseager/Downloads/annual_gas_transmission_gathering_2010_present/annual_gas_transmission_gathering_2023.xlsx", skip = 2)
+
+hl_ar <- read_xlsx("/Users/jameseager/Downloads/annual_hazardous_liquid_2010_present/annual_hazardous_liquid_2022.xlsx", skip = 2)
 ```
 
 
-```{r}
-gt_ar %>%
-  group_by(PARTA5COMMODITY)%>%
-  summarize(miles = sum(PARTDTTOTAL)) %>% view
-```
+
 
 
 ```{r}
@@ -381,7 +413,7 @@ hl %>%
   filter(COMMODITY_RELEASED_TYPE == "CO2 (CARBON DIOXIDE)")%>%
   count(ACCIDENT_IDENTIFIER) %>% 
   mutate(total = sum(n, na.rm = T),
-         per = n / total) %>% view
+         per = n / total) 
 
 hl %>% 
   filter(between(IYEAR, 2010, 2023),
@@ -420,3 +452,222 @@ group_by(COMMODITY_RELEASED_TYPE) %>%
             diff2sd = sd(shutdowndiff, na.rm = T))
 ```
 
+6
+```{r}
+com_names <- tibble(
+  PARTA5COMMODITY = sort(unique(liqAR$PARTA5COMMODITY))[c(3,1,2,4,5)],
+  COMMODITY_RELEASED_TYPE = sort(unique(hl$COMMODITY_RELEASED_TYPE)),
+  new_names = c("Fuel Grade Ethanol", "CO2", "Crude Oil", "HVL", "Petrol Product (non-HVL)")
+)
+
+
+
+```
+
+#national trends
+
+```{r miles over time }
+liqAR %>%
+  group_by(REPORT_YEAR, PARTA5COMMODITY) %>%
+  summarise(miles = sum(PARTDTOTALMILES, na.rm = T)) %>%
+  left_join(com_names)%>%
+  ggplot(aes(x = REPORT_YEAR, y = miles, col = new_names))+
+  geom_line(show.legend = F, linewidth = .8)+
+  geom_text(aes(label = str_wrap(new_names, 16), x = 2022.1),
+            data = . %>% filter(REPORT_YEAR == 2022),
+            show.legend = F, hjust = 0, vjust = 0, lineheight = .66)+
+  scale_color_manual(values = pstMax)+
+  scale_x_continuous(limits = c(2010, 2022), expand = c(0,0),
+                     breaks = seq(2010,2022,2),
+                     oob = function(x, ...) x)+
+  scale_y_continuous(limits = c(0,90000), expand = c(0,0), 
+                     labels = scales::label_number(scale = .001, suffix = "K"))+
+  coord_cartesian(clip="off")+
+  theme_pst()+
+  theme(plot.margin = margin(3,30,3,4, "mm"),
+        plot.tag.location = "plot")+
+  labs(y = NULL, x=NULL, title = "Hazardous Liquid Pipeline Mileage by Commodity",
+       caption = "PHMSA Annual Reports, Hazardous Liquids 2010-2022",
+       tag = tag)
+
+ggsave("plots/commodity_miles.png", width = wdt, height = hgt)
+
+
+liqAR %>%
+  filter(grepl("Ethanol",PARTA5COMMODITY))%>%
+  group_by(REPORT_YEAR, PARTA5COMMODITY) %>%
+  summarise(miles = sum(PARTDTOTALMILES, na.rm = T))%>%
+  ggplot(aes(x = REPORT_YEAR, y = miles))+
+  geom_line(show.legend = F, linewidth = .8, col = lilac)+
+  scale_x_continuous(limits = c(2010, 2022), expand = c(0,0),
+                     oob = function(x, ...) x)+
+  scale_y_continuous(limits = c(0,20), expand = c(0,0), 
+                     labels = scales::label_number())+
+  theme_pst(8)+
+  labs(x = NULL, y = NULL, tag = tag)
+
+ggsave("plots/fuel_ethanol.png", width = 3, height = 3/1.62)
+
+```
+
+```{r}
+liqAR %>%
+  group_by(REPORT_YEAR, PARTA5COMMODITY) %>%
+  summarise(miles = sum(PARTDTOTALMILES, na.rm = T),
+            hca = sum(PARTBHCATOTAL, na.rm =T)) %>% 
+  left_join(com_names)%>%
+  ggplot(aes(x = reorder(new_names, hca/miles), y = hca/miles, fill = new_names))+
+  geom_bar(show.legend = F,stat = "identity", width = .7,
+           data = . %>% filter(REPORT_YEAR == 2022))+
+  scale_fill_manual(values = pstMax,)+
+  scale_y_continuous(limits = c(0,1), expand = c(0,0), 
+                     labels = scales::label_percent(accuracy = 1))+
+  scale_x_discrete(labels = function(x) str_wrap(x,16))+
+  coord_flip(clip="off")+
+  theme_pst_flip()+
+  theme(plot.margin = margin(3,30,3,4, "mm"))+
+  labs(y = "% of Mileage 'Could be HCA'",x=NULL, title = "Hazardous Liquid HCA Mileage Proportion by Commodity", tag = tag,
+       caption = "PHMSA Annual Reports, Hazardous Liquids 2022")
+
+ggsave("plots/hca_comm_miles.png", width = wdt, height = hgt)
+  
+```
+
+
+```{r giving ar a 2023 using 2022 data}
+liqAR_fix <- liqAR %>%
+  rbind(
+    liqAR %>% filter(REPORT_YEAR == 2022) %>%
+      mutate(REPORT_YEAR = 2023)
+  )
+
+
+```
+
+
+```{r}
+hl_summary <- hl %>%
+  filter(between(IYEAR, 2014,2023))%>%
+  group_by(COMMODITY_RELEASED_TYPE, IYEAR) %>%
+  summarize(n = n(),
+            sig = sum(SIGNIFICANT == "YES", na.rm = T),
+            hca = sum(COULD_BE_HCA == "YES", na.rm = T),
+            rel = sum(TOTAL_RELEASE, na.rm = T),
+            cost = sum(TOTAL_COST_CURRENT, na.rm = T),
+            fatal = sum(FATAL, na.rm = T),
+            injure = sum(INJURE, na.rm = T))%>%
+  ungroup()%>%
+  complete(COMMODITY_RELEASED_TYPE, IYEAR, fill = list(n = 0, hca = 0, sig = 0,
+                                                       rel = 0, cost = 0,
+                                                       fatal = 0, injure = 0))%>%
+  left_join(com_names)%>% 
+  left_join(
+    liqAR_fix %>%
+      filter(between(REPORT_YEAR, 2014,2023))%>%
+      group_by(PARTA5COMMODITY, REPORT_YEAR)%>%
+      summarize(miles = sum(PARTDTOTALMILES, na.rm = T),
+                hca_miles = sum(PARTBHCATOTAL, na.rm = T)),
+    by = c("IYEAR" = "REPORT_YEAR", "PARTA5COMMODITY" = "PARTA5COMMODITY")
+  ) %>% 
+  # mutate(rate = n/miles,
+  #        hca_rate = hca / hca_miles#,
+  #        #across(rel:injure, ~.x/n, .names = "{.col}_per")
+  #        )%>% 
+  group_by(new_names) %>%
+  summarize(across(n:injure, ~sum(.x,na.rm = T)),
+            inc_per = sum(n)/(sum(miles)/1000),
+            sinc_per = sum(sig)/ (sum(miles)/1000),
+            hci_per = sum(hca)/(sum(hca_miles)/1000))%>%
+  ungroup()%>%
+  mutate(across(sig:injure, ~.x/n, .names = "{.col}_per"))
+```
+
+```{r sig inc rate}
+hl %>%
+  filter(between(IYEAR, 2014,2023))%>%
+  group_by(COMMODITY_RELEASED_TYPE, IYEAR) %>%
+  summarize(n = n(),
+            sig = sum(SIGNIFICANT == "YES", na.rm = T),
+            hca = sum(COULD_BE_HCA == "YES", na.rm = T),
+            rel = sum(TOTAL_RELEASE, na.rm = T),
+            cost = sum(TOTAL_COST_CURRENT, na.rm = T),
+            fatal = sum(FATAL, na.rm = T),
+            injure = sum(INJURE, na.rm = T))%>%
+  ungroup()%>%
+  complete(COMMODITY_RELEASED_TYPE, IYEAR, fill = list(n = 0, hca = 0,sig = 0,
+                                                       rel = 0, cost = 0,
+                                                       fatal = 0, injure = 0))%>%
+  left_join(com_names)%>% 
+  left_join(
+    liqAR_fix %>%
+      filter(between(REPORT_YEAR, 2014,2023))%>%
+      group_by(PARTA5COMMODITY, REPORT_YEAR)%>%
+      summarize(miles = sum(PARTDTOTALMILES, na.rm = T),
+                hca_miles = sum(PARTBHCATOTAL, na.rm = T)),
+    by = c("IYEAR" = "REPORT_YEAR", "PARTA5COMMODITY" = "PARTA5COMMODITY")
+  )%>%
+  #filter(!grepl("BIOFUEL", COMMODITY_RELEASED_TYPE))%>%
+  ggplot(aes(x = IYEAR, y = sig/(miles/1000), col = new_names))+
+  geom_line(show.legend = F, linewidth = .8)+
+  geom_text(aes(label = str_wrap(new_names, 16), x = 2023.1),
+            data = . %>% filter(IYEAR == 2023 & !grepl("Ethanol",new_names)),
+            show.legend = F, hjust = 0, vjust = 0, lineheight = .66)+
+  scale_color_manual(values = pstMax)+
+  scale_x_continuous(limits = c(2014, 2023), expand = c(0,0),
+                     breaks = seq(2010,2022,2),
+                     oob = function(x, ...) x)+
+  scale_y_continuous(limits = c(0,1.4), expand = c(0,0))+
+  coord_cartesian(clip="off")+
+  theme_pst()+
+  theme(plot.margin = margin(3,30,3,4, "mm"),
+        plot.tag.location = "plot",
+        plot.caption.position = "plot")+
+  labs(y = "Incidents per 1,000 Miles", x=NULL, title = "Hazardous Liquid Incident Rate by Commodity",
+       caption = "PHMSA Annual Reports, Hazardous Liquids 2010-2022",
+       tag = tag)
+```
+
+```{r hca inc rate}
+hl %>%
+  filter(between(IYEAR, 2014,2023))%>%
+  group_by(COMMODITY_RELEASED_TYPE, IYEAR) %>%
+  summarize(n = n(),
+            sig = sum(SIGNIFICANT == "YES", na.rm = T),
+            hca = sum(COULD_BE_HCA == "YES", na.rm = T),
+            rel = sum(TOTAL_RELEASE, na.rm = T),
+            cost = sum(TOTAL_COST_CURRENT, na.rm = T),
+            fatal = sum(FATAL, na.rm = T),
+            injure = sum(INJURE, na.rm = T))%>%
+  ungroup()%>%
+  complete(COMMODITY_RELEASED_TYPE, IYEAR, fill = list(n = 0, hca = 0,sig = 0,
+                                                       rel = 0, cost = 0,
+                                                       fatal = 0, injure = 0))%>%
+  left_join(com_names)%>% 
+  left_join(
+    liqAR_fix %>%
+      filter(between(REPORT_YEAR, 2014,2023))%>%
+      group_by(PARTA5COMMODITY, REPORT_YEAR)%>%
+      summarize(miles = sum(PARTDTOTALMILES, na.rm = T),
+                hca_miles = sum(PARTBHCATOTAL, na.rm = T)),
+    by = c("IYEAR" = "REPORT_YEAR", "PARTA5COMMODITY" = "PARTA5COMMODITY")
+  )%>%
+  #filter(!grepl("BIOFUEL", COMMODITY_RELEASED_TYPE))%>%
+  ggplot(aes(x = IYEAR, y = hca/(hca_miles/1000), col = new_names))+
+  geom_line(show.legend = F, linewidth = .8)+
+  geom_text(aes(label = str_wrap(new_names, 16), x = 2023.1),
+            data = . %>% filter(IYEAR == 2023 & !grepl("Ethanol",new_names)),
+            show.legend = F, hjust = 0, vjust = 0, lineheight = .66)+
+  scale_color_manual(values = pstMax)+
+  scale_x_continuous(limits = c(2014, 2023), expand = c(0,0),
+                     breaks = seq(2010,2022,2),
+                     oob = function(x, ...) x)+
+  scale_y_continuous(limits = c(0,5.1), expand = c(0,0))+
+  coord_cartesian(clip="off")+
+  theme_pst()+
+  theme(plot.margin = margin(3,30,3,4, "mm"),
+        plot.tag.location = "plot",
+        plot.caption.position = "plot")+
+  labs(y = "Incidents per 1,000 Miles", x=NULL, title = "Hazardous Liquid High Consequence Incident Rate by Commodity",
+       caption = "PHMSA Annual Reports, Hazardous Liquids 2010-2022",
+       tag = tag)
+```
