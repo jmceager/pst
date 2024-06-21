@@ -65,7 +65,7 @@ miles <- miles %>%
 
 #### OPERATOR DATA ####
 # from safety program 
-safe <- read_csv("data/raw/Safety_Program_Data.csv", skip = 2)
+safe <- read_xlsx("data/raw/Safety_Program_Data.xlsx", skip = 2, sheet = 2)
 
 
 ops<-safe %>%
@@ -88,22 +88,13 @@ ops<-safe %>%
                                # PA_STATUS, DP_STATUS, 
                                # OQ_STATUS, CRM_STATUS
                                ),
-         start = mdy(
-                  coalesce(#OME_ENTER_DATE, `D&A_ENTER_DATE`, 
-                           IM_ENTER_DATE#, OPA_ENTER_DATE,
-           #                 PA_ENTER_DATE, DP_ENTER_DATE, 
-           #                 OQ_ENTER_DATE, CRM_ENTER_DATE
-           )
-            ),
-         end = mdy(
-               #coalesce(OME_EXIT_DATE, `D&A_EXIT_DATE`, 
-                        IM_EXIT_DATE#, OPA_EXIT_DATE,
-                        #PA_EXIT_DATE, DP_EXIT_DATE, 
-                        #OQ_EXIT_DATE, CRM_EXIT_DATE)
-               )
+         start = if_else(is.na(IM_ENTER_DATE), ymd("1200-12-12"),
+                              ymd(IM_ENTER_DATE)),
+         end = if_else(is.na(IM_EXIT_DATE), ymd(Sys.Date()),
+                      ymd(IM_EXIT_DATE))
   )%>%
   select(sub.id,sub.name,sub.sys,sub.status,pri.id,pri.name, pri.status, start,end) %>%
-  distinct() %>%
+  distinct() %>% 
   mutate(pri.name = if_else(str_detect(pri.name,regex("enbridge",ignore_case = TRUE)),
                             "Enbridge",pri.name
   ),
@@ -125,6 +116,10 @@ ops<-safe %>%
 
 ops.simple <- ops %>%
   select(sub.id, sub.name, sub.sys, pri.id, pri.name)
+
+write_csv(ops, "Op_IM_Dates.csv")
+
+write_csv(ops.simple, "Op_IM_Simple.csv")
 
 #### INCIDENT DATA ####
 
@@ -267,6 +262,7 @@ hl.full <- hzrdData %>%
          MoYr = my(paste(IMONTH,IYEAR, sep = "-")),
          MSYS = "HL",
          ILOC =  if_else(ON_OFF_SHORE == "ONSHORE", 
+                         
                          paste0(str_to_title(ONSHORE_CITY_NAME), ", ", ONSHORE_STATE_ABBREVIATION),
                          if_else(grepl("STATE WATERS", OFF_ACCIDENT_ORIGIN, ignore.case= T) ,
                                  paste0(state.name[match(OFFSHORE_STATE_ABBREVIATION, state.abb)], " State Waters"),
@@ -343,37 +339,37 @@ all.inc <- rbind(select(hl.full%>%  rename(NAME = NAME.x), all_of(short_cols)),
 
 ## get incident rate per operator (by base ID not prime/sub)
 ## QUESTION: What do I do about terminal / tank farm incident rates? 
-operatorRate <- miles %>%
-  group_by(OPERATOR_ID, SYS, IYEAR)%>%
-  summarize(miles = sum(mileage))%>%
-  full_join(hl.op %>%
-              count(OPERATOR_ID, IYEAR) %>%
-              mutate(SYS = "HL"),
-             by = c("OPERATOR_ID", "IYEAR","SYS")
-            )%>% 
-  full_join(gt.op %>%
-               count(OPERATOR_ID, IYEAR) %>%
-               mutate(SYS = "GT"),
-            by = c("OPERATOR_ID", "IYEAR","SYS")
-  )%>%
-  full_join(gd.op %>%
-               count(OPERATOR_ID, IYEAR) %>%
-               mutate(SYS = "GD"),
-            by = c("OPERATOR_ID", "IYEAR","SYS")
-  )%>%
-  mutate(inc = sum(n,n.x,n.y, na.rm=T),
-         inc = replace_na(inc, 0))%>%
-  select(!c(n,n.x,n.y))%>%
-   #filter(OPERATOR_ID == 32363)%>% view()
-  ungroup()%>%
-  group_by(OPERATOR_ID, SYS)%>%
-  summarize(n = n(),
-            inc = sum(inc, na.rm=T)/n,
-            miles = sum(miles, na.rm = T)/n,
-            ipm = inc/miles,
-            ipm2 = (inc/n)/(miles/n),
-            ipm = ifelse(is.nan(ipm) & inc == 0, 0, ipm),
-            ipm2 = ifelse(is.nan(ipm2) & inc == 0, 0, ipm2)) 
+# operatorRate <- miles %>%
+#   group_by(OPERATOR_ID, SYS, IYEAR)%>%
+#   summarize(miles = sum(mileage))%>%
+#   full_join(hl.op %>%
+#               count(OPERATOR_ID, IYEAR) %>%
+#               mutate(SYS = "HL"),
+#              by = c("OPERATOR_ID", "IYEAR","SYS")
+#             )%>% 
+#   full_join(gt.op %>%
+#                count(OPERATOR_ID, IYEAR) %>%
+#                mutate(SYS = "GT"),
+#             by = c("OPERATOR_ID", "IYEAR","SYS")
+#   )%>%
+#   full_join(gd.op %>%
+#                count(OPERATOR_ID, IYEAR) %>%
+#                mutate(SYS = "GD"),
+#             by = c("OPERATOR_ID", "IYEAR","SYS")
+#   )%>%
+#   mutate(inc = sum(n,n.x,n.y, na.rm=T),
+#          inc = replace_na(inc, 0))%>%
+#   select(!c(n,n.x,n.y))%>%
+#    #filter(OPERATOR_ID == 32363)%>% view()
+#   ungroup()%>%
+#   group_by(OPERATOR_ID, SYS)%>%
+#   summarize(n = n(),
+#             inc = sum(inc, na.rm=T)/n,
+#             miles = sum(miles, na.rm = T)/n,
+#             ipm = inc/miles,
+#             ipm2 = (inc/n)/(miles/n),
+#             ipm = ifelse(is.nan(ipm) & inc == 0, 0, ipm),
+#             ipm2 = ifelse(is.nan(ipm2) & inc == 0, 0, ipm2)) 
 
 
 # all.inc <- left_join(all.inc, operatorRate, 
