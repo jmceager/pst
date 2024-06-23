@@ -1,0 +1,559 @@
+---
+title: "co2"
+author: "James Eager"
+date: "`r Sys.Date()`"
+output: 
+  tufte::tufte_handout: default
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r include = FALSE, echo = FALSE}
+rm(list = ls())
+```
+
+```{r setup, include=FALSE}
+library(tufte)
+# invalidate cache when the tufte version changes
+knitr::opts_chunk$set(cache.extra = packageVersion('tufte'))
+options(htmltools.dir.version = FALSE)
+
+library(tidyverse)
+library(ggrepel)
+library(RColorBrewer)
+library(ggthemes)
+library(ggExtra)
+library(viridis)
+library(scales)
+library(readxl)
+library(kableExtra)
+library(lubridate)
+library(sf)
+library(tufte)
+library(ggspatial)
+library(mapboxapi)
+library(leaflet)
+library(tidycensus)
+library(tigris)
+library(showtext)
+library(factoextra)
+
+knitr::opts_chunk$set(echo = FALSE, include = FALSE, message = FALSE)
+options(knitr.table.format = "latex")
+options(tigris_use_cache = TRUE)
+wdt = 7.25
+hgt = wdt/1.62
+bs= 10
+capt = paste0("Source: PHMSA Incident and Mileage Data (",
+              lubridate::year(Sys.Date()),
+              ")")
+datadir = "https://raw.githubusercontent.com/jmceager/pst/main/phmsa-clean/data/"
+tag = paste("PST", lubridate::year(Sys.Date()))
+
+pstFont = "Montserrat"
+font_add_google(pstFont)
+showtext_opts(dpi=300) 
+showtext_auto()# theme clean adjustments to apply to ggplot
+
+extrafont::font_import("/Users/jameseager/Library/Fonts/")
+
+```
+
+```{r theme_pst}
+#### main plot theme ####
+theme_pst <- function(baseSize=bs) {
+  (theme(
+                       axis.line.x = element_line(
+                         colour = "#182125",
+                         linewidth = 0.5,
+                         linetype = "solid"
+                       ),
+                       axis.line.y = element_line(
+                         colour = "#182125",
+                         linewidth = 0.5,
+                         linetype = "solid"
+                       ),
+                       axis.ticks.y = element_line(
+                         colour = "#182125",
+                         linewidth = 0.5,
+                         linetype = "solid"
+                       ),
+                       text = element_text(family = pstFont),
+                       axis.text = element_text(colour = "#8C9394",
+                                                size = baseSize * .8),
+                       axis.title = element_text(colour ="black", 
+                                                 size= baseSize),
+                       panel.grid.minor.y = element_line(linetype = "dotted", 
+                                                         colour = "#C4C8C6"),
+                       panel.grid.major.y = element_line(colour = "#394C56", 
+                                                         linetype = "dotted"),
+                       panel.grid.major.x = element_blank(),
+                       panel.grid.minor.x = element_blank(),
+                       panel.background = element_blank(),
+                       panel.border = element_blank(),
+                       strip.background = element_rect(linetype = 0),
+                       strip.text = element_blank(),
+                       strip.text.x = element_blank(),
+                       strip.text.y = element_blank(),
+                       legend.text = element_text(colour = "black",
+                                                  size = baseSize * .8),
+                       legend.background = element_rect(fill = NULL, 
+                                                        color = "#182125"),
+                       legend.title = element_text( face = "bold", 
+                                                    colour = "black",
+                                                    size = baseSize),
+                       legend.position = "right",
+                       legend.key = element_blank(),
+                       legend.spacing.y = unit(.125, 'cm'),
+                       #legend.background = element_blank(),
+                       plot.tag.location = "plot",
+                       plot.title.position = "plot",
+                       plot.tag.position = "topright",
+                       plot.tag = element_text(size = baseSize *.66,
+                                               colour = "#8C9394"),
+                       plot.background = element_rect(fill = "#ffffff"),
+                       plot.title = element_text(face = "bold", 
+                                                 colour = "black",
+                                                 size = baseSize*1.2),
+                       plot.subtitle = element_text(colour = "#8C9394",
+                                                    size = baseSize),
+                       plot.caption = element_text(size = baseSize *.8)
+                     )
+  )
+}
+
+
+
+#### map theme ####
+theme_pst_map <- function(baseSize=bs) {
+  (theme_void() + 
+     theme(
+       legend.direction = "horizontal",
+       legend.position = "bottom",
+       plot.tag.location = "plot",
+       plot.title.position = "plot",
+       plot.tag.position = "topright",
+       text = element_text(family = pstFont),
+       legend.text = element_text(colour = "black",
+                                   size = baseSize * .8),
+       legend.background = element_rect(fill = NA, 
+                                        color = NA),
+       legend.title = element_text( face = "bold", 
+                                    colour = "black",
+                                    size = baseSize),
+       legend.key = element_blank(),
+       plot.background = element_rect(fill = "#ffffff", colour = NA),
+       plot.margin = unit(c(0,0,0,0), "cm"),
+       plot.tag = element_text(size = baseSize *.66,
+                               colour = "#8C9394"),
+       plot.title = element_text(face = "bold", 
+                                 colour = "black",
+                                 size = baseSize*1.2),
+       plot.subtitle = element_text(colour = "#8C9394",
+                                    size = baseSize),
+       plot.caption = element_text(size = baseSize *.8,
+                                   lineheight = .33)
+       )
+
+                    
+  )
+}
+
+#### flip theme ####
+theme_pst_flip <- function(baseSize=bs) {
+  (theme(
+                       axis.line.y = element_line(
+                         colour = "#182125",
+                         linewidth = 0.5,
+                         linetype = "solid"
+                       ),
+                       axis.line.x = element_line(
+                         colour = "#182125",
+                         linewidth = 0.5,
+                         linetype = "solid"
+                       ),
+                       axis.ticks.y = element_line(
+                         colour = "#182125",
+                         linewidth = 0.5,
+                         linetype = "solid"
+                       ),
+                       text = element_text(family = pstFont),
+                       axis.text = element_text(colour = "#8C9394",
+                                                size = baseSize * .8),
+                       axis.title = element_text(colour ="black", 
+                                                 size= baseSize),
+                       panel.grid.minor.x = element_line(linetype = "dotted", 
+                                                         colour = "#C4C8C6"),
+                       panel.grid.major.x = element_line(colour = "#394C56", 
+                                                         linetype = "dotted"),
+                       panel.grid.major.y = element_blank(),
+                       panel.grid.minor.y = element_blank(),
+                       panel.background = element_blank(),
+                       panel.border = element_blank(),
+                       strip.background = element_rect(linetype = 0),
+                       strip.text = element_blank(),
+                       strip.text.x = element_blank(),
+                       strip.text.y = element_blank(),
+                       legend.text = element_text(colour = "black",
+                                                  size = baseSize * .8),
+                       legend.background = element_rect(fill = NULL, 
+                                                        color = "#182125"),
+                       legend.title = element_text( face = "bold", 
+                                                    colour = "black",
+                                                    size = baseSize),
+                       legend.position = "right",
+                       legend.key = element_blank(),
+                       #legend.background = element_blank(),
+                       plot.tag.location = "plot",
+                       plot.title.position = "plot",
+                       plot.tag.position = "topright",
+                       plot.tag = element_text(size = baseSize *.66,
+                                               colour = "#8C9394"),
+                       plot.background = element_rect(fill = "#ffffff"),
+                       plot.title = element_text(face = "bold", 
+                                                 colour = "black",
+                                                 size = baseSize*1.2),
+                       plot.subtitle = element_text(colour = "#8C9394",
+                                                    size = baseSize),
+                       plot.caption = element_text(size = baseSize *.8)
+                     )
+  )
+}
+
+#### facet theme ####
+theme_pst_facet <- function(baseSize=bs) {
+  (theme(
+                       axis.line.x = element_line(
+                         colour = "#182125",
+                         linewidth = 0.5,
+                         linetype = "solid"
+                       ),
+                       axis.line.y = element_line(
+                         colour = "#182125",
+                         linewidth = 0.5,
+                         linetype = "solid"
+                       ),
+                       axis.ticks.y = element_line(
+                         colour = "#182125",
+                         linewidth = 0.5,
+                         linetype = "solid"
+                       ),
+                       text = element_text(family = pstFont),
+                       axis.text = element_text(colour = "#8C9394",
+                                                size = baseSize * .8),
+                       axis.title = element_text(colour ="black", 
+                                                 size= baseSize),
+                       panel.grid.minor.y = element_line(linetype = "dotted", 
+                                                         colour = "#C4C8C6"),
+                       panel.grid.major.y = element_line(colour = "#394C56", 
+                                                         linetype = "dotted"),
+                       panel.grid.major.x = element_blank(),
+                       panel.grid.minor.x = element_blank(),
+                       panel.border = element_blank(),
+                       strip.background = element_rect(linetype = 0),
+                       strip.text = element_blank(),
+                       strip.text.x = element_text(colour = "gray15",
+                                                  size = baseSize * .8,
+                                                  margin = ),
+                       strip.text.y = element_text(colour = "gray15",
+                                                  size = baseSize * .8),
+                       legend.text = element_text(colour = "black",
+                                                  size = baseSize * .8),
+                       legend.background = element_rect(fill = NULL, 
+                                                        color = "#182125"),
+                       legend.title = element_text( face = "bold", 
+                                                    colour = "black",
+                                                    size = baseSize),
+                       legend.position = "right",
+                       legend.key = element_blank(),
+                       legend.spacing.y = unit(.125, 'cm'),
+                       #legend.background = element_blank(),
+                       plot.tag.location = "plot",
+                       plot.title.position = "plot",
+                       plot.tag.position = "topright",
+                       plot.tag = element_text(size = baseSize *.66,
+                                               colour = "#8C9394"),
+                       plot.background = element_rect(fill = "#ffffff"),
+                       panel.background = element_rect(fill = "#f1f3f4"),
+                       plot.title = element_text(face = "bold", 
+                                                 colour = "black",
+                                                 size = baseSize*1.2),
+                       plot.subtitle = element_text(colour = "#8C9394",
+                                                    size = baseSize),
+                       plot.caption = element_text(size = baseSize *.8)
+                     )
+  )
+}
+
+
+```
+
+```{r nice colors}
+#brewer pal
+col <- brewer.pal(6,"Set2")
+green <- col[1]
+orange <- col[2]
+purple <- col[3]
+pink <- col[4]
+lime <- col[5]
+yellow <- col[6]
+
+ecru = "#FFEEDB"
+
+
+#pst 
+darkBlue <- "#003E59"
+midBlue <- "#00546F"
+bluGreen <- "#459197"
+liteGreen <- "#61A893"
+
+
+#pst contrast 
+#1
+honey <- "#F2AA18"
+lilac <- "#C297B8"
+# 2
+hunterGrn <- "#315C2B"
+maize <- "#E7BB41"
+
+crimson <- "#96140D"
+lavBlu <- "#C6CAED"
+
+#based on pst
+liteBlue <- "#5CCEFF"
+liteBlu2 <- "#0AC2FF"
+darkGreen <- "#3C685A"
+brown <- "#664400"
+
+## coolors
+purp = "#644695"
+
+# pst pairs
+blu_p = "#A8E5FF"
+crim_p = "#F27069"
+purp_p = "#9E86C6"
+lil_p = "#673C5D"
+green_p1 = "#3E7061"
+green_p2 = "#90C2B3"
+ecru_p = "#241300"
+
+
+#pals 
+pst1 <- c(darkBlue, liteGreen, lilac, honey, bluGreen, crimson)
+pst2 <- c(darkBlue, liteGreen, lilac, brown, maize, midBlue)
+pstMax <- c(darkBlue, liteGreen, lilac, honey, purp, brown, crimson, liteBlu2)
+pstPaired <- c(darkBlue, blu_p, green_p1, green_p2, lilac, lil_p, 
+               crimson, crim_p, ecru_p, ecru)
+
+```
+
+
+```{r incident data}
+#get df
+#remove outer continental shelf incidents 
+df <- read_csv(paste0(datadir, "clean/all_inc.csv") ) 
+
+#join, including transformation from wgs84 to nad 83
+df_sp <- df %>%
+  st_as_sf(coords = c("LOCATION_LONGITUDE", "LOCATION_LATITUDE"), crs = 4326)%>%
+  st_transform(2229)
+
+
+```
+
+```{r}
+juris <- read_xlsx("research/state-transparency/data/analysis.xlsx", sheet = 5)[,c(1:3,6,8)] %>%
+  rename("STATE_NAME" = 1,
+         "GT_INTRASTATE" = 2,
+         "GT_INTERSTATE" = 3,
+         "HL_INTRASTATE" = 4,
+         "HL_INTERSTATE" = 5)
+
+jb <- juris %>%
+  mutate(across(2:5, ~ if_else(is.na(.x), F,T)),
+         STATE_NAME = str_to_upper(STATE_NAME),
+         STATE_NAME = ifelse(grepl("LIQUID", STATE_NAME), 
+                             "CALIFORNIA LIQUID", STATE_NAME)) %>%
+  pivot_longer(!STATE_NAME,
+               names_to = c("SYS", "INTER_INTRA"),
+               names_sep = "_",
+               values_to = "bool")
+```
+
+```{r getting annual report data}
+# library(plyr)
+
+## read ar part H csvs <-
+#read following cols 
+# OPERATOR_ID, INTER_INTRA, PARTHONNTOTAL
+
+data_path = "research/state-transparency/data/reports"
+
+liqAR <- plyr::ldply(.data = list.files(pattern = "HL",
+                                        path = data_path,
+                                        full.names = T),
+               .fun = read.csv,
+               
+               )
+gtrAR <- plyr::ldply(.data = list.files(pattern = "GT",
+                                        path = data_path,
+                                        full.names = T),        
+                     .fun = read.csv
+               )
+
+gdsAR <- plyr::ldply(.data = list.files(pattern = "GD",
+                                        path = data_path,
+                                        full.names = T),              
+                     .fun = read.csv
+               )
+
+
+#detach("package:plyr", unload = T)
+```
+
+```{r annual reports to 202 miles}
+hl_miles <- liqAR %>%
+ # filter(REPORT_YEAR == 2022)%>%
+  group_by(STATE_NAME, INTER_INTRA, REPORT_YEAR) %>%
+  summarize(miles = sum(PARTHONTOTAL, na.rm = T)) %>% 
+  ungroup() %>%
+  mutate(SYS = "HL")
+
+gt_miles <- gtrAR %>%
+ # filter(REPORT_YEAR == 2022)%>%
+  group_by(STATE_NAME, INTER_INTRA, REPORT_YEAR) %>%
+  summarize(miles = sum(PARTHONTOTAL, na.rm = T))%>% 
+  ungroup() %>%
+  mutate(SYS = "GT")
+
+gd_miles <- gdsAR %>%
+  mutate(service_miles = (AVERAGE_LENGTH * NUM_SRVCS_TOTAL)/5280,
+         mileage = service_miles + MMILES_TOTAL)  %>%
+  group_by(STOP, REPORT_YEAR) %>%
+  summarize(miles = sum(mileage, na.rm = T))  %>%
+  rename(STATE = STOP) %>%
+  mutate(STATE_NAME = case_when(
+    STATE == "DC"  ~ "WASHINGTON, DC",
+    .default = str_to_upper(state.name[match(STATE, state.abb)])
+  ),
+  SYS = "GD"
+  )
+
+new_miles <- bind_rows(hl_miles, gt_miles, gd_miles)# %>%
+  # mutate(STATE = case_when(
+  #   STATE_NAME == "CALIFORNIA" ~ "CA-L",
+  #   STATE_NAME == "WASHINGTON DC"  ~ "DC",
+  #   .default = state.abb[match(str_to_title(STATE_NAME), state.name)]
+  # ))%>%
+  # bind_rows(gd_miles %>% 
+  #             mutate(STATE = ifelse(STATE == "CA", "CA-L",STATE),
+  #                    STATE_NAME = ifelse(STATE == "CALIFORNIA", 
+  #                                        "CALIFORNIA LIQUID",STATE_NAME))
+  #           ) %>%
+  # bind_rows(
+  #   bind_rows(hl_miles, gt_miles) %>%
+  #     filter(STATE_NAME %in% c( "ARKANSAS", "CALIFORNIA"))%>%
+  #     mutate(STATE = ifelse(STATE_NAME == "ARKANSAS", "AR-O", "CA-G"))%>%
+  #     bind_rows(gd_miles %>% filter(STATE %in% c("AR", "CA") )%>% 
+  #                 mutate(STATE = ifelse(STATE == "AR", "AR-O", "CA-G"),
+  #                        STATE_NAME = ifelse(STATE == "AR-O", 
+  #                                            "ARKANSAS OGC", "CALIFORNIA GAS")))
+  # ) 
+  
+
+new_miles <- new_miles %>%
+  rbind(new_miles %>% filter(REPORT_YEAR == 2022 & SYS == "HL") 
+        %>% mutate(REPORT_YEAR = 2023)) 
+
+```
+
+```{r}
+napsr_list = "ME,NH,VT,MA,NY,PA,OH,WV,VA,RI,CT,NJ,DE,MD,DC"
+napsr = str_split(napsr_list, ",")[[1]]
+
+```
+
+```{r}
+summary_cols = c("SIGNIFICANT", "SERIOUS")
+
+sumdf <- df %>%
+  group_by(STATE, IYEAR, SYS, INTER_INTRA)%>%
+  summarize(n=n(),
+            across(all_of(summary_cols), ~sum(.x == "YES", na.rm = T)),
+            across(all_of(c("TOTAL_RELEASE", "TOTAL_COST_CURRENT")),
+                   sum)) %>%
+  ungroup()%>%
+  complete(STATE, nesting(IYEAR, SYS, INTER_INTRA), 
+           fill = list(n = 0, SIGNIFICANT = 0,
+                                     SERIOUS = 0, TOTAL_COST_CURRENT=0,
+                                     TOTAL_RELEASE = 0))%>%
+  left_join(jb %>%
+              mutate(STATE = state.abb[match(STATE_NAME,
+                                       str_to_upper(state.name))]), 
+            by = c("STATE", "SYS", "INTER_INTRA")) %>%
+  mutate(bool = ifelse(SYS == "GD", T, bool)) %>%
+  filter(STATE %in% napsr & bool == T & between(IYEAR, 2019,2023)) %>%
+  ungroup()%>%
+  left_join(new_miles %>%
+               mutate(STATE = state.abb[match(STATE_NAME,
+                                              str_to_upper(state.name))],
+                      STATE = ifelse(grepl(" DC", STATE_NAME), "DC", STATE),
+                      INTER_INTRA = ifelse(SYS == "GD", "INTRASTATE", INTER_INTRA)),
+             by = c("IYEAR" = "REPORT_YEAR", 
+                    "STATE" = "STATE",
+                    "SYS" = "SYS",
+                    "INTER_INTRA" = "INTER_INTRA"),
+            suffix = c("", ".n"), keep = T)%>%
+  drop_na(INTER_INTRA.n) %>%
+  mutate( ir = n / (miles/1000)) %>%
+  group_by(STATE, SYS)%>%
+  summarize(across(n:TOTAL_COST_CURRENT, ~sum(.x, na.rm = T)),
+            miles_19 = sum(miles[IYEAR == 2019], na.rm = T),
+            miles_23 = sum(miles[IYEAR == 2023], na.rm = T),
+            miles_sum = sum(miles, na.rm = T),
+            ir_19 = mean(ir[IYEAR == 2019], na.rm = T),
+            ir_23 = mean(ir[IYEAR == 2023], na.rm = T),
+            ir_mu = mean(ir),
+            years = sum(miles > 0, na.rm = T)) %>%
+  mutate(ir_5 = n / (miles_sum/5000),
+         state_lab = ifelse(STATE == "VA"& SYS != "HL", "VA*",STATE),
+         state_name = state.name[match(STATE, state.abb)],
+         state_name = ifelse(STATE == "DC", "Washington, D.C.", state_name),
+         state_name = ifelse(STATE == "VA" & SYS != "HL",
+                              "Virginia*", STATE))
+
+```
+
+```{r}
+sumdf %>%
+  ggplot(aes(x = state_lab, y = ir_5, fill = SYS))+
+  geom_col(width = .7)+
+  coord_flip()+
+  theme_pst_facet()+
+  theme( panel.grid.minor.x = element_line(linetype = "dotted", 
+                                                         colour = "#C4C8C6"),
+         panel.grid.major.x = element_line(colour = "#394C56", 
+                                           linetype = "dotted"),
+         panel.grid.major.y = element_blank(),
+         panel.grid.minor.y = element_blank(),
+         axis.line.y = element_blank())+
+  facet_wrap(~SYS, scales = "free")+
+  labs()
+```
+
+```{r}
+sumdf %>%
+  ggplot(aes(x = state_lab, y = ir_5, fill = SYS))+
+  geom_col(width = .7)+
+  coord_flip()+
+  theme_pst_facet()+
+  theme( panel.grid.minor.x = element_line(linetype = "dotted", 
+                                                         colour = "#C4C8C6"),
+         panel.grid.major.x = element_line(colour = "#394C56", 
+                                           linetype = "dotted"),
+         panel.grid.major.y = element_blank(),
+         panel.grid.minor.y = element_blank(),
+         axis.line.y = element_blank())+
+  facet_wrap(~SYS, scales = "free")+
+  labs()
+```
