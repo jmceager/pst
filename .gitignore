@@ -30,6 +30,6 @@ vignettes/*.pdf
 *.DS_Store
 */rsconnect/*
 .Rproj
-*.Rproj 
+*.Rproj
 .dcf
 /plots/*
