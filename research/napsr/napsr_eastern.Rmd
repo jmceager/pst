@@ -57,6 +57,8 @@ showtext_auto()# theme clean adjustments to apply to ggplot
 
 extrafont::font_import("/Users/jameseager/Library/Fonts/")
 
+setwd("/Users/jameseager/Documents/pst/research/state-transparency")
+
 ```
 
 ```{r theme_pst}
@@ -362,7 +364,7 @@ df_sp <- df %>%
 ```
 
 ```{r}
-juris <- read_xlsx("research/state-transparency/data/analysis.xlsx", sheet = 5)[,c(1:3,6,8)] %>%
+juris <- read_xlsx("data/analysis.xlsx", sheet = 5)[,c(1:3,6,8)] %>%
   rename("STATE_NAME" = 1,
          "GT_INTRASTATE" = 2,
          "GT_INTERSTATE" = 3,
@@ -387,7 +389,7 @@ jb <- juris %>%
 #read following cols 
 # OPERATOR_ID, INTER_INTRA, PARTHONNTOTAL
 
-data_path = "research/state-transparency/data/reports"
+data_path = "data/reports"
 
 liqAR <- plyr::ldply(.data = list.files(pattern = "HL",
                                         path = data_path,
@@ -557,3 +559,101 @@ sumdf %>%
   facet_wrap(~SYS, scales = "free")+
   labs()
 ```
+
+
+#### transparency rating 
+
+```{r}
+
+years <- excel_sheets("data/transparency-history.xlsx")
+
+
+
+# start faceting more by pipeline miles 
+
+dfRaw <- map_dfr(years, read_xlsx, 
+              path = "data/transparency-history.xlsx", .id = "sheet") %>%
+  mutate(year = parse_number(years[as.numeric(sheet)]),
+         average = coalesce(total, average),
+         score = select(., findSite:sitingRouting) %>% rowSums(na.rm = T))%>%
+  select(!c(total, sheet))%>%
+  rename(state = State) %>%
+  mutate(eastern = state.abb[match(state,state.name)] %in% napsr,
+         score_per = average/3)
+
+
+df_23 <- read_xlsx("data/2023_draft2.xlsx", sheet = 1,
+                    skip = 0) %>%
+  select("State",matches("^[0-9]")) %>%
+  mutate(score = 0)%>%
+  rename(Column1 = State) 
+
+specs <- tibble(
+  oldName = colnames(df_23),
+  newName = colnames(dfRaw)[1:length(colnames(df_23))]
+)
+  
+df_wide <- df_23 %>%
+  rename_with(~specs$newName, specs$oldName) %>%
+  mutate(year = 2023,
+         score = select(., findSite:sitingRouting) %>% rowSums(),
+         score_per = score / ifelse( year == 2013, 
+                                     30, ifelse(year == 2012, 
+                                                27, 33)),
+         average = score / ifelse( year == 2013, 
+                                   10, ifelse(year == 2012, 
+                                              9, 11)),
+         state = str_remove(state, "\\*"),
+         eastern = state.abb[match(state,state.name)] %in% napsr)%>%
+  bind_rows(dfRaw)%>%
+  mutate(class = case_when(
+    score_per == 1 ~ "Excellent",
+    between(score_per, 24.01/33, 32.99/33) ~ "Good",
+    between(score_per, 17/33, 24/33) ~ "Pass",
+    score_per < 16.99/33 ~ "Fail",
+    .default = "Not Rated"
+  ),
+  class_int = case_when(
+    score_per == 1 ~ 4,
+    between(score_per, 24.01/33, 32.99/33) ~ 3,
+    between(score_per, 17/33, 24/33) ~ 2,
+    score_per < 16.99/33 ~ 1,
+    .default = 0
+  ),
+  class = factor(
+    class,
+    levels = c("Not Rated","Fail", "Pass", "Good", "Excellent")
+  ),
+  state = if_else(state == "DC", "District of Columbia", state))
+
+df <- df_wide %>%
+  select(!class)%>%
+  pivot_longer(!c(state, year, eastern)) %>%
+  drop_na(value)
+
+state_list = df %>% filter(year == 2023) %>% pull(state) %>% unique()
+```
+
+
+```{r hex data}
+hexes_new <- read_sf("/Users/jameseager/Documents/pst/phmsa-clean/data/gis/new_hex_st/HexStates.shp") %>%
+  mutate(State = if_else(grepl("OCG", State), "Arkansas OGC", State))
+
+#for abbr things
+stab_check <- hexes_new %>%
+  st_drop_geometry()%>% select(State, State_Abbr)
+
+stab_ab = stab_check$State_Abbr
+stab_name = stab_check$State
+
+hn_center <- hexes_new %>%
+  st_centroid() %>%
+  mutate(x = st_coordinates(.)[1],
+         y = st_coordinates(.)[2])%>%
+  rename(sa = State_Abbr)
+
+df23_hex <- df_wide%>%
+  filter(year == 2023)%>%
+  right_join(hexes_new, by = c("state" = "State")) %>%
+  replace_na(list(class = "Not Rated"))
+``` 
