@@ -33,3 +33,4 @@ vignettes/*.pdf
 *.Rproj
 .dcf
 /plots/*
+.gitignore.orig
