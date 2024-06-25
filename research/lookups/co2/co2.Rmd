@@ -307,6 +307,8 @@ midBlue <- "#00546F"
 bluGreen <- "#459197"
 liteGreen <- "#61A893"
 
+richblk <- "#182125"
+
 
 #pst contrast 
 #1
@@ -344,6 +346,15 @@ pst2 <- c(darkBlue, liteGreen, lilac, brown, maize, midBlue)
 pstMax <- c(darkBlue, liteGreen, lilac, honey, purp, brown, crimson, liteBlu2)
 pstPaired <- c(darkBlue, blu_p, green_p1, green_p2, lilac, lil_p, 
                crimson, crim_p, ecru_p, ecru)
+
+
+pstRep <- c(
+  CO2 = honey,
+  `Crude Oil` = darkBlue,
+  `Fuel Grade Ethanol` = brown,
+  HVL = lilac,
+  `Petrol Product (non-HVL)` = liteGreen
+)
 
 ```
 
@@ -406,7 +417,7 @@ hl_ar <- read_xlsx("/Users/jameseager/Downloads/annual_hazardous_liquid_2010_pre
 
 
 
-```{r}
+```{r eval = F}
 hl %>% 
   filter(between(IYEAR, 2010, 2023),
          ON_OFF_SHORE == "ONSHORE")%>%
@@ -429,27 +440,35 @@ hl %>%
   count(IYEAR)
 
 hl %>%
-  filter(between(IYEAR, 2010, 2023),
+  filter(between(IYEAR, 2018, 2023),
          ON_OFF_SHORE == "ONSHORE")%>%
+  filter(!is.na(ON_SITE_DATETIME))%>%
   mutate(onsitediff = seconds_to_period( ON_SITE_DATETIME - INCIDENT_IDENTIFIED_DATETIME) ,
          shutdowninc = seconds_to_period(SHUTDOWN_DATETIME - LOCAL_DATETIME),
          shutdowndiff = seconds_to_period(SHUTDOWN_DATETIME - INCIDENT_IDENTIFIED_DATETIME)) %>%
-  filter(COMMODITY_RELEASED_TYPE == "CO2 (CARBON DIOXIDE)")%>%
+  #filter(COMMODITY_RELEASED_TYPE == "CO2 (CARBON DIOXIDE)")%>%
   select(MDY, NAME.x,cleanLoc, ON_SITE_DATETIME, SHUTDOWN_DATETIME,
          INCIDENT_IDENTIFIED_DATETIME, ACCIDENT_IDENTIFIER,
-         ACCIDENT_DETAILS,
+         ACCIDENT_DETAILS, COMMODITY_RELEASED_TYPE,
          #ends_with("DATETIME"),
          TOTAL_RELEASE, onsitediff, shutdowndiff, shutdowninc)%>% #view
-  select(INCIDENT_IDENTIFIED_DATETIME, SHUTDOWN_DATETIME,onsitediff, shutdowndiff, shutdowninc) %>%
-  filter(!is.na(onsitediff))%>%
-  filter(onsitediff >= seconds(1)) %>% #view
- # filter(shutdowndiff <= hours(2)) %>% #view()
-  summary()
+  select(COMMODITY_RELEASED_TYPE,INCIDENT_IDENTIFIED_DATETIME, SHUTDOWN_DATETIME,onsitediff, shutdowndiff, shutdowninc) %>%
+  # filter(!is.na(onsitediff))%>%
+ filter(onsitediff >= seconds(0),
+        shutdowndiff >= seconds(0)) %>%
+  mutate(onsitediff = period_to_seconds(onsitediff),
+         shutdowndiff = period_to_seconds(shutdowndiff)) %>% 
+ # filter(shutdowndiff <= hours(2)) %>% #view
+  #summary()
 group_by(COMMODITY_RELEASED_TYPE) %>%
-  summarize(diffmu = mean(onsitediff, na.rm = T),
-            diff2mu =mean(shutdowndiff, na.rm = T),
+  summarize(diffmu = seconds_to_period(mean(onsitediff, na.rm = T)),
+            diff2mu =seconds_to_period(mean(shutdowndiff, na.rm = T)),
             diffsd = sd(onsitediff, na.rm = T),
-            diff2sd = sd(shutdowndiff, na.rm = T))
+            diff2sd = sd(shutdowndiff, na.rm = T)) %>% view
+
+
+
+
 ```
 
 6
@@ -467,6 +486,8 @@ com_names <- tibble(
 #national trends
 
 ```{r miles over time }
+#setwd("research/lookups/co2")
+
 liqAR %>%
   group_by(REPORT_YEAR, PARTA5COMMODITY) %>%
   summarise(miles = sum(PARTDTOTALMILES, na.rm = T)) %>%
@@ -476,7 +497,7 @@ liqAR %>%
   geom_text(aes(label = str_wrap(new_names, 16), x = 2022.1),
             data = . %>% filter(REPORT_YEAR == 2022),
             show.legend = F, hjust = 0, vjust = 0, lineheight = .66)+
-  scale_color_manual(values = pstMax)+
+  scale_color_manual(values = pstRep)+
   scale_x_continuous(limits = c(2010, 2022), expand = c(0,0),
                      breaks = seq(2010,2022,2),
                      oob = function(x, ...) x)+
@@ -498,12 +519,13 @@ liqAR %>%
   group_by(REPORT_YEAR, PARTA5COMMODITY) %>%
   summarise(miles = sum(PARTDTOTALMILES, na.rm = T))%>%
   ggplot(aes(x = REPORT_YEAR, y = miles))+
-  geom_line(show.legend = F, linewidth = .8, col = lilac)+
+  geom_line(show.legend = F, linewidth = .8, col = brown)+
   scale_x_continuous(limits = c(2010, 2022), expand = c(0,0),
                      oob = function(x, ...) x)+
-  scale_y_continuous(limits = c(0,20), expand = c(0,0), 
+  scale_y_continuous(limits = c(0,21), expand = c(0,0), 
                      labels = scales::label_number())+
   theme_pst(8)+
+  theme(panel.grid.minor.y = element_blank())+
   labs(x = NULL, y = NULL, tag = tag)
 
 ggsave("plots/fuel_ethanol.png", width = 3, height = 3/1.62)
@@ -519,7 +541,7 @@ liqAR %>%
   ggplot(aes(x = reorder(new_names, hca/miles), y = hca/miles, fill = new_names))+
   geom_bar(show.legend = F,stat = "identity", width = .7,
            data = . %>% filter(REPORT_YEAR == 2022))+
-  scale_fill_manual(values = pstMax,)+
+  scale_fill_manual(values = pstRep)+
   scale_y_continuous(limits = c(0,1), expand = c(0,0), 
                      labels = scales::label_percent(accuracy = 1))+
   scale_x_discrete(labels = function(x) str_wrap(x,16))+
@@ -580,7 +602,60 @@ hl_summary <- hl %>%
             hci_per = sum(hca)/(sum(hca_miles)/1000))%>%
   ungroup()%>%
   mutate(across(sig:injure, ~.x/n, .names = "{.col}_per"))
+
+
 ```
+
+
+```{r sig inc rate}
+hl %>%
+  filter(between(IYEAR, 2014,2023))%>%
+  group_by(COMMODITY_RELEASED_TYPE, IYEAR) %>%
+  summarize(n = n(),
+            sig = sum(SIGNIFICANT == "YES", na.rm = T),
+            hca = sum(COULD_BE_HCA == "YES", na.rm = T),
+            rel = sum(TOTAL_RELEASE, na.rm = T),
+            cost = sum(TOTAL_COST_CURRENT, na.rm = T),
+            fatal = sum(FATAL, na.rm = T),
+            injure = sum(INJURE, na.rm = T))%>%
+  ungroup()%>%
+  complete(COMMODITY_RELEASED_TYPE, IYEAR, fill = list(n = 0, hca = 0,sig = 0,
+                                                       rel = 0, cost = 0,
+                                                       fatal = 0, injure = 0))%>%
+  left_join(com_names)%>% 
+  left_join(
+    liqAR_fix %>%
+      filter(between(REPORT_YEAR, 2014,2023))%>%
+      group_by(PARTA5COMMODITY, REPORT_YEAR)%>%
+      summarize(miles = sum(PARTDTOTALMILES, na.rm = T),
+                hca_miles = sum(PARTBHCATOTAL, na.rm = T)),
+    by = c("IYEAR" = "REPORT_YEAR", "PARTA5COMMODITY" = "PARTA5COMMODITY")
+  )%>%
+  #filter(!grepl("BIOFUEL", COMMODITY_RELEASED_TYPE))%>%
+  ggplot(aes(x = IYEAR, y = n/(miles/1000), col = new_names))+
+  geom_line(show.legend = F, linewidth = .88)+
+  geom_text(aes(label = str_wrap(new_names, 16), x = 2023.1),
+            data = . %>% filter(IYEAR == 2023 & !grepl("Ethanol",new_names)),
+            show.legend = F, hjust = 0, vjust = 0, lineheight = .66)+
+  scale_color_manual(values = pstRep)+
+  scale_x_continuous(limits = c(2014, 2023), expand = c(0,0),
+                     breaks = seq(2010,2022,2),
+                     oob = function(x, ...) x)+
+  scale_y_continuous(limits = c(0,3.8), expand = c(0,0))+
+  coord_cartesian(clip="off")+
+  theme_pst()+
+  theme(plot.margin = margin(3,30,3,4, "mm"),
+        plot.tag.location = "plot",
+        plot.caption.position = "plot")+
+  labs(y = "Incidents per 1,000 Miles", x=NULL, title = "Hazardous Liquid Incident Rate by Commodity",
+       caption = "PHMSA Annual Reports, Hazardous Liquids 2010-2023",
+       tag = tag)
+
+ggsave("plots/hl_inc_rate.png", width = wdt, height = hgt)
+
+```
+
+
 
 ```{r sig inc rate}
 hl %>%
@@ -608,11 +683,11 @@ hl %>%
   )%>%
   #filter(!grepl("BIOFUEL", COMMODITY_RELEASED_TYPE))%>%
   ggplot(aes(x = IYEAR, y = sig/(miles/1000), col = new_names))+
-  geom_line(show.legend = F, linewidth = .8)+
+  geom_line(show.legend = F, linewidth = .85)+
   geom_text(aes(label = str_wrap(new_names, 16), x = 2023.1),
             data = . %>% filter(IYEAR == 2023 & !grepl("Ethanol",new_names)),
             show.legend = F, hjust = 0, vjust = 0, lineheight = .66)+
-  scale_color_manual(values = pstMax)+
+  scale_color_manual(values = pstRep)+
   scale_x_continuous(limits = c(2014, 2023), expand = c(0,0),
                      breaks = seq(2010,2022,2),
                      oob = function(x, ...) x)+
@@ -622,9 +697,12 @@ hl %>%
   theme(plot.margin = margin(3,30,3,4, "mm"),
         plot.tag.location = "plot",
         plot.caption.position = "plot")+
-  labs(y = "Incidents per 1,000 Miles", x=NULL, title = "Hazardous Liquid Incident Rate by Commodity",
+  labs(y = "Significant Incidents per 1,000 Miles", x=NULL, title = "Hazardous Liquid Significant Incident Rate by Commodity",
        caption = "PHMSA Annual Reports, Hazardous Liquids 2010-2022",
        tag = tag)
+
+ggsave("plots/hl_sig_rate.png", width = wdt, height = hgt)
+
 ```
 
 ```{r hca inc rate}
@@ -657,7 +735,7 @@ hl %>%
   geom_text(aes(label = str_wrap(new_names, 16), x = 2023.1),
             data = . %>% filter(IYEAR == 2023 & !grepl("Ethanol",new_names)),
             show.legend = F, hjust = 0, vjust = 0, lineheight = .66)+
-  scale_color_manual(values = pstMax)+
+  scale_color_manual(values = pstRep)+
   scale_x_continuous(limits = c(2014, 2023), expand = c(0,0),
                      breaks = seq(2010,2022,2),
                      oob = function(x, ...) x)+
@@ -670,4 +748,364 @@ hl %>%
   labs(y = "Incidents per 1,000 Miles", x=NULL, title = "Hazardous Liquid High Consequence Incident Rate by Commodity",
        caption = "PHMSA Annual Reports, Hazardous Liquids 2010-2022",
        tag = tag)
+
+ggsave("plots/hl_hca_rate.png", width = wdt, height = hgt)
+
 ```
+
+```{r}
+voi = c("ir", "sir","injure","fatal", "relp", "costp")
+
+hl %>%
+  filter(between(IYEAR, 2014,2023))%>%
+  group_by(COMMODITY_RELEASED_TYPE, IYEAR) %>%
+  summarize(n = n(),
+            sig = sum(SIGNIFICANT == "YES", na.rm = T),
+            hca = sum(COULD_BE_HCA == "YES", na.rm = T),
+            rel = sum(TOTAL_RELEASE, na.rm = T),
+            cost = sum(TOTAL_COST_CURRENT, na.rm = T),
+            fatal = sum(FATAL, na.rm = T),
+            injure = sum(INJURE, na.rm = T))%>%
+  ungroup()%>%
+  complete(COMMODITY_RELEASED_TYPE, IYEAR, fill = list(n = 0, hca = 0,sig = 0,
+                                                       sigp = 0, 
+                                                       rel = 0, cost = 0,
+                                                       fatal = 0, injure = 0))%>%
+  left_join(com_names)%>% 
+  left_join(
+    liqAR_fix %>%
+      filter(between(REPORT_YEAR, 2014,2023))%>%
+      group_by(PARTA5COMMODITY, REPORT_YEAR)%>%
+      summarize(miles = sum(PARTDTOTALMILES, na.rm = T),
+                hca_miles = sum(PARTBHCATOTAL, na.rm = T)),
+    by = c("IYEAR" = "REPORT_YEAR", "PARTA5COMMODITY" = "PARTA5COMMODITY")
+  ) %>%
+  mutate(ir = n / (miles/1000),
+         sir = sig / (miles/1000),
+         hcar = hca / (hca_miles/1000)) %>%
+  group_by(new_names)%>%
+  summarise(across(n:injure, ~sum(.x,na.rm = T), .names = "{.col}_orig"),
+            across(ir:hcar, ~ mean(.x,na.rm = T), .names = "{.col}_orig"),
+            miles_orig = miles[IYEAR == 2023])%>%
+  mutate(sigp_orig = sig_orig/n_orig,
+         costp_orig = cost_orig/n_orig,
+         relp_orig = rel_orig/n_orig)%>%
+  ungroup()%>%
+  mutate(across(ends_with("_orig"), ~(.x - min(.x))/(max(.x)- min(.x)), .names = "{.col}_per"))%>%
+  rename_with(~str_replace(., "orig_", ""))%>%
+  pivot_longer(-new_names,
+               names_to = c("var", ".value"),
+               names_sep = "_") %>% 
+  filter(var%in%voi)%>%
+  mutate(val_lab = case_when(
+    var == "costp" ~ scales::dollar(orig, scale = .001, 
+                                    accuracy = 1, suffix = "K"),
+    var == "relp" ~ scales::comma(orig, scale = .001, 
+                                    accuracy = 1, suffix = "K"),
+    var == "miles" & orig < 1000 ~ as.character(round(orig, 0)),
+    var == "miles" & orig >= 1000 ~ scales::comma(orig, scale = .001, 
+                                    accuracy = 1, suffix = "K"),
+    var %in% c("ir", "sir") ~ as.character(round(orig, 1)),
+    .default = as.character(orig)
+  ),
+  var = factor(var, levels = rev(voi),
+               labels = rev(c( "Rate", "Sig. Rate",
+                          "Injuries", "Fatalities", "Release per", 
+                          "Cost per"))))%>%
+  ggplot(aes(x = var, y = per, fill = new_names, group = new_names))+
+  geom_col(position = position_dodge(width = .85), width = .85)+
+  geom_text(aes(label = val_lab, 
+                y = ifelse(per>.5, per-.02, per+.02),
+                hjust = ifelse(per>.5,1, 0),
+                col = ifelse(per>.5,"black", "white" ),
+                group = new_names,
+                x = var), 
+            position = position_dodge(width = .85),
+            show.legend = F, fontface = "bold", size = 3.3)+
+  scale_fill_manual(values = pstRep, name = NULL)+
+  scale_color_manual(values = c( "#fffff0", richblk))+
+  scale_y_continuous(breaks = seq(0,1,.25), labels = c("Min", "25%",
+                                                       "50%", "75%", "Max"))+
+  coord_flip()+
+  theme_pst_flip()+
+  theme(axis.line.y = element_blank(),
+        axis.text.y = element_text(size = bs, color = richblk))+
+  labs(title = "HL Incident Summary by Commodity",
+       subtitle = "Min-Max Normalization of Impacts",
+       tag = tag, caption = "PHMSA Flagged Files & Annual Reports, 2024",
+       y = NULL)
+  
+  
+ggsave("plots/summary.png", width = wdt, height = wdt/1.33)
+
+```
+
+```{r}
+hl %>%
+  filter(between(IYEAR, 2014,2023))%>%
+  left_join(com_names)%>%
+  count(new_names, CAUSE) %>% 
+  complete(new_names, CAUSE, fill = list(n = 0))%>%
+  group_by(new_names)%>%
+  mutate(total = sum(n),
+         maxn = max(n))%>%
+    filter(total > 1)%>%
+  ungroup()%>%
+  mutate(per = n/total,
+         bold_bool = (n == maxn))%>%
+  ggplot(aes(x = CAUSE, y = new_names, fill = per, label = scales::percent(per, accuracy = .1)))+
+  geom_tile(height = .9, width = .9)+
+  geom_text(aes(fontface = ifelse(bold_bool, "bold", "plain"),
+                color = ifelse(per > .5, "white", "black")),
+            show.legend = F)+
+  scale_color_manual(values =c( richblk, "#fffff0"))+
+  scale_fill_gradient(low = muted(liteGreen, l = 95, c = 3), 
+                   high = midBlue, limits = c(0,.7), 
+                   labels = scales::label_percent(), 
+                   name = NULL, breaks = c(.1,.3,.5,.7))+
+  scale_x_discrete(position = "top", name = NULL,
+                   labels = function(x) str_to_title(str_wrap(x, 18)))+
+  scale_y_discrete(labels = function(x) str_wrap(x, 18), name = NULL)+
+  theme_pst()+
+  theme(axis.text.x.top = element_text(angle = -45, vjust = 0.5, 
+                                       hjust = 1, size = bs, color = richblk),
+        axis.text.y = element_text(size = bs, color = richblk),
+        axis.line.x = element_blank(),
+        axis.line.y = element_blank(),
+        panel.grid.major.y = element_blank(),
+        axis.ticks = element_blank(),
+        axis.ticks.y = element_blank(),
+        legend.position = "right",
+        legend.direction = "vertical",
+        legend.background = element_blank())+
+  labs(title = "HL Incident Causes by Commodity",
+       tag = tag, caption = "PHMSA Flagged Files, 2024")
+ggsave("plots/all_cause.png", width = wdt, height = hgt)
+
+hl %>%
+  filter(between(IYEAR, 2014,2023), SIGNIFICANT == "YES")%>%
+  left_join(com_names)%>%
+  count(new_names, CAUSE) %>% 
+  complete(new_names, CAUSE, fill = list(n = 0))%>%
+  group_by(new_names)%>%
+  mutate(total = sum(n),
+         maxn = max(n))%>%
+    filter(total > 1)%>%
+  ungroup()%>%
+  mutate(per = n/total,
+         bold_bool = (n == maxn))%>%
+  ggplot(aes(x = CAUSE, y = new_names, fill = per, label = scales::percent(per, accuracy = .1)))+
+  geom_tile(height = .9, width = .9)+
+  geom_text(aes(fontface = ifelse(bold_bool, "bold", "plain"),
+                color = ifelse(per > .5, "white", "black")),
+            show.legend = F)+
+  scale_color_manual(values =c( richblk, "#fffff0"))+
+  scale_fill_gradient(low = muted(liteGreen, l = 95, c = 3), 
+                   high = midBlue, limits = c(0,.7), 
+                   labels = scales::label_percent(), 
+                   name = NULL, breaks = c(.1,.3,.5,.7))+
+  scale_x_discrete(position = "top", name = NULL,
+                   labels = function(x) str_to_title(str_wrap(x, 18)))+
+  scale_y_discrete(labels = function(x) str_wrap(x, 18), name = NULL)+
+  theme_pst()+
+  theme(axis.text.x.top = element_text(angle = -45, vjust = 0.5, 
+                                       hjust = 1, size = bs, color = richblk),
+        axis.text.y = element_text(size = bs, color = richblk),
+        axis.line.x = element_blank(),
+        axis.line.y = element_blank(),
+        panel.grid.major.y = element_blank(),
+        axis.ticks = element_blank(),
+        axis.ticks.y = element_blank(),
+        legend.position = "right",
+        legend.direction = "vertical",
+        legend.background = element_blank())+
+  labs(title = "HL Significant Incident Causes",
+       subtitle = "Commodities with >1 Significant Incident",
+       tag = tag, caption = "PHMSA Flagged Files, 2024")
+ggsave("plots/sig_cause.png", width = wdt, height = hgt)
+
+```
+
+```{r}
+hl %>%
+  filter(between(IYEAR, 2014,2023))%>%
+  left_join(com_names)%>%
+  count(new_names, SYSTEM_PART_INVOLVED) %>% 
+  complete(new_names, SYSTEM_PART_INVOLVED, fill = list(n = 0))%>%
+  group_by(new_names)%>%
+  mutate(total = sum(n),
+         maxn = max(n))%>%
+    filter(total > 1)%>%
+  ungroup()%>%
+  mutate(per = n/total,
+         bold_bool = (n == maxn))%>%
+  ggplot(aes(x = SYSTEM_PART_INVOLVED, y = new_names, fill = per, label = scales::percent(per, accuracy = .1)))+
+  geom_tile(height = .9, width = .9)+
+  geom_text(aes(fontface = ifelse(bold_bool, "bold", "plain"),
+                color = ifelse(per > .5, "white", "black")),
+            show.legend = F)+
+  scale_color_manual(values =c( richblk, "#fffff0"))+
+  scale_fill_gradient(low = muted(liteGreen, l = 95, c = 3), 
+                   high = midBlue, limits = c(0,.85), 
+                   labels = scales::label_percent(), 
+                   name = NULL, breaks = c(0,.2,.4,.6,.8))+
+  scale_x_discrete(name = NULL,labels = function(x)
+    str_trunc(str_to_title(str_wrap(x, 21)),39), position = "top")+
+  scale_y_discrete(labels = function(x) str_wrap(x, 16), name = NULL)+
+  theme_pst()+
+  theme(axis.text.x.top = element_text(size = bs,angle = -45,
+                                       hjust = 1,color = richblk),
+        axis.text.y = element_text(size = bs, color = richblk),
+        axis.line.x = element_blank(),
+        axis.line.y = element_blank(),
+        panel.grid.major.y = element_blank(),
+        axis.ticks = element_blank(),
+        axis.ticks.y = element_blank(),
+        legend.position = "right",
+        legend.direction = "vertical",
+        legend.background = element_blank())+
+  labs(title = "HL Incident Part Failures by Commodity",
+       tag = tag, caption = "PHMSA Flagged Files, 2024")
+ggsave("plots/all_part.png", width = wdt, height = hgt)
+
+hl %>%
+  filter(between(IYEAR, 2014,2023), SIGNIFICANT == "YES")%>%
+  left_join(com_names)%>%
+  count(new_names, SYSTEM_PART_INVOLVED) %>% 
+  complete(new_names, SYSTEM_PART_INVOLVED, fill = list(n = 0))%>%
+  group_by(new_names)%>%
+  mutate(total = sum(n),
+         maxn = max(n))%>%
+    filter(total > 1)%>%
+  ungroup()%>%
+  mutate(per = n/total,
+         bold_bool = (n == maxn))%>%
+  ggplot(aes(x = SYSTEM_PART_INVOLVED, y = new_names, fill = per, label = scales::percent(per, accuracy = .1)))+
+  geom_tile(height = .9, width = .9)+
+  geom_text(aes(fontface = ifelse(bold_bool, "bold", "plain"),
+                color = ifelse(per > .5, "white", "black")),
+            show.legend = F)+
+  scale_color_manual(values =c( richblk, "#fffff0"))+
+  scale_fill_gradient(low = muted(liteGreen, l = 95, c = 3), 
+                   high = midBlue, limits = c(0,.85), 
+                   labels = scales::label_percent(), 
+                   name = NULL, breaks = c(0,.2,.4,.6,.8))+
+  scale_x_discrete(name = NULL,labels = function(x)
+    str_trunc(str_to_title(str_wrap(x, 21)),39), position = "top")+
+  scale_y_discrete(labels = function(x) str_wrap(x, 16), name = NULL)+
+  theme_pst()+
+  theme(axis.text.x.top = element_text(size = bs,angle = -45, 
+                                       hjust = 1, color = richblk),
+        axis.text.y = element_text(size = bs, color = richblk),
+        axis.line.x = element_blank(),
+        axis.line.y = element_blank(),
+        panel.grid.major.y = element_blank(),
+        axis.ticks = element_blank(),
+        axis.ticks.y = element_blank(),
+        legend.position = "right",
+        legend.direction = "vertical",
+        legend.background = element_blank())+
+  labs(title = "HL Significant Incident Part Failures",
+       subtitle = "Commodities with >1 Significant Incident",
+       tag = tag, caption = "PHMSA Flagged Files, 2024")
+ggsave("plots/sig_part.png", width = wdt, height = hgt)
+
+```
+
+
+```{r}
+hl %>%
+   filter(between(IYEAR, 2014, 2023),
+         ON_OFF_SHORE == "ONSHORE",
+         #SIGNIFICANT == "YES",
+        # grepl("INCLUDING VALVE SITES",SYSTEM_PART_INVOLVED)
+         )%>%
+  filter(!is.na(ON_SITE_DATETIME))%>%
+  mutate(onsitediff = seconds_to_period( ON_SITE_DATETIME - INCIDENT_IDENTIFIED_DATETIME) ,
+         shutdowninc = seconds_to_period(SHUTDOWN_DATETIME - LOCAL_DATETIME),
+         shutdowndiff = seconds_to_period(SHUTDOWN_DATETIME - INCIDENT_IDENTIFIED_DATETIME)) %>%
+  #filter(COMMODITY_RELEASED_TYPE == "CO2 (CARBON DIOXIDE)")%>%
+  select(MDY, NAME.x,cleanLoc, ON_SITE_DATETIME, SHUTDOWN_DATETIME,
+         INCIDENT_IDENTIFIED_DATETIME, ACCIDENT_IDENTIFIER,
+         ACCIDENT_DETAILS, COMMODITY_RELEASED_TYPE,
+         #ends_with("DATETIME"),
+         TOTAL_RELEASE, onsitediff, shutdowndiff, shutdowninc)%>% #view
+  select(COMMODITY_RELEASED_TYPE,INCIDENT_IDENTIFIED_DATETIME, SHUTDOWN_DATETIME,onsitediff, shutdowndiff, shutdowninc) %>%
+  # filter(!is.na(onsitediff))%>%
+ filter(onsitediff >= seconds(0),
+        shutdowndiff >= seconds(0)) %>%
+  mutate(onsitediff = period_to_seconds(onsitediff),
+         shutdowndiff = period_to_seconds(shutdowndiff)) %>% 
+  left_join(com_names)%>%
+  mutate(new_names = factor(new_names, 
+                            levels = c("CO2", "HVL", "Petrol Product (non-HVL)",
+                                       "Crude Oil", "Fuel Grade Ethanol")))%>%
+  #filter(!grepl("BIO", COMMODITY_RELEASED_TYPE))%>%
+  ggplot(aes(x = fct_rev(new_names), y = shutdowndiff, col = new_names))+
+  geom_boxplot(show.legend = F, linewidth = .8)+
+  scale_y_continuous(trans = "pseudo_log",
+                     breaks = c(0, 60,3600, 34560, 241920, 1036800, 3110400 ),
+                     labels = c("0", "Minute", "Hour", "Day", 
+                                "Week", "Month", "Qrt."),
+                     minor_breaks = c(30, 720, 17280, 120960, 518400, 1555200,
+                                      6220800))+
+  scale_color_manual(values = pstRep)+
+   scale_x_discrete(labels = function(x) str_wrap(x, 16), name = NULL)+
+  coord_flip()+
+  theme_pst_flip()+
+  theme(axis.text.y = element_text(size = bs, color = richblk),
+        axis.text.x = element_text(size = bs))+
+  labs(title = "Shutdown Time of Onshore Pipeline Incidents by Commodity",
+       subtitle = "All system parts, excluding times less than 0 seconds",
+       tag = tag, caption = "PHMSA Flagged Files, 2024", y = NULL)
+
+ggsave("plots/all_box.png", width = wdt, height = hgt)
+
+hl %>%
+   filter(between(IYEAR, 2014, 2023),
+         ON_OFF_SHORE == "ONSHORE",
+         #SIGNIFICANT == "YES",
+        grepl("INCLUDING VALVE SITES",SYSTEM_PART_INVOLVED)
+         )%>%
+  filter(!is.na(ON_SITE_DATETIME))%>%
+  mutate(onsitediff = seconds_to_period( ON_SITE_DATETIME - INCIDENT_IDENTIFIED_DATETIME) ,
+         shutdowninc = seconds_to_period(SHUTDOWN_DATETIME - LOCAL_DATETIME),
+         shutdowndiff = seconds_to_period(SHUTDOWN_DATETIME - INCIDENT_IDENTIFIED_DATETIME)) %>%
+  #filter(COMMODITY_RELEASED_TYPE == "CO2 (CARBON DIOXIDE)")%>%
+  select(MDY, NAME.x,cleanLoc, ON_SITE_DATETIME, SHUTDOWN_DATETIME,
+         INCIDENT_IDENTIFIED_DATETIME, ACCIDENT_IDENTIFIER,
+         ACCIDENT_DETAILS, COMMODITY_RELEASED_TYPE,
+         #ends_with("DATETIME"),
+         TOTAL_RELEASE, onsitediff, shutdowndiff, shutdowninc)%>% #view
+  select(COMMODITY_RELEASED_TYPE,INCIDENT_IDENTIFIED_DATETIME, SHUTDOWN_DATETIME,onsitediff, shutdowndiff, shutdowninc) %>%
+  # filter(!is.na(onsitediff))%>%
+ filter(onsitediff >= seconds(0),
+        shutdowndiff >= seconds(0)) %>%
+  mutate(onsitediff = period_to_seconds(onsitediff),
+         shutdowndiff = period_to_seconds(shutdowndiff)) %>% 
+  left_join(com_names)%>%
+  mutate(new_names = factor(new_names, 
+                            levels = c("CO2", "HVL", "Petrol Product (non-HVL)",
+                                       "Crude Oil", "Fuel Grade Ethanol")))%>%
+  filter(!grepl("BIO", COMMODITY_RELEASED_TYPE))%>%
+  ggplot(aes(x = fct_rev(new_names), y = shutdowndiff, col = new_names))+
+  geom_boxplot(show.legend = F, linewidth = .8)+
+ scale_y_continuous(trans = "pseudo_log",
+                     breaks = c(0, 60,3600, 34560, 241920, 1036800, 3110400 ),
+                     labels = c("0", "Minute", "Hour", "Day", 
+                                "Week", "Month", "Qrt."),
+                     minor_breaks = c(30, 720, 17280, 120960, 518400, 1555200,
+                                      6220800))+
+  scale_color_manual(values = pstRep)+
+   scale_x_discrete(labels = function(x) str_wrap(x, 16), name = NULL)+
+  coord_flip()+
+  theme_pst_flip()+
+  theme(axis.text.y = element_text(size = bs, color = richblk),
+        axis.text.x = element_text(size = bs))+
+  labs(title = "Shutdown Time of Onshore Pipeline Incidents by Commodity",
+       subtitle = "Incidents on pipelines, including valve sites alone",
+       tag = tag, caption = "PHMSA Flagged Files, 2024", y = NULL)
+
+ggsave("plots/pipe_box.png", width = wdt, height = hgt)
+```
+
