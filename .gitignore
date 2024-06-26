@@ -32,5 +32,6 @@ vignettes/*.pdf
 .Rproj
 *.Rproj
 .dcf
-/plots/*
+*/plots/*
+*/napsr_plots/*
 .gitignore.orig
