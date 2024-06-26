@@ -1433,7 +1433,7 @@ df %>%
             suffix = c("", ".j"))%>%
   left_join(valueLabsDf)%>%
   mutate(name = factor(name, 
-                       levels = c("score", catComm, catData, catAcs)))%>% 
+                       levels = c("score", catComm, catData, catAcs)))%>% view
   ggplot(aes(y = name, x = reorder(state, value.j), fill = value))+
   geom_tile(width = .8, height = .8)+
   geom_text(data = (df %>%
@@ -1739,7 +1739,7 @@ df %>%
                      limits = c(0,3.2),
                      expand = expansion(0,0))+
   coord_flip()+
-  theme_pst(bs = 10)+
+  theme_pst(10)+
   theme(panel.grid.major.y = element_line(linetype = "dotted", 
                                           colour = "gray90",
                                           size = .33),
@@ -2123,7 +2123,7 @@ df %>%
   scale_y_continuous(minor_breaks = seq(0,35,5), limits = c(0,34.5),
                      expand = expansion(0,0))+
   coord_flip()+
-  theme_pst(bs = 10)+
+  theme_pst(10)+
   theme(panel.grid.major.y = element_line(linetype = "dotted", 
                                           colour = "gray90",
                                           size = .33),
@@ -2133,7 +2133,7 @@ df %>%
         panel.grid.major.x = element_line(colour = "#394C56", 
                                           linetype = "dotted"),
         panel.grid.minor.y = element_blank(),
-        axis.text = element_text(color = richblack),
+        axis.text = element_text(color = "black"),
         legend.position = c(.8,.05),
         plot.tag.position = c(.97, .0075)) +
   labs(x = NULL,
