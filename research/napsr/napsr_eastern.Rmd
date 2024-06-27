@@ -528,36 +528,103 @@ sumdf <- df %>%
 
 ```{r}
 sumdf %>%
+  mutate(SYS = case_when(
+    SYS == "GD" ~ "Gas Distribution",
+    SYS == "GT" ~ "Gas Transmission",
+    SYS == "HL" ~ "Hazardous Liquids"
+  ))%>%
   ggplot(aes(x = state_lab, y = ir_5, fill = SYS))+
   geom_col(width = .7)+
   coord_flip()+
+  scale_fill_manual(values = pstMax)+
   theme_pst_facet()+
   theme( panel.grid.minor.x = element_line(linetype = "dotted", 
                                                          colour = "#C4C8C6"),
          panel.grid.major.x = element_line(colour = "#394C56", 
                                            linetype = "dotted"),
+         strip.background = element_rect(),
          panel.grid.major.y = element_blank(),
          panel.grid.minor.y = element_blank(),
-         axis.line.y = element_blank())+
+         axis.line.y = element_blank(),
+         legend.position = "none")+
+  scale_y_continuous(limits = c(0, NA), expand = expansion(mult = c(0,.1)))+
   facet_wrap(~SYS, scales = "free")+
-  labs()
+  labs(x = NULL, y = "Incidents per 1,000 Miles",
+       subtitle = "All Incidents from 1/1/2018-12/31/2022",
+       title = "5-Year Incident Rate by System & Program", tag = tag)
+
+ggsave("napsr_plots/ir_comp.png", width = wdt, height = hgt)
 ```
 
 ```{r}
 sumdf %>%
-  ggplot(aes(x = state_lab, y = ir_5, fill = SYS))+
+  mutate(SYS = case_when(
+    SYS == "GD" ~ "Gas Distribution",
+    SYS == "GT" ~ "Gas Transmission",
+    SYS == "HL" ~ "Hazardous Liquids"
+  ))%>%
+  ggplot(aes(x = state_lab, y = TOTAL_COST_CURRENT/n, fill = SYS))+
   geom_col(width = .7)+
   coord_flip()+
+  scale_fill_manual(values = pstMax)+
   theme_pst_facet()+
   theme( panel.grid.minor.x = element_line(linetype = "dotted", 
                                                          colour = "#C4C8C6"),
          panel.grid.major.x = element_line(colour = "#394C56", 
                                            linetype = "dotted"),
+         strip.background = element_rect(),
          panel.grid.major.y = element_blank(),
          panel.grid.minor.y = element_blank(),
-         axis.line.y = element_blank())+
+         axis.line.y = element_blank(),
+         legend.position = "none")+
+  scale_y_continuous(limits = c(0, NA), expand = expansion(mult = c(0,.1)),
+                     labels = function(x) 
+                       scales::dollar(x, 
+                         scale = ifelse(x >= 1e6, .000001, .001), 
+                         suffix = ifelse(x >= 1e6, "M", "K"))
+                     )+
   facet_wrap(~SYS, scales = "free")+
-  labs()
+  labs(x = NULL, y = "Total Cost of Damage  per Incident",
+       subtitle = "All Incidents from 1/1/2018-12/31/2022",
+       title = "Incident Damage Cost by System & Program", tag = tag)
+
+ggsave("napsr_plots/dmg_comp.png", width = wdt, height = hgt)
+```
+
+
+```{r}
+sumdf %>%
+  mutate(SYS = case_when(
+    SYS == "GD" ~ "Gas Distribution\n(MSCF)",
+    SYS == "GT" ~ "Gas Transmission\n(MSCF)",
+    SYS == "HL" ~ "Hazardous Liquids\n(U.S. Gal.)"
+  ))%>%
+  ggplot(aes(x = state_lab, y = TOTAL_RELEASE/n, fill = SYS))+
+  geom_col(width = .7)+
+  coord_flip()+
+  scale_fill_manual(values = pstMax)+
+  theme_pst_facet()+
+  theme( panel.grid.minor.x = element_line(linetype = "dotted", 
+                                                         colour = "#C4C8C6"),
+         panel.grid.major.x = element_line(colour = "#394C56", 
+                                           linetype = "dotted"),
+         strip.background = element_rect(),
+         panel.grid.major.y = element_blank(),
+         panel.grid.minor.y = element_blank(),
+         axis.line.y = element_blank(),
+         legend.position = "none")+
+  scale_y_continuous(limits = c(0, NA), expand = expansion(mult = c(0,.1)),
+                     labels = function(x) 
+                       scales::comma(x, 
+                         scale = ifelse(x >= 1e3, .001, 1), 
+                         suffix = ifelse(x >= 1e3, "K", ""))
+                     )+
+  facet_wrap(~SYS, scales = "free")+
+  labs(x = NULL, y = "Total Product Released per Incident",
+       subtitle = "All Incidents from 1/1/2018-12/31/2022",
+       title = "Incident Release Size by System & Program", tag = tag)
+
+ggsave("napsr_plots/rel_comp.png", width = wdt, height = hgt)
 ```
 
 
@@ -578,7 +645,7 @@ dfRaw <- map_dfr(years, read_xlsx,
          score = select(., findSite:sitingRouting) %>% rowSums(na.rm = T))%>%
   select(!c(total, sheet))%>%
   rename(state = State) %>%
-  mutate(eastern = state.abb[match(state,state.name)] %in% napsr,
+  mutate(eastern = state.abb[match(state,state.name)] %in% napsr  | state == "DC",
          score_per = average/3)
 
 
@@ -604,7 +671,7 @@ df_wide <- df_23 %>%
                                    10, ifelse(year == 2012, 
                                               9, 11)),
          state = str_remove(state, "\\*"),
-         eastern = state.abb[match(state,state.name)] %in% napsr)%>%
+         eastern = state.abb[match(state,state.name)] %in% napsr| state == "DC")%>%
   bind_rows(dfRaw)%>%
   mutate(class = case_when(
     score_per == 1 ~ "Excellent",
@@ -632,12 +699,43 @@ df <- df_wide %>%
   drop_na(value)
 
 state_list = df %>% filter(year == 2023) %>% pull(state) %>% unique()
+
+catAcs <- c("regAccess", "regDescription", "sitingRouting")
+catComm <- c("findSite","agencyCon", "companyCon")
+catData <- c("incData", "mapGT", "excavationData", 
+             "enforceRecs", "inpectRecs")
+allScores <- c(catAcs, catComm, catData)
+
+
+commsName = "Find + Connect"
+agencyName = "Agency Authority"
+dataName = "Data + Maps"
+
+valueLabs <- c("findSite" = "Find Website",
+               "mapGT" = "Trans. Pipe Maps",
+               "regDescription" = "Desc. Regulation",
+               "regAccess" = "Access Stat+Regs",
+               "agencyCon" = "Agency Contacts",
+               "companyCon" = "Comp. Contacts",
+               "excavationData" = "Excav. Dmg. Data",
+               "average" = "Avg. Score",
+               "incData" = "Incident Data",
+               "enforceRecs" = "Enforcement Data",
+               "inpectRecs" = "Inspection Records",
+               "sitingRouting" = "Siting + Routing",
+               "score" = "Composite Score",
+               "score_per" = "Percentage Score",
+               "class_int" = "Composite Score")
+valueLabsDf <- tibble(name = names(valueLabs), lName = valueLabs) %>%
+  mutate(name = factor(name, levels = c(allScores, "score", "score_per", "class_int")))
+
 ```
 
 
 ```{r hex data}
 hexes_new <- read_sf("/Users/jameseager/Documents/pst/phmsa-clean/data/gis/new_hex_st/HexStates.shp") %>%
-  mutate(State = if_else(grepl("OCG", State), "Arkansas OGC", State))
+  mutate(State = if_else(grepl("OCG", State), "Arkansas OGC", State)) %>%
+  filter(State_Abbr %in% napsr)
 
 #for abbr things
 stab_check <- hexes_new %>%
@@ -656,4 +754,326 @@ df23_hex <- df_wide%>%
   filter(year == 2023)%>%
   right_join(hexes_new, by = c("state" = "State")) %>%
   replace_na(list(class = "Not Rated"))
+
+df_cat_hex<- df %>%
+  filter(year == 2023)%>%
+  mutate(
+    cat = case_when(
+      name %in% catAcs ~ agencyName,
+      name %in% catComm ~ commsName,
+      name %in% catData ~ dataName,
+      name == "score" ~ "Score",
+      .default = NA
+    )
+  )%>%
+  drop_na(cat)%>% 
+  filter(cat != "Score")%>%
+  group_by(state, cat)%>%
+  summarize(value = mean(value))%>%
+  mutate(
+    cat_class = case_when(
+    value == 3 ~ "Excellent",
+    value > 24/11 & value <= 32/11 ~ "Good",
+     value > 17/11 & value <= 24/11  ~ "Pass",
+    value <= 17/11 ~ "Fail",
+    .default = NA
+  ),
+    cat_class = factor(
+    cat_class,
+    levels = c("Fail", "Pass", "Good", "Excellent")
+  ))%>%
+  ungroup()%>%
+  bind_rows(tibble(state = c("Alaska", "Hawaii"),
+                   State_Abbr = c("AK", "HI")))%>%
+  complete(state, cat, fill = list(value = NA))%>%
+  drop_na(cat)%>%
+  right_join(hexes_new, by = c("state" = "State")) %>%
+  filter(State_Abbr.y %in% napsr)
 ``` 
+
+```{r class  map}
+
+new_pal = c("#000000","#49446E", "#3285A4", "#7EC8B0", "grey50")
+
+
+ggplot()+
+  layer_spatial(df23_hex, aes(fill = class), col = "#fffff0")+
+  geom_sf_text(data = hn_center, mapping = aes(label = sa), col = "#fffff0")+
+  scale_fill_manual(
+                    breaks = c("Excellent", "Good", "Pass", "Fail", "Not Rated"),
+                    drop = FALSE,
+                    values = c( Excellent = new_pal[[4]],
+                                Good = new_pal[[3]],
+                                Pass = new_pal[[2]],
+                                Fail = new_pal[[1]],
+                                `Not Rated` = new_pal[[5]]), name = NULL)+
+  theme_pst_map()+
+  theme(legend.position = "right",
+        legend.direction = "vertical",
+        plot.margin = margin(6,6,3,6))+
+  labs(title = "NAPSR East Transparency Ratings",
+       tag = tag)
+
+plot_name = "class_hex.pdf"
+ggsave(plot_name, path= "napsr_plots/", device = "pdf",
+       width = wdt, height = hgt)
+```
+
+```{r score  map}
+ggplot()+
+  layer_spatial(df23_hex, aes(fill = score), col = "#fffff0")+
+  geom_sf_text(data = hn_center, mapping = aes(label = sa), col = "#fffff0")+
+  scale_fill_viridis(option = "G", name = "Score", end = .8, limits = c(0,33),
+                     breaks = c(0,18,25,33))+
+  theme_pst_map()+
+  labs(title = "NAPSR East Transparency Scores",
+       tag = tag)+
+  theme(legend.title = element_text(vjust = .8),
+        legend.position = "right",
+        legend.direction = "vertical",
+        plot.margin = margin(6,6,3,6))
+
+plot_name = "score_hex.pdf"
+ggsave(plot_name, path= "napsr_plots/", device = "pdf",
+       width = wdt, height = hgt)
+```
+
+
+```{r}
+ggplot()+
+  layer_spatial(df_cat_hex %>% filter(cat != "Score"), 
+                aes(fill = cat_class), col = "#fffff0")+
+  geom_sf_text(data = hn_center, mapping = aes(label = sa), 
+               col = "#fffff0", size = 3)+
+  scale_fill_viridis_d(option = "G",end = .8 , 
+                       na.value = "gray65", name = NULL,
+                       breaks = c("Fail", "Pass", "Good", "Excellent"))+
+  #guides(fill = guide_legend(label.position = "bottom", show.limits = T))+
+  theme_pst_map()+
+  theme(panel.background = element_rect(colour = "gray45",
+                                        linewidth = .8),
+        strip.clip = "false",
+        strip.text = element_text(margin = margin(2,2,2,2,)),
+        plot.margin = margin(3,6,6,6),
+        legend.position = "right",
+        legend.direction = "vertical")+
+  facet_wrap(~cat, ncol = 3)+
+  labs(title = "Average State Score by Category: NAPSR East", tag = tag)
+
+plot_name = "score_cat_hex.pdf"
+ggsave(plot_name, path= "napsr_plots/", 
+       width = wdt, height = hgt)
+```
+
+
+```{r avg score over time }
+df %>%
+  filter(name == "average") %>%
+  group_by( year, eastern)%>%
+  summarize(score = mean(value))%>%
+  ggplot(aes(x = year, y = score, col = eastern))+
+  geom_line(linewidth = .95)+
+  scale_color_manual(
+                     values = c(`TRUE` = purp, 
+                                   `FALSE` = purp_p),
+                        name = "Region",
+                        labels = c(`TRUE` = "NAPSR East",
+                                   `FALSE` = "All Others"))+
+  scale_x_continuous(limits = c(2014, 2023), expand = c(0,0))+
+  scale_y_continuous(limits = c(0, 3), 
+                     expand = expansion(0,0))+
+  # scale_linetype_manual(values = c(`TRUE` = "solid", 
+  #                                  `FALSE` = "dashed"),
+  #                       name = "Region",
+  #                       labels = c(`TRUE` = "NAPSR East", 
+  #                                  `FALSE` = "All Others"))+
+  theme_pst()+
+  theme(axis.text.y = element_text(color = "gray5"),
+        legend.position = c(.7,.17),
+        legend.key.width = unit(30, "pt"),
+        legend.box = "horizontal")+
+  labs(x = NULL, y = "Average Score",
+       tag = tag, title = "Average Score",
+       subtitle = "NAPSR Eastern Region Compared to All Other States")
+
+ggsave("napsr_plots/Avg_time.png", width = wdt, height = hgt, units = "in")
+```
+
+
+```{r scores by category pover time }
+#### over time ####
+df %>%
+  filter(name %in% c(catAcs, catComm, catData)) %>%
+  mutate(nameCat = case_when(name %in% catAcs ~ agencyName,
+                             name %in% catComm ~ commsName,
+                             name %in% catData ~ dataName)) %>%
+  group_by(nameCat, year, eastern)%>%
+  summarize(score = mean(value))%>%
+  mutate(nameCat = ifelse(nameCat == "Connection", "Find and Connect", nameCat))%>%
+  ggplot(aes(x = year, y = score, col = nameCat, linetype = eastern))+
+  geom_line(linewidth = .85)+
+  scale_color_manual(values = pstMax, name = "Category")+
+  scale_x_continuous(limits = c(2014, 2023), expand = c(0,0))+
+  scale_y_continuous(limits = c(0, 3), 
+                     expand = expansion(0,0))+
+  scale_linetype_manual(values = c(`TRUE` = "solid", 
+                                   `FALSE` = "dashed"),
+                        name = "Region",
+                        labels = c(`TRUE` = "NAPSR East", 
+                                   `FALSE` = "All Others"))+
+  theme_pst()+
+  theme(axis.text.y = element_text(color = "gray5"),
+        legend.position = c(.7,.17),
+        legend.key.width = unit(30, "pt"),
+        legend.box = "horizontal")+
+  labs(x = NULL, y = "Average Score",
+       tag = tag, title = "Average Score by Category",
+       subtitle = "NAPSR Eastern Region Compared to All Other States")
+
+ggsave("napsr_plots/Category_Avg_time.png", width = wdt, height = hgt, units = "in")
+
+
+df %>%
+  filter(name %in% c(catAcs, catComm, catData)) %>%
+  mutate(nameCat = case_when(name %in% catAcs ~ agencyName,
+                             name %in% catComm ~ commsName,
+                             name %in% catData ~ dataName)) %>%
+  group_by(nameCat, year, eastern)%>%
+  summarize(score = mean(value))%>%
+  mutate(nameCat = ifelse(nameCat == "Connection", "Find and Connect", nameCat))%>%
+  filter(eastern) %>%
+  ggplot(aes(x = year, y = score, col = nameCat))+
+  geom_line(linewidth = .85)+
+  scale_color_manual(values = pstMax, name = "Category")+
+  scale_x_continuous(limits = c(2014, 2023), expand = c(0,0))+
+  scale_y_continuous(limits = c(0, 3), 
+                     expand = expansion(0,0))+
+  theme_pst()+
+  theme(axis.text.y = element_text(color = "gray5"),
+        legend.position = c(.7,.17),
+        legend.key.width = unit(30, "pt"),
+        legend.box = "horizontal")+
+  labs(x = NULL, y = "Average Score",
+       tag = tag, title = "Average Score by Category",
+       subtitle = "NAPSR Eastern Region")
+
+ggsave("napsr_plots/Category_Avg_time_onlyeast.png", width = wdt, height = hgt, units = "in")
+
+
+```
+
+```{r all scores matrix avg}
+score_names = c("score", "score_per", "class", "average")
+
+df %>%
+  filter(year == 2023, !name %in% score_names, eastern) %>%
+  left_join(df %>% filter(year == 2023, name == "score"), by = "state",
+            suffix = c("", ".j"))%>%
+  left_join(valueLabsDf)%>%
+  mutate(name = factor(name, 
+                       levels = c("class_int", catComm, catData, catAcs)),
+         value = ifelse(name == "class_int", value - 1, value))%>% 
+  filter(eastern)%>%
+  drop_na(name)%>%
+  ggplot(aes(y = name, x = reorder(state, value.j), fill = value))+
+  geom_tile(width = .8, height = .8)+
+  geom_text(data = . %>% filter(year == 2023, name == "class_int"),
+            aes(x = state, y = name, label = round(value.j, 2)#,
+               # col = value >= 2.95
+                ),
+            fontface = "bold",  size = 3, color = "#fffff0")+
+  scale_y_discrete(position = "right", label = valueLabs)+
+  scale_fill_viridis(option = "G", end = .8, name = "Rating", limits = c(0,3),
+                     breaks = seq(3,0,-1),
+                     labels = c(`3` = '3: Excellent',
+                                `2` = '2: Good',
+                                `1` = '1: Pass',
+                                `0` = '0: Fail'))+
+  #scale_color_manual(values = c("#fffff0", "#141400"))+
+  theme_pst()+
+  coord_flip()+
+  guides(fill = guide_legend())+
+  labs(title = "State Transparency Ratings: NAPSR East",
+       subtitle = "State, Average Score, and Category Matrix",
+       tag = tag,
+       x = NULL,
+       y = NULL)+
+  theme(axis.line.y = element_blank(),
+        axis.line.x = element_blank(),
+        axis.text = element_text(color = "#182125"),
+        axis.text.x = element_text(angle = -27, hjust = 1),
+        panel.grid.major.y = element_blank(),
+       # legend.position = "none",
+        legend.justification = "left")
+
+plot_name = "napsr_plots/matrix_tile_avg.pdf"
+ggsave(plot_name,
+       width = wdt, height = hgt)
+
+```
+
+```{r cleveland 5 and  10 yr}
+df %>%
+  filter(year == 2013 | year == 2018| year == 2023,
+         name == "score", eastern)%>%
+  pivot_wider(names_from = c("name", "year")) %>%
+  drop_na(score_2013, score_2018, score_2023)%>%
+  group_by(state)%>%
+  mutate(min = min(score_2013,score_2018,score_2023 ),
+         max = max(score_2013,score_2018,score_2023 ))%>% 
+  ungroup()%>%
+  mutate(state = factor(state),
+         state = fct_reorder(state, score_2023)) %>% 
+  ggplot()+
+  # geom_hline(yintercept = 17/11, alpha = .7, 
+  #            col = new_pal[2], linetype = "dashed")+
+  # geom_hline(yintercept = 24/11, alpha = .7, 
+  #            col = new_pal[3], linetype = "dashed")+
+  geom_hline(yintercept = 33, alpha = .7,
+             col = new_pal[4], linetype = "dashed")+
+  # geom_text(aes(y = 17/11, x = as.factor("Florida"), label = "Pass"),
+  #           alpha = .7, col = new_pal[2], angle = 90)+
+  # geom_text(aes(y = 24/11, x = as.factor("Florida"), label = "Good"),
+  #            alpha = .7, col = new_pal[3], angle = 90)+
+   # geom_text(aes(y = 33, x = as.factor("Florida"), label = "Perfect"), 
+   #            alpha = .7,  col = new_pal[4], angle = 90)+
+  annotate(x = "District of Columbia", y = 32.5, angle = 90,
+           geom = "text", label = "Perfect", hjust =0.15,
+           color = liteGreen)+
+  geom_segment(aes(x = state, 
+                   xend = state, 
+                   y=min, yend = max),
+               color = "gray30", alpha = .5)+
+  geom_point(aes(x = state, y = score_2013, color = "2013"),
+             size = 3, alpha = .9)+
+  geom_point(aes(x = state, y = score_2018, color = "2018"), 
+             size = 3, alpha = .9)+
+  geom_point(aes(x = state, y = score_2023, color = "2023"), 
+             size = 3, alpha = .9)+
+  # scale_color_manual(values = c(darkBlue,  bluGreen, liteGreen), name = "Year")+
+  scale_color_manual(values = c("#9DCED2", "#2494A8",darkBlue), 
+                     name = "Year",
+                    breaks = c(2013, 2018, 2023))+
+  scale_y_continuous(minor_breaks = seq(5,35,10),
+                     limits = c(0,33.02),
+                     expand = expansion(0,0))+
+  coord_flip()+
+  theme_pst(10)+
+  theme(panel.grid.major.y = element_line(linetype = "dotted", 
+                                          colour = "gray90",
+                                          size = .33),
+        panel.grid.minor.x = element_line(linetype = "dotted", 
+                                          colour = "#C4C8C6",
+                                          size = .33),
+        panel.grid.major.x = element_line(colour = "#394C56", 
+                                          linetype = "dotted"),
+        panel.grid.minor.y = element_blank(),
+        legend.position = "none",
+        plot.tag.position = c(.97,.995)) +
+  labs(x = "State / Regulator",
+       y = "Composite Score",
+       tag = tag,
+       title = "State Transparency 5 & 10-Year Change")
+
+ggsave("napsr_plots/5_10_Year_Cleveland.pdf", width = wdt, height = hgt, units = "in")
+```
