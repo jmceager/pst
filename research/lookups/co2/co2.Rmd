@@ -57,6 +57,8 @@ showtext_auto()# theme clean adjustments to apply to ggplot
 
 extrafont::font_import("/Users/jameseager/Library/Fonts/")
 
+setwd("/Users/jameseager/Documents/pst/research/lookups/co2")
+
 ```
 
 ```{r theme_pst}
@@ -374,7 +376,7 @@ hl <- read_csv(paste0(datadir, "clean/hl_inc.csv") )
 
 ```
 
-```{r getting annual report data, eval = FALSE}
+```{r getting annual report data}
 
 ## read ar part H csvs <-
 #read following cols 
@@ -492,6 +494,7 @@ liqAR %>%
   group_by(REPORT_YEAR, PARTA5COMMODITY) %>%
   summarise(miles = sum(PARTDTOTALMILES, na.rm = T)) %>%
   left_join(com_names)%>%
+  #group_by(REPORT_YEAR) %>% mutate(total = sum(miles))%>% ungroup()%>% mutate(per = miles/total)%>% view
   ggplot(aes(x = REPORT_YEAR, y = miles, col = new_names))+
   geom_line(show.legend = F, linewidth = .8)+
   geom_text(aes(label = str_wrap(new_names, 16), x = 2022.1),
@@ -524,7 +527,7 @@ liqAR %>%
                      oob = function(x, ...) x)+
   scale_y_continuous(limits = c(0,21), expand = c(0,0), 
                      labels = scales::label_number())+
-  theme_pst(8)+
+  theme_pst(12)+
   theme(panel.grid.minor.y = element_blank())+
   labs(x = NULL, y = NULL, tag = tag)
 
@@ -538,6 +541,7 @@ liqAR %>%
   summarise(miles = sum(PARTDTOTALMILES, na.rm = T),
             hca = sum(PARTBHCATOTAL, na.rm =T)) %>% 
   left_join(com_names)%>%
+  # view
   ggplot(aes(x = reorder(new_names, hca/miles), y = hca/miles, fill = new_names))+
   geom_bar(show.legend = F,stat = "identity", width = .7,
            data = . %>% filter(REPORT_YEAR == 2022))+
@@ -634,11 +638,14 @@ hl %>%
   #filter(!grepl("BIOFUEL", COMMODITY_RELEASED_TYPE))%>%
   ggplot(aes(x = IYEAR, y = n/(miles/1000), col = new_names))+
   geom_line(show.legend = F, linewidth = .88)+
-  geom_text(aes(label = str_wrap(new_names, 16), x = 2023.1),
+  geom_text_repel(aes(label = str_wrap(new_names, 16), x = 2023.1),
             data = . %>% filter(IYEAR == 2023 & !grepl("Ethanol",new_names)),
-            show.legend = F, hjust = 0, vjust = 0, lineheight = .66)+
+            show.legend = F, hjust = 0, vjust = 0, 
+            lineheight = .66, direction = "y", max.overlaps = 5,
+            min.segment.length = .5,
+            xlim = c(2010,2025))+
   scale_color_manual(values = pstRep)+
-  scale_x_continuous(limits = c(2014, 2023), expand = c(0,0),
+  scale_x_continuous(limits = c(2014, 2023.1), expand = c(0,0),
                      breaks = seq(2010,2022,2),
                      oob = function(x, ...) x)+
   scale_y_continuous(limits = c(0,3.8), expand = c(0,0))+
@@ -684,11 +691,14 @@ hl %>%
   #filter(!grepl("BIOFUEL", COMMODITY_RELEASED_TYPE))%>%
   ggplot(aes(x = IYEAR, y = sig/(miles/1000), col = new_names))+
   geom_line(show.legend = F, linewidth = .85)+
-  geom_text(aes(label = str_wrap(new_names, 16), x = 2023.1),
+  geom_text_repel(aes(label = str_wrap(new_names, 16), x = 2023.1),
             data = . %>% filter(IYEAR == 2023 & !grepl("Ethanol",new_names)),
-            show.legend = F, hjust = 0, vjust = 0, lineheight = .66)+
+            show.legend = F, hjust = 0, vjust = .66, 
+            lineheight = .66, direction = "y", max.overlaps = 5,
+            min.segment.length = .5,
+            xlim = c(2010,2025))+
   scale_color_manual(values = pstRep)+
-  scale_x_continuous(limits = c(2014, 2023), expand = c(0,0),
+  scale_x_continuous(limits = c(2014, 2023.1), expand = c(0,0),
                      breaks = seq(2010,2022,2),
                      oob = function(x, ...) x)+
   scale_y_continuous(limits = c(0,1.4), expand = c(0,0))+
@@ -728,19 +738,22 @@ hl %>%
       summarize(miles = sum(PARTDTOTALMILES, na.rm = T),
                 hca_miles = sum(PARTBHCATOTAL, na.rm = T)),
     by = c("IYEAR" = "REPORT_YEAR", "PARTA5COMMODITY" = "PARTA5COMMODITY")
-  )%>%
-  #filter(!grepl("BIOFUEL", COMMODITY_RELEASED_TYPE))%>%
+  )%>% 
+  filter(!grepl("BIOFUEL", COMMODITY_RELEASED_TYPE))%>%
   ggplot(aes(x = IYEAR, y = hca/(hca_miles/1000), col = new_names))+
   geom_line(show.legend = F, linewidth = .8)+
-  geom_text(aes(label = str_wrap(new_names, 16), x = 2023.1),
+  geom_text_repel(aes(label = str_wrap(new_names, 16), x = 2023.1),
             data = . %>% filter(IYEAR == 2023 & !grepl("Ethanol",new_names)),
-            show.legend = F, hjust = 0, vjust = 0, lineheight = .66)+
+            show.legend = F, hjust = 0, vjust = 0, 
+            lineheight = .66, direction = "y", max.overlaps = 5,
+            min.segment.length = .5,
+            xlim = c(2010,2025))+
   scale_color_manual(values = pstRep)+
-  scale_x_continuous(limits = c(2014, 2023), expand = c(0,0),
+  scale_x_continuous(limits = c(2014, 2023.1), expand = c(0,0),
                      breaks = seq(2010,2022,2),
                      oob = function(x, ...) x)+
-  scale_y_continuous(limits = c(0,5.1), expand = c(0,0))+
-  coord_cartesian(clip="off")+
+  scale_y_continuous(limits = c(0,6.1), expand = c(0,0))+
+  coord_cartesian(clip="off", xlim = c(2014,2023.1))+
   theme_pst()+
   theme(plot.margin = margin(3,30,3,4, "mm"),
         plot.tag.location = "plot",
@@ -856,7 +869,7 @@ hl %>%
   ggplot(aes(x = CAUSE, y = new_names, fill = per, label = scales::percent(per, accuracy = .1)))+
   geom_tile(height = .9, width = .9)+
   geom_text(aes(fontface = ifelse(bold_bool, "bold", "plain"),
-                color = ifelse(per > .5, "white", "black")),
+                color = ifelse(per > .4, "white", "black")),
             show.legend = F)+
   scale_color_manual(values =c( richblk, "#fffff0"))+
   scale_fill_gradient(low = muted(liteGreen, l = 95, c = 3), 
@@ -1107,5 +1120,9 @@ hl %>%
        tag = tag, caption = "PHMSA Flagged Files, 2024", y = NULL)
 
 ggsave("plots/pipe_box.png", width = wdt, height = hgt)
+```
+
+```{r}
+liqAR
 ```
 
