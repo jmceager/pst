@@ -869,7 +869,7 @@ hl %>%
   ggplot(aes(x = CAUSE, y = new_names, fill = per, label = scales::percent(per, accuracy = .1)))+
   geom_tile(height = .9, width = .9)+
   geom_text(aes(fontface = ifelse(bold_bool, "bold", "plain"),
-                color = ifelse(per > .4, "white", "black")),
+                color = ifelse(per > .44, "white", "black")),
             show.legend = F)+
   scale_color_manual(values =c( richblk, "#fffff0"))+
   scale_fill_gradient(low = muted(liteGreen, l = 95, c = 3), 
@@ -910,7 +910,7 @@ hl %>%
   ggplot(aes(x = CAUSE, y = new_names, fill = per, label = scales::percent(per, accuracy = .1)))+
   geom_tile(height = .9, width = .9)+
   geom_text(aes(fontface = ifelse(bold_bool, "bold", "plain"),
-                color = ifelse(per > .5, "white", "black")),
+                color = ifelse(per > .44, "white", "black")),
             show.legend = F)+
   scale_color_manual(values =c( richblk, "#fffff0"))+
   scale_fill_gradient(low = muted(liteGreen, l = 95, c = 3), 
@@ -955,7 +955,7 @@ hl %>%
   ggplot(aes(x = SYSTEM_PART_INVOLVED, y = new_names, fill = per, label = scales::percent(per, accuracy = .1)))+
   geom_tile(height = .9, width = .9)+
   geom_text(aes(fontface = ifelse(bold_bool, "bold", "plain"),
-                color = ifelse(per > .5, "white", "black")),
+                color = ifelse(per > .49, "white", "black")),
             show.legend = F)+
   scale_color_manual(values =c( richblk, "#fffff0"))+
   scale_fill_gradient(low = muted(liteGreen, l = 95, c = 3), 
@@ -996,7 +996,7 @@ hl %>%
   ggplot(aes(x = SYSTEM_PART_INVOLVED, y = new_names, fill = per, label = scales::percent(per, accuracy = .1)))+
   geom_tile(height = .9, width = .9)+
   geom_text(aes(fontface = ifelse(bold_bool, "bold", "plain"),
-                color = ifelse(per > .5, "white", "black")),
+                color = ifelse(per > .49, "white", "black")),
             show.legend = F)+
   scale_color_manual(values =c( richblk, "#fffff0"))+
   scale_fill_gradient(low = muted(liteGreen, l = 95, c = 3), 
