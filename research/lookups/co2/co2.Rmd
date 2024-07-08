@@ -456,8 +456,8 @@ hl %>%
          TOTAL_RELEASE, onsitediff, shutdowndiff, shutdowninc)%>% #view
   select(COMMODITY_RELEASED_TYPE,INCIDENT_IDENTIFIED_DATETIME, SHUTDOWN_DATETIME,onsitediff, shutdowndiff, shutdowninc) %>%
   # filter(!is.na(onsitediff))%>%
- filter(onsitediff >= seconds(0),
-        shutdowndiff >= seconds(0)) %>%
+ # filter(onsitediff >= seconds(0),
+ #        shutdowndiff >= seconds(0)) %>%
   mutate(onsitediff = period_to_seconds(onsitediff),
          shutdowndiff = period_to_seconds(shutdowndiff)) %>% 
  # filter(shutdowndiff <= hours(2)) %>% #view
@@ -466,7 +466,10 @@ group_by(COMMODITY_RELEASED_TYPE) %>%
   summarize(diffmu = seconds_to_period(mean(onsitediff, na.rm = T)),
             diff2mu =seconds_to_period(mean(shutdowndiff, na.rm = T)),
             diffsd = sd(onsitediff, na.rm = T),
-            diff2sd = sd(shutdowndiff, na.rm = T)) %>% view
+            diff2sd = sd(shutdowndiff, na.rm = T),
+            range = seconds_to_period(range(shutdowndiff, na.rm = T)),
+            max = seconds_to_period(max(shutdowndiff, na.rm = T)),
+            maxs = max(shutdowndiff,na.rm =T)) %>% view
 
 
 
@@ -1056,12 +1059,12 @@ hl %>%
   #filter(!grepl("BIO", COMMODITY_RELEASED_TYPE))%>%
   ggplot(aes(x = fct_rev(new_names), y = shutdowndiff, col = new_names))+
   geom_boxplot(show.legend = F, linewidth = .8)+
-  scale_y_continuous(trans = "pseudo_log",
-                     breaks = c(0, 60,3600, 34560, 241920, 1036800, 3110400 ),
+ scale_y_continuous(trans = "pseudo_log",
+                     breaks = c(0, 60,3600, 86400, 604800, 2629800, 7889400 ),
                      labels = c("0", "Minute", "Hour", "Day", 
                                 "Week", "Month", "Qrt."),
-                     minor_breaks = c(30, 720, 17280, 120960, 518400, 1555200,
-                                      6220800))+
+                     minor_breaks = c(30, 1800, 43200, 302400, 1296000, 
+                                      3944700))+
   scale_color_manual(values = pstRep)+
    scale_x_discrete(labels = function(x) str_wrap(x, 16), name = NULL)+
   coord_flip()+
@@ -1104,11 +1107,11 @@ hl %>%
   ggplot(aes(x = fct_rev(new_names), y = shutdowndiff, col = new_names))+
   geom_boxplot(show.legend = F, linewidth = .8)+
  scale_y_continuous(trans = "pseudo_log",
-                     breaks = c(0, 60,3600, 34560, 241920, 1036800, 3110400 ),
+                     breaks = c(0, 60,3600, 86400, 604800, 2629800, 7889400 ),
                      labels = c("0", "Minute", "Hour", "Day", 
                                 "Week", "Month", "Qrt."),
-                     minor_breaks = c(30, 720, 17280, 120960, 518400, 1555200,
-                                      6220800))+
+                     minor_breaks = c(30, 1800, 43200, 302400, 1296000, 
+                                      3944700))+
   scale_color_manual(values = pstRep)+
    scale_x_discrete(labels = function(x) str_wrap(x, 16), name = NULL)+
   coord_flip()+
@@ -1123,6 +1126,80 @@ ggsave("plots/pipe_box.png", width = wdt, height = hgt)
 ```
 
 ```{r}
-liqAR
+
+hl %>%
+   filter(between(IYEAR, 2014, 2023),
+         ON_OFF_SHORE == "ONSHORE",
+         #SIGNIFICANT == "YES",
+       # grepl("INCLUDING VALVE SITES",SYSTEM_PART_INVOLVED)
+         )%>%
+  filter(!is.na(ON_SITE_DATETIME))%>%
+  mutate(onsitediff = seconds_to_period( ON_SITE_DATETIME - INCIDENT_IDENTIFIED_DATETIME) ,
+         shutdowninc = seconds_to_period(SHUTDOWN_DATETIME - LOCAL_DATETIME),
+         shutdowndiff = seconds_to_period(SHUTDOWN_DATETIME - INCIDENT_IDENTIFIED_DATETIME)) %>%
+  #filter(COMMODITY_RELEASED_TYPE == "CO2 (CARBON DIOXIDE)")%>%
+  select(MDY,IYEAR, NAME.x,cleanLoc, ON_SITE_DATETIME, SHUTDOWN_DATETIME,
+         INCIDENT_IDENTIFIED_DATETIME, ACCIDENT_IDENTIFIER,
+         ACCIDENT_DETAILS, COMMODITY_RELEASED_TYPE,
+         #ends_with("DATETIME"),
+         TOTAL_RELEASE, onsitediff, shutdowndiff, shutdowninc)%>% #view
+  select(IYEAR, COMMODITY_RELEASED_TYPE,INCIDENT_IDENTIFIED_DATETIME, SHUTDOWN_DATETIME,onsitediff, shutdowndiff, shutdowninc) %>%
+  # filter(!is.na(onsitediff))%>%
+ # filter(onsitediff >= seconds(0),
+ #        shutdowndiff >= seconds(0)) %>%
+  mutate(onsitediff = period_to_seconds(onsitediff),
+         shutdowndiff = period_to_seconds(shutdowndiff)) %>% 
+  left_join(com_names)%>% 
+  mutate(new_names = factor(new_names, 
+                            levels = c("CO2", "HVL", "Petrol Product (non-HVL)",
+                                       "Crude Oil", "Fuel Grade Ethanol")))%>%
+  ggplot(aes(x=shutdowndiff))+
+  geom_histogram(fill = midBlue)+
+  #geom_density(linewidth = 1, col = midBlue)+
+  scale_x_continuous(trans = "pseudo_log",
+                     name = NULL,
+                     breaks = c(-7889400,-2629800,-604800,-86400,0, 
+                                86400, 604800, 2629800, 31557600 ),
+                     labels = c("-Year","-Month","-Week","-Day","0",  
+                                "Day", "Week","Month", "Year"),
+                     minor_breaks = c(-3944700,-1296000,-302400 ,-43200,
+                                      43200, 302400, 1296000, 15778800))+
+  scale_y_continuous(limits = c(-10,700), expand = c(0,0))+
+  theme_pst()+
+  theme(axis.line.x = element_blank())+
+  labs(title = "Unfiltered Distribution of Shutdown Times")
+```
+
+
+```{r}
+hl %>%
+   filter(between(IYEAR, 2014, 2023),
+         ON_OFF_SHORE == "ONSHORE",
+         #SIGNIFICANT == "YES",
+       # grepl("INCLUDING VALVE SITES",SYSTEM_PART_INVOLVED)
+         )%>%
+  filter(!is.na(ON_SITE_DATETIME))%>%
+  mutate(onsitediff = seconds_to_period( ON_SITE_DATETIME - INCIDENT_IDENTIFIED_DATETIME) ,
+         shutdowninc = seconds_to_period(SHUTDOWN_DATETIME - LOCAL_DATETIME),
+         shutdowndiff = seconds_to_period(SHUTDOWN_DATETIME - INCIDENT_IDENTIFIED_DATETIME)) %>%
+  #filter(COMMODITY_RELEASED_TYPE == "CO2 (CARBON DIOXIDE)")%>%
+  select(MDY,IYEAR, NAME.x,cleanLoc, ON_SITE_DATETIME, SHUTDOWN_DATETIME,
+         INCIDENT_IDENTIFIED_DATETIME, ACCIDENT_IDENTIFIER,
+         ACCIDENT_DETAILS, COMMODITY_RELEASED_TYPE,
+         #ends_with("DATETIME"),
+         TOTAL_RELEASE, onsitediff, shutdowndiff, shutdowninc)%>% #view
+  select(IYEAR, COMMODITY_RELEASED_TYPE,INCIDENT_IDENTIFIED_DATETIME, SHUTDOWN_DATETIME,onsitediff, shutdowndiff, shutdowninc) %>%
+  # filter(!is.na(onsitediff))%>%
+ # filter(onsitediff >= seconds(0),
+ #        shutdowndiff >= seconds(0)) %>%
+  mutate(onsitediff = period_to_seconds(onsitediff),
+         shutdowndiff = period_to_seconds(shutdowndiff)) %>% 
+  left_join(com_names)%>% 
+  mutate(new_names = factor(new_names, 
+                            levels = c("CO2", "HVL", "Petrol Product (non-HVL)",
+                                       "Crude Oil", "Fuel Grade Ethanol")))%>%
+  mutate(neg = shutdowndiff <0 )%>%
+  count(IYEAR, neg) %>% 
+  ggplot(aes(x = IYEAR, ))
 ```
 
