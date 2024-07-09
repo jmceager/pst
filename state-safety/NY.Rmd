@@ -207,8 +207,10 @@ statesF <- as(states, Class = "Spatial")
  
 stateShape <- states[states$NAME == moStateL,]
 
-int_statae <- st_intersects(stateShape,states)[[1]]
+int_state <- st_intersects(stateShape,states)[[1]]
 
+adjList <- as.vector(st_drop_geometry(states[int_state,"NAME"]))$NAME
+adjList <- adjList[adjList != stateShape$NAME]
 
 #### old way of getting neighbors pre sf ####
 # mtx <- gTouches(statesF, byid = T)
@@ -231,19 +233,7 @@ df.adj <- read_csv(paste0(datadir, "clean/all_inc.csv"))%>%
 df.all <- read_csv(paste0(datadir, "clean/all_inc.csv")) 
 ```
 
-```{r eval=FALSE}
- df_all %>%
-  filter(IYEAR == 2022)%>%
-  group_by(IYEAR, SYS) %>%
-  mutate(bin = quantile(TOTAL_RELEASE, probs = c(.9))[[1]],
-         top10 = ifelse(TOTAL_RELEASE>=bin, "Top", "Not"))%>%
-  group_by(SYS, top10)%>%
-  summarize(rel = sum(TOTAL_RELEASE, na.rm = T))
-  ungroup()%>%
-  ggplot(aes(x = IYEAR, y = TOTAL_RELEASE, fill = top10))+
-  geom_bar(stat = "identity", position = "dodge")+
-  facet_wrap(~SYS, scales = "free_y")
-```
+
 
 ```{r mileage data}
 #all miles
