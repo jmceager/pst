@@ -406,7 +406,7 @@ write_csv(hl.full, "data/clean/hl_inc.csv")
 write_csv(all.inc, "data/clean/all_inc.csv")
 
 #csv for mileage numbers 
-write_csv(miles.op, "data/clean/sys_miles.csv")
+#write_csv(miles.op, "data/clean/sys_miles.csv")
 
 #csv for op match 
 write.csv(ops, "data/clean/operator_id_match.csv")
