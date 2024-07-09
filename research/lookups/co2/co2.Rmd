@@ -413,9 +413,52 @@ liqAR <- plyr::ldply(.data = list.files(pattern = "hazardous_liquid",
 # gt_ar <- read_xlsx("/Users/jameseager/Downloads/annual_gas_transmission_gathering_2010_present/annual_gas_transmission_gathering_2023.xlsx", skip = 2)
 
 hl_ar <- read_xlsx("/Users/jameseager/Downloads/annual_hazardous_liquid_2010_present/annual_hazardous_liquid_2022.xlsx", skip = 2)
+
+hl_ar3 <- read_xlsx("/Users/jameseager/Downloads/annual_hazardous_liquid_2010_present/annual_hazardous_liquid_2022.xlsx", skip = 2, sheet =4)
+
 ```
 
+```{r}
+ liqAR3 <- plyr::ldply(.data = list.files(pattern = "hazardous_liquid",
+                                        path = "/Users/jameseager/Downloads/annual_hazardous_liquid_2010_present/",
+                                        full.name = T),
+               .fun = read_xlsx,
+               skip = 2,
+               sheet = 4
+               )
 
+state_sum <- liqAR3 %>%
+  filter(REPORT_YEAR >= 2014)%>%
+  left_join(com_names)%>%
+  filter(new_names == "CO2")%>%
+  group_by(REPORT_YEAR, STATE_NAME)%>%
+  summarize(miles = sum(PARTITOTAL,na.rm = T)) %>% 
+  bind_rows(
+    liqAR3 %>%
+      filter(REPORT_YEAR >= 2022)%>%
+      left_join(com_names)%>%
+      filter(new_names == "CO2")%>%
+      group_by(REPORT_YEAR, STATE_NAME)%>%
+      summarize(miles = sum(PARTITOTAL,na.rm = T)) %>% 
+      mutate(REPORT_YEAR = 2023)
+  )%>%
+  ungroup()%>%
+  complete(STATE_NAME, REPORT_YEAR, fill = list(miles = 0))%>%
+  left_join(
+    hl %>%
+      count(IYEAR, STATE)%>%
+      mutate(STATE_NAME = str_to_upper(state.name[match(STATE, state.abb)])) ,
+    by = c("STATE_NAME", "REPORT_YEAR" = "IYEAR")
+  )%>%
+  mutate(ipm = n / miles)%>% 
+  ungroup()%>%
+  group_by(STATE_NAME, STATE)%>%
+  summarize(min = miles[REPORT_YEAR == 2014],
+            max = miles[REPORT_YEAR == 2023],
+            inc = sum(n),
+            n = n(),
+            ipm = mean(ipm[miles>0], na.rm = T)) 
+```
 
 
 
@@ -571,6 +614,161 @@ liqAR_fix <- liqAR %>%
   )
 
 
+```
+
+```{r}
+hl_ar3 %>%
+  group_by(STATE_NAME, PARTA5COMMODITY)%>%
+  summarize(miles = sum(PARTITOTAL, na.rm = T))%>% view
+```
+
+
+```{r big map tings}
+us_states <- tigris::states()
+
+# need appropriate projections for the lower 48 states, for Alaska, and for Hawaii
+# ESRI:102003
+crs_lower48 <- "+proj=aea +lat_1=29.5 +lat_2=45.5 +lat_0=37.5 +lon_0=-96 +x_0=0 +y_0=0 +ellps=GRS80 +datum=NAD83 +units=m +no_defs"
+# EPSG:3338
+crs_alaska <- "+proj=aea +lat_1=55 +lat_2=65 +lat_0=50 +lon_0=-154 +x_0=0 +y_0=0 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs "
+# ESRI:102007
+crs_hawaii <- "+proj=aea +lat_1=8 +lat_2=18 +lat_0=13 +lon_0=-157 +x_0=0 +y_0=0 +ellps=GRS80 +datum=NAD83 +units=m +no_defs"
+
+# convert to sf and project
+us_states <- us_states %>%
+  st_transform(crs_lower48) %>%
+  filter(!STATEFP %in% c("60", "72","66","69","78")) # remove Puerto Rico
+
+# now remove Alaska and Hawaii for lower 48, and calculate bounding box
+us_lower48 <- filter(us_states, !STATEFP %in% c("02", "15"))
+bb <- st_bbox(us_lower48)
+
+
+# to move Alaska and Hawaii, we need a helper function that can place an SF geometry object
+# at a desired position and scale; the scale option is not used in this code example
+place_geometry <- function(geometry, position, scale = 1) {
+  (geometry - st_centroid(geometry)) * scale +
+    st_sfc(st_point(position))
+}
+
+# move Alaska
+us_alaska <- filter(us_states, STATEFP == "02")
+us_alaska2 <- st_transform(us_alaska, crs_alaska)
+st_geometry(us_alaska2) <- place_geometry(
+  st_geometry(us_alaska2),
+  c(bb$xmin - 0*(bb$xmax - bb$xmin),
+    bb$ymin - 0*(bb$ymax - bb$ymin))
+)
+# we're cheating here by assigning a projection that isn't correct; we
+# need to do this because the final compound map needs to have a single
+# projection
+st_crs(us_alaska2) <- crs_lower48
+
+# move Hawaii
+us_hawaii <- filter(us_states, STATEFP == "15")
+us_hawaii2 <- st_transform(us_hawaii, crs_hawaii)
+st_geometry(us_hawaii2) <- place_geometry(
+  st_geometry(us_hawaii2),
+  c(bb$xmin + 0.3*(bb$xmax - bb$xmin),
+    bb$ymin + 0.*(bb$ymax - bb$ymin))
+)
+# cheating, as before
+st_crs(us_hawaii2) <- crs_lower48
+
+# now make four data frames:
+# 1. original map
+# 2. map with Hawaii moved
+# 3. map with Hawaii and Alaska moved
+# 4. like 3, to generate an additional state in gganimate
+# we use prefixes "a_", "b_", etc in the `type` variable as a
+# simple cheat to get the animation order right in gganimate
+
+new_states<- rbind(us_lower48, us_alaska2, us_hawaii2)
+
+bb2 <- st_bbox(new_states)
+```
+
+```{r}
+state_co2 <- hl_ar3 %>%
+  left_join(com_names)%>%
+  group_by(STATE_NAME, new_names)%>%
+  summarize(miles = sum(PARTITOTAL, na.rm = T))%>%
+  group_by(STATE_NAME)%>%
+  mutate(total = sum(miles))%>%
+  ungroup()%>%
+  mutate(mi_per = miles/total)%>%
+  filter(new_names == "CO2")%>%
+  mutate(NAME = str_to_title(STATE_NAME)) %>%
+  right_join(new_states) %>%
+  left_join(
+    state_sum,
+    by =c("STUSPS" = "STATE")
+  ) %>%
+  mutate(change = (max-min) / min)
+
+
+
+
+ggplot()+
+  layer_spatial(data=state_co2, aes(fill = miles), color = "#f2f2f2")+
+  scale_fill_gradient(low = muted(liteGreen, l = 95, c = 3), 
+                    high = midBlue, limits = c(0,1863), 
+                    labels = scales::label_comma(), 
+                    name = NULL, breaks = c(600,1200, 1800),
+                    na.value = "#9EA6A9")+
+  theme_pst_map()+
+  theme(legend.position = "inside",
+        legend.position.inside = c(.8,.1))+
+  labs(title = "Miles of CO2 Pipeline by State", tag = tag,
+       caption = capt)
+ggsave("plots/miles_state.png", width = wdt, height = hgt)
+
+
+
+ggplot()+
+  layer_spatial(data=state_co2, aes(fill = mi_per), color = "#f2f2f2")+
+  scale_fill_gradient(low = muted(liteGreen, l = 95, c = 3), 
+                    high = midBlue, limits = c(0,.15), 
+                    labels = scales::label_percent(), 
+                    name = NULL, breaks = c(.05,.1,.15),
+                    na.value = "#9EA6A9")+
+  theme_pst_map()+
+  theme(legend.position = "inside",
+        legend.position.inside = c(.8,.1))+
+  labs(title = "Proportion of CO2 Pipelines in HL System by State",tag = tag,
+       caption = capt)
+
+ggsave("plots/permi_state.png", width = wdt, height = hgt)
+
+
+ggplot()+
+  layer_spatial(data=state_co2, aes(fill = ipm), color = "#f2f2f2")+
+  scale_fill_gradient(low = muted(liteGreen, l = 95, c = 3), 
+                    high = midBlue, #limits = c(0,.7), 
+                   # labels = scales::label_percent(), 
+                    name = NULL, #breaks = c(.2,.4,.6),
+                    na.value = "#9EA6A9")+
+  theme_pst_map()+
+  theme(legend.position = "inside",
+        legend.position.inside = c(.8,.1))+
+  labs(title = "Average Incident Rate of CO2 Pipelines by State",tag = tag,
+       caption = capt)
+ggsave("plots/ipm_state.png", width = wdt, height = hgt)
+
+
+# 
+# ggplot()+
+#   layer_spatial(data=state_co2, aes(fill = ifelse(change>1,1,change)), color = "#f2f2f2")+
+#   scale_fill_gradient2(low = honey, mid = "#FFEEDB" ,
+#                     high = midBlue, limits = c(-1,1), 
+#                     breaks = seq(-1,1,.5),
+#                     labels = c("-100%", "-50%", "0%", "50%", "≥100%"),
+#                     midpoint = 0,name = NULL,
+#                     na.value = "#9EA6A9")+
+#   theme_pst_map()+
+#   theme(legend.position = "inside",
+#         legend.position.inside = c(.8,.1))+
+#   labs(title = "Proportion of CO2 Pipelines in HL System by State")
 ```
 
 
@@ -782,7 +980,7 @@ hl %>%
             cost = sum(TOTAL_COST_CURRENT, na.rm = T),
             fatal = sum(FATAL, na.rm = T),
             injure = sum(INJURE, na.rm = T))%>%
-  ungroup()%>%
+  ungroup()%>% 
   complete(COMMODITY_RELEASED_TYPE, IYEAR, fill = list(n = 0, hca = 0,sig = 0,
                                                        sigp = 0, 
                                                        rel = 0, cost = 0,
@@ -798,7 +996,7 @@ hl %>%
   ) %>%
   mutate(ir = n / (miles/1000),
          sir = sig / (miles/1000),
-         hcar = hca / (hca_miles/1000)) %>%
+         hcar = hca / (hca_miles/1000)) %>% view
   group_by(new_names)%>%
   summarise(across(n:injure, ~sum(.x,na.rm = T), .names = "{.col}_orig"),
             across(ir:hcar, ~ mean(.x,na.rm = T), .names = "{.col}_orig"),
@@ -1152,22 +1350,26 @@ hl %>%
   left_join(com_names)%>% 
   mutate(new_names = factor(new_names, 
                             levels = c("CO2", "HVL", "Petrol Product (non-HVL)",
-                                       "Crude Oil", "Fuel Grade Ethanol")))%>%
+                                       "Crude Oil", "Fuel Grade Ethanol")))%>% view
   ggplot(aes(x=shutdowndiff))+
-  geom_histogram(fill = midBlue)+
+  geom_histogram(fill = liteGreen)+
   #geom_density(linewidth = 1, col = midBlue)+
   scale_x_continuous(trans = "pseudo_log",
-                     name = NULL,
-                     breaks = c(-7889400,-2629800,-604800,-86400,0, 
-                                86400, 604800, 2629800, 31557600 ),
-                     labels = c("-Year","-Month","-Week","-Day","0",  
-                                "Day", "Week","Month", "Year"),
-                     minor_breaks = c(-3944700,-1296000,-302400 ,-43200,
-                                      43200, 302400, 1296000, 15778800))+
+                     breaks = c(-2629800,-86400,-1800,0, 
+                                1800,86400, 2629800 ),
+                     labels = c("-Month","-Day","-Hour","0",  
+                                "Hour","Day","Month"),
+                     minor_breaks = c(-1296000,-302400 ,-43200,
+                                      43200, 302400, 1296000))+
   scale_y_continuous(limits = c(-10,700), expand = c(0,0))+
-  theme_pst()+
-  theme(axis.line.x = element_blank())+
-  labs(title = "Unfiltered Distribution of Shutdown Times")
+  theme_pst(12)+
+  theme(axis.line.x = element_blank(),
+        axis.text.x = element_text(angle = 30, hjust = 1.1, size = 7.5, vjust = 1.1))+
+  labs(title = NULL, y = "Incidents", x = "Shutdown Time")
+
+
+ggsave("plots/time_dist.png", width = 3, height = 3/1.62)
+
 ```
 
 
@@ -1199,7 +1401,22 @@ hl %>%
                             levels = c("CO2", "HVL", "Petrol Product (non-HVL)",
                                        "Crude Oil", "Fuel Grade Ethanol")))%>%
   mutate(neg = shutdowndiff <0 )%>%
-  count(IYEAR, neg) %>% 
-  ggplot(aes(x = IYEAR, ))
+  count(IYEAR, neg) %>%
+  drop_na()%>%
+  group_by(IYEAR) %>%
+  summarize(total = sum(n),
+            neg = sum(n[neg==TRUE], na.rm = T))%>%
+  ungroup()%>%
+  mutate(per = neg/total)%>%
+  ggplot(aes(x = IYEAR, y = per))+
+  geom_line(color = liteGreen, linewidth = 1)+
+  theme_pst(12)+
+  scale_y_continuous(limits = c(0,.17), labels = scales::label_percent())+
+  labs(y = "% Reported < 0 sec.", x = NULL)
+
+
+ggsave("plots/time_trend.png", width = 3, height = 3/1.62)
+
+
 ```
 
