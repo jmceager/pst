@@ -70,17 +70,17 @@ theme_pst <- function(baseSize=bs) {
   (theme(
                        axis.line.x = element_line(
                          colour = "#182125",
-                         size = 0.5,
+                         linewidth = 0.5,
                          linetype = "solid"
                        ),
                        axis.line.y = element_line(
                          colour = "#182125",
-                         size = 0.5,
+                         linewidth = 0.5,
                          linetype = "solid"
                        ),
                        axis.ticks.y = element_line(
                          colour = "#182125",
-                         size = 0.5,
+                         linewidth = 0.5,
                          linetype = "solid"
                        ),
                        text = element_text(family = pstFont),
@@ -111,7 +111,9 @@ theme_pst <- function(baseSize=bs) {
                        legend.key = element_blank(),
                        legend.spacing.y = unit(.125, 'cm'),
                        #legend.background = element_blank(),
-                       plot.tag.position = c(.97,.97),
+                       plot.tag.location = "plot",
+                       plot.title.position = "plot",
+                       plot.tag.position = "topright",
                        plot.tag = element_text(size = baseSize *.66,
                                                colour = "#8C9394"),
                        plot.background = element_rect(fill = "#ffffff"),
@@ -125,13 +127,17 @@ theme_pst <- function(baseSize=bs) {
   )
 }
 
+
+
 #### map theme ####
 theme_pst_map <- function(baseSize=bs) {
   (theme_void() + 
      theme(
        legend.direction = "horizontal",
        legend.position = "bottom",
-       plot.tag.position = c(.97,.97),
+       plot.tag.location = "plot",
+       plot.title.position = "plot",
+       plot.tag.position = "topright",
        text = element_text(family = pstFont),
        legend.text = element_text(colour = "black",
                                    size = baseSize * .8),
@@ -158,17 +164,136 @@ theme_pst_map <- function(baseSize=bs) {
   )
 }
 
+#### flip theme ####
+theme_pst_flip <- function(baseSize=bs) {
+  (theme(
+                       axis.line.y = element_line(
+                         colour = "#182125",
+                         linewidth = 0.5,
+                         linetype = "solid"
+                       ),
+                       axis.line.x = element_line(
+                         colour = "#182125",
+                         linewidth = 0.5,
+                         linetype = "solid"
+                       ),
+                       axis.ticks.y = element_line(
+                         colour = "#182125",
+                         linewidth = 0.5,
+                         linetype = "solid"
+                       ),
+                       text = element_text(family = pstFont),
+                       axis.text = element_text(colour = "#8C9394",
+                                                size = baseSize * .8),
+                       axis.title = element_text(colour ="black", 
+                                                 size= baseSize),
+                       panel.grid.minor.x = element_line(linetype = "dotted", 
+                                                         colour = "#C4C8C6"),
+                       panel.grid.major.x = element_line(colour = "#394C56", 
+                                                         linetype = "dotted"),
+                       panel.grid.major.y = element_blank(),
+                       panel.grid.minor.y = element_blank(),
+                       panel.background = element_blank(),
+                       panel.border = element_blank(),
+                       strip.background = element_rect(linetype = 0),
+                       strip.text = element_blank(),
+                       strip.text.x = element_blank(),
+                       strip.text.y = element_blank(),
+                       legend.text = element_text(colour = "black",
+                                                  size = baseSize * .8),
+                       legend.background = element_rect(fill = NULL, 
+                                                        color = "#182125"),
+                       legend.title = element_text( face = "bold", 
+                                                    colour = "black",
+                                                    size = baseSize),
+                       legend.position = "right",
+                       legend.key = element_blank(),
+                       #legend.background = element_blank(),
+                       plot.tag.location = "plot",
+                       plot.title.position = "plot",
+                       plot.tag.position = "topright",
+                       plot.tag = element_text(size = baseSize *.66,
+                                               colour = "#8C9394"),
+                       plot.background = element_rect(fill = "#ffffff"),
+                       plot.title = element_text(face = "bold", 
+                                                 colour = "black",
+                                                 size = baseSize*1.2),
+                       plot.subtitle = element_text(colour = "#8C9394",
+                                                    size = baseSize),
+                       plot.caption = element_text(size = baseSize *.8)
+                     )
+  )
+}
+
+#### facet theme ####
+theme_pst_facet <- function(baseSize=bs) {
+  (theme(
+                       axis.line.x = element_line(
+                         colour = "#182125",
+                         linewidth = 0.5,
+                         linetype = "solid"
+                       ),
+                       axis.line.y = element_line(
+                         colour = "#182125",
+                         linewidth = 0.5,
+                         linetype = "solid"
+                       ),
+                       axis.ticks.y = element_line(
+                         colour = "#182125",
+                         linewidth = 0.5,
+                         linetype = "solid"
+                       ),
+                       text = element_text(family = pstFont),
+                       axis.text = element_text(colour = "#8C9394",
+                                                size = baseSize * .8),
+                       axis.title = element_text(colour ="black", 
+                                                 size= baseSize),
+                       panel.grid.minor.y = element_line(linetype = "dotted", 
+                                                         colour = "#C4C8C6"),
+                       panel.grid.major.y = element_line(colour = "#394C56", 
+                                                         linetype = "dotted"),
+                       panel.grid.major.x = element_blank(),
+                       panel.grid.minor.x = element_blank(),
+                       panel.border = element_blank(),
+                       strip.background = element_rect(linetype = 0),
+                       strip.text = element_blank(),
+                       strip.text.x = element_text(colour = "gray15",
+                                                  size = baseSize * .8,
+                                                  margin = ),
+                       strip.text.y = element_text(colour = "gray15",
+                                                  size = baseSize * .8),
+                       legend.text = element_text(colour = "black",
+                                                  size = baseSize * .8),
+                       legend.background = element_rect(fill = NULL, 
+                                                        color = "#182125"),
+                       legend.title = element_text( face = "bold", 
+                                                    colour = "black",
+                                                    size = baseSize),
+                       legend.position = "right",
+                       legend.key = element_blank(),
+                       legend.spacing.y = unit(.125, 'cm'),
+                       #legend.background = element_blank(),
+                       plot.tag.location = "plot",
+                       plot.title.position = "plot",
+                       plot.tag.position = "topright",
+                       plot.tag = element_text(size = baseSize *.66,
+                                               colour = "#8C9394"),
+                       plot.background = element_rect(fill = "#ffffff"),
+                       panel.background = element_rect(fill = "#f1f3f4"),
+                       plot.title = element_text(face = "bold", 
+                                                 colour = "black",
+                                                 size = baseSize*1.2),
+                       plot.subtitle = element_text(colour = "#8C9394",
+                                                    size = baseSize),
+                       plot.caption = element_text(size = baseSize *.8)
+                     )
+  )
+}
+
+
 ```
 
 ```{r nice colors}
-col <- brewer.pal(6,"Set2")
-green <- col[1]
-orange <- col[2]
-purple <- col[3]
-pink <- col[4]
-lime <- col[5]
-yellow <- col[6]
-
 #brewer pal
 col <- brewer.pal(6,"Set2")
 green <- col[1]
@@ -178,25 +303,64 @@ pink <- col[4]
 lime <- col[5]
 yellow <- col[6]
 
+ecru = "#FFEEDB"
+
+
 #pst 
 darkBlue <- "#003E59"
 midBlue <- "#00546F"
 bluGreen <- "#459197"
 liteGreen <- "#61A893"
 
+richblk <- "#182125"
+
+
 #pst contrast 
 #1
-honey <- "#FFAD05"
+honey <- "#F2AA18"
 lilac <- "#C297B8"
-crimson <- "#92140C"
-
 # 2
 hunterGrn <- "#315C2B"
 maize <- "#E7BB41"
 
+crimson <- "#96140D"
+lavBlu <- "#C6CAED"
+
+#based on pst
+liteBlue <- "#5CCEFF"
+liteBlu2 <- "#0AC2FF"
+darkGreen <- "#3C685A"
+brown <- "#664400"
+
+## coolors
+purp = "#644695"
+
+# pst pairs
+blu_p = "#A8E5FF"
+crim_p = "#F27069"
+purp_p = "#9E86C6"
+lil_p = "#673C5D"
+green_p1 = "#3E7061"
+green_p2 = "#90C2B3"
+ecru_p = "#241300"
+
+
 #pals 
-pst1 <- c(darkBlue, liteGreen, lilac, bluGreen, honey,  crimson)
-pst2 <- c(darkBlue, liteGreen, hunterGrn, bluGreen, maize, midBlue)
+pst1 <- c(darkBlue, liteGreen, lilac, honey, bluGreen, crimson)
+pst2 <- c(darkBlue, liteGreen, lilac, brown, maize, midBlue)
+pstMax <- c(darkBlue, liteGreen, lilac, honey, purp, brown, crimson, liteBlu2)
+pstPaired <- c(darkBlue, blu_p, green_p1, green_p2, lilac, lil_p, 
+               crimson, crim_p, ecru_p, ecru)
+
+
+pstRep <- c(
+  CO2 = honey,
+  `Crude Oil` = darkBlue,
+  `Fuel Grade Ethanol` = brown,
+  HVL = lilac,
+  `Petrol Product (non-HVL)` = liteGreen
+)
+
 ```
 
 ```{r load gis data and get adjacent states}
@@ -294,9 +458,9 @@ df.all %>%
 df.all%>% 
   filter(IYEAR == 2023) %>%
   count(STATE, IYEAR) %>%
-  top_n(n = 5, wt = n) %>% view
+  top_n(n = 5, wt = n) %>% 
   pivot_wider(names_from = IYEAR,
-              values_from = n) %>%
+              values_from = n)%>%
   mutate(change = (`2022`-`2021`),
          per_change = change/`2021`) %>%
   arrange(change)%>%
@@ -451,36 +615,46 @@ From 2010 to today, XXXXXXX has had:
 ```
 
 ```{r inc rate}
+adjL = "Adjacent (avg.)"
+usL =  "U.S.A. (avg.)"
+
 df %>%
   count( STATE, IYEAR) %>%
+  mutate(STATEL = if_else(STATE == moState, moStateL, STATE))%>%
   rbind(
-    mutate(count(df.adj, IYEAR), STATE = "Adjacent (avg.)"),
-    mutate(count(df.all, IYEAR), STATE = "U.S.A. (avg.)")
+    mutate(count(df.adj, IYEAR), STATE = adjL, STATEL = adjL),
+    mutate(count(df.all, IYEAR),STATE = usL, STATEL = usL)
     ) %>%
-  filter(IYEAR < 2023)%>%
+  filter(IYEAR < 2024)%>%
   left_join(allSM) %>% 
   mutate(ir = n/(mileage / 1000))%>%
-  ggplot(aes(x = IYEAR, y = ir, group = STATE, color = STATE))+
+  ggplot(aes(x = IYEAR, y = ir, group = STATEL, color = STATEL))+
   #geom_point( alpha = .8)+
   geom_line(linewidth = .7)+
+  geom_text(aes(label = STATEL, x = 2023.1),
+            data = . %>% filter(IYEAR == 2023),
+            show.legend = F, hjust = 0, vjust = 0, lineheight = .66,
+            fontface = "bold")+
   theme_pst()+
   scale_color_manual(values = pst1,
                      name = "State",
-                     breaks = c(moState, "Adjacent (avg.)", "U.S.A. (avg.)"),
+                     breaks = c(moStateL, "Adjacent (avg.)", "U.S.A. (avg.)"),
                      labels = c(moStateL, "Adjacent (avg.)", "U.S.A. (avg.)"))+
-  scale_x_continuous(labels = seq(2010,2022,2), breaks = seq(2010,2022,2))+
+  scale_x_continuous(labels = seq(2010,2023,2), breaks = seq(2010,2022,2),
+                     oob = function(x, ...) x)+
   scale_y_continuous(limits = c(0,.12),
                      breaks = seq(0,.2,.05),
                      expand = expansion(0))+
-  theme(legend.position = c(.85, .9),
-        legend.box = "horizontal")+
+  coord_cartesian(clip="off")+
+  theme(legend.position = "none",
+        legend.box = "horizontal",
+        plot.margin = margin(3,30,3,4, "mm"),)+
   labs(title = paste(moStateL, "Pipeline Incident Rate"),
        subtitle = "All Systems, All Incidents per 1,000 Miles (2010-2022)",
        caption = capt,
        tag = tag,
-       y = "Incident Rate (per 1,000 mi)", 
-       x = "Year", 
-       size = "Incident Count")
+       y = "Incident Rate", 
+       x = NULL)
 
 plotName = "AllIncMile.png"
 plotExport = paste0(exportdir, plotName)
@@ -493,32 +667,42 @@ ggsave(plotExport, width = wdt, height = hgt, units = "px")
 df %>%
   filter(SIGNIFICANT == "YES")%>%
   count( STATE, IYEAR) %>%
+  mutate(STATEL = if_else(STATE == moState, moStateL, STATE))%>%
   rbind(
-    mutate(count(filter(df.adj, SIGNIFICANT == "YES"), IYEAR), STATE = "Adjacent (avg.)"),
-    mutate(count(filter(df.all, SIGNIFICANT == "YES"), IYEAR), STATE = "U.S.A. (avg.)")
+    mutate(count(filter(df.adj, SIGNIFICANT == "YES"), IYEAR),STATE = adjL, STATEL = adjL),
+    mutate(count(filter(df.all, SIGNIFICANT == "YES"), IYEAR), STATE = usL, STATEL = usL)
     )%>%
-  filter(IYEAR < 2023)%>%
+  filter(IYEAR < 2024)%>%
   left_join(allSM) %>% 
   mutate(ir = n/(mileage/1000) )%>%
   complete(STATE, IYEAR, fill = list(ir = 0))%>%
-  ggplot(aes(x = IYEAR, y = ir, group = STATE, color = STATE))+
+  ggplot(aes(x = IYEAR, y = ir, group = STATEL, color = STATEL))+
   #geom_point(aes(size = n), alpha = .8)+
   geom_line(linewidth = .7)+
+  geom_text(aes(label = STATEL, x = 2023.1),
+            data = . %>% filter(IYEAR == 2023),
+            show.legend = F, hjust = 0, vjust = 0, lineheight = .66,
+            fontface = "bold")+
   theme_pst()+
   scale_color_manual(values = pst1,
                      name = "State",
-                     breaks = c(moState, "Adjacent (avg.)", "U.S.A. (avg.)"),
+                     breaks = c(moStateL, "Adjacent (avg.)", "U.S.A. (avg.)"),
                      labels = c(moStateL, "Adjacent (avg.)", "U.S.A. (avg.)"))+
-  scale_x_continuous(labels = seq(2010,2022,2), breaks = seq(2010,2022,2))+
-  scale_y_continuous(limits = c(-.001, .06),breaks = seq(0,.10,.025),
-                     expand = expansion(0))+ 
-  theme(legend.position = c(.85, .85),
-        legend.box = "horizontal")+
+  scale_x_continuous(labels = seq(2010,2023,2), breaks = seq(2010,2022,2),
+                     oob = function(x, ...) x)+
+  scale_y_continuous(limits = c(-.0, .08),breaks = seq(0,.10,.025),
+                     expand = expansion(0))+
+  coord_cartesian(clip = "off")+
+  theme(plot.margin = margin(3,30,3,4, "mm"),
+        legend.position = "none",
+        legend.box = "horizontal",
+        plot.tag.position = "topright",
+        plot.tag.location = "plot")+
   labs(title = paste(moStateL, "Significant Incident Rate"),
        subtitle = "All Systems, Significant Incidents per 1,000 Miles (2010-2022)",
        caption = capt,
        tag = tag,
-       y = "Significant Incident Rate (per 1,000 mi)", 
+       y = "Significant Incident Rate", 
        x = "Year", 
        size = "Singificant\nIncident Count")
 
@@ -557,7 +741,7 @@ df %>%
     mutate(count(filter(df.adj, SIGNIFICANT == "YES"), IYEAR, SYS), STATE = "Adjacent (avg.)"),
     mutate(count(filter(df.all, SIGNIFICANT == "YES"), IYEAR, SYS), STATE = "U.S.A. (avg.)")
     )%>%
-  filter(IYEAR < 2023, IYEAR > 2009,
+  filter(IYEAR < 2024, IYEAR > 2009,
          SYS != "UNGS", SYS != "GG")%>%
   left_join(mileSYSAll) %>% 
   mutate(ir = n/(miles/1000) )%>%
@@ -566,11 +750,11 @@ df %>%
   summarize(ir = mean(ir)) %>%
   pivot_wider(names_from = STATE, id_cols = c(SYS), values_from = ir)%>%
   rename("Adj" = 2, 
-         "PA" = 3,
+         "NY" = 3,
          "US" = 4) %>%
   mutate(Adjacent = Adj-US,
-         PA = Adj-PA)%>%
-  select(SYS, Adjacent, PA)%>%
+         NY = Adj-NY)%>%
+  select(SYS, Adjacent, NY)%>%
   pivot_longer(!SYS)%>%
   ggplot(aes(x = SYS, y = value, group = name, col = name))+
   geom_hline(aes(yintercept = 0))+
@@ -579,7 +763,7 @@ df %>%
   geom_point(position = position_dodge(width = .25))+
   annotate("text",x = .5, y = .08, label = "Worse than Average →",angle = 90 ,size = 3, fontface = "bold", color = "gray35")+
   annotate("text",x = .5, y = -.08, label = "← Better than Average",angle = 90 , size = 3, fontface = "bold", color = "gray35")+
-  scale_y_continuous(name = "Incident Rate Difference", limits = c(-.15,.2))+
+ # scale_y_continuous(name = "Incident Rate Difference", limits = c(-.15,.2))+
   scale_color_manual(values = pst1, name = "Geography")+
   theme_pst()+
   theme(legend.position = c(.8,.2),
@@ -593,6 +777,47 @@ plotExport = paste0(exportdir, plotName)
 wdt = 2560
 hgt = wdt/1.62
 ggsave(plotExport, width = wdt, height = hgt, units = "px")
+```
+
+```{r}
+library(ggtern)
+
+miles_tern <- milesFull %>%
+  distinct(OPERATOR_ID, SYSTEM_TYPE, STATE, IYEAR, .keep_all = T)%>%
+  filter(IYEAR == 2022, !grepl("OCS", STATE), STATE != "N/A") %>%
+  group_by(STATE, SYS) %>% 
+  summarize(miles = sum(mileage, na.rm = T)) %>%
+  ungroup()%>%
+  pivot_wider(id_cols = STATE, 
+              names_from = SYS,
+              values_from = miles) %>%
+  mutate(across(GD:HL, ~replace_na(.x, 0)),
+         total = GD+GT+HL,
+         across(GD:HL, ~scale(.x, center = F)),
+         do_col = STATE == moState)
+
+"#003E59" "#61A893" "#C297B8"
+
+ggplot(data = miles_tern, aes(x = GD, y = GT, z = HL, size = total, col = do_col))+
+  geom_point()+
+  coord_tern()+
+  scale_size_area()+
+  scale_color_manual(values = c(`TRUE`= "red", `FALSE` = "gray10"))+
+  theme_nomask()+
+  theme_showarrows()+
+  theme_pst()+
+  theme_showgrid_major()+
+  theme(tern.axis.line.R = element_line(color = lilac),
+        tern.axis.arrow.R = element_line(color = lilac),
+        tern.axis.line.T = element_line(color = darkBlue),
+        tern.axis.arrow.T = element_line(color = darkBlue),
+        tern.axis.line.L = element_line(color = liteGreen),
+        tern.axis.arrow.L = element_line(color = liteGreen),
+        tern.panel.grid.major = element_line(linewidth = .5, linetype = "dotted", color = "gray60"),
+        tern.panel.grid.minor = element_line(linewidth = .3, linetype = "dotted", color = "gray80"))+
+  theme_mesh(3)
+
+    
 ```
 
 
