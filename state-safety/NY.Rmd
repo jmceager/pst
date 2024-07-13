@@ -796,13 +796,14 @@ miles_tern <- milesFull %>%
          across(GD:HL, ~scale(.x, center = F)),
          do_col = STATE == moState)
 
-"#003E59" "#61A893" "#C297B8"
 
 ggplot(data = miles_tern, aes(x = GD, y = GT, z = HL, size = total, col = do_col))+
-  geom_point()+
+  geom_point(data = . %>% filter(!do_col), alpha = .7)+
+  geom_point(data = . %>% filter(do_col), alpha = .9)+
   coord_tern()+
   scale_size_area()+
-  scale_color_manual(values = c(`TRUE`= "red", `FALSE` = "gray10"))+
+  scale_color_manual(values = c(`TRUE`= honey,
+                                `FALSE` = muted(brown, 67, 5)))+
   theme_nomask()+
   theme_showarrows()+
   theme_pst()+
