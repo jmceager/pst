@@ -834,7 +834,7 @@ ggplot(data = miles_tern, aes(x = GD_p, y = GT_p, z = HL_p,
         plot.margin = margin(0,0,0,0,"pt"))+
   theme_mesh(5)
 
-ggplot2::ggsave("NY/arrange.png", ga, width = wdt, height = hgt, units = "px")
+#ggplot2::ggsave("NY/arrange.png", ga, width = wdt, height = hgt, units = "px")
 
 
    
