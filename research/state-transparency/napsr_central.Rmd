@@ -1,0 +1,1092 @@
+---
+title: "co2"
+author: "James Eager"
+date: "`r Sys.Date()`"
+output: 
+  tufte::tufte_handout: default
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r include = FALSE, echo = FALSE}
+rm(list = ls())
+```
+
+```{r setup, include=FALSE}
+library(tufte)
+# invalidate cache when the tufte version changes
+knitr::opts_chunk$set(cache.extra = packageVersion('tufte'))
+options(htmltools.dir.version = FALSE)
+
+library(tidyverse)
+library(ggrepel)
+library(RColorBrewer)
+library(ggthemes)
+library(ggExtra)
+library(viridis)
+library(scales)
+library(readxl)
+library(kableExtra)
+library(lubridate)
+library(sf)
+library(tufte)
+library(ggspatial)
+library(mapboxapi)
+library(leaflet)
+library(tidycensus)
+library(tigris)
+library(showtext)
+library(factoextra)
+
+knitr::opts_chunk$set(echo = FALSE, include = FALSE, message = FALSE)
+options(knitr.table.format = "latex")
+options(tigris_use_cache = TRUE)
+wdt = 7.25
+hgt = wdt/1.62
+bs= 10
+capt = paste0("Source: PHMSA Incident and Mileage Data (",
+              lubridate::year(Sys.Date()),
+              ")")
+datadir = "https://raw.githubusercontent.com/jmceager/pst/main/phmsa-clean/data/"
+tag = paste("PST", lubridate::year(Sys.Date()))
+
+pstFont = "Montserrat"
+font_add_google(pstFont)
+showtext_opts(dpi=300) 
+showtext_auto()# theme clean adjustments to apply to ggplot
+
+extrafont::font_import("/Users/jameseager/Library/Fonts/")
+
+setwd("/Users/jameseager/Documents/pst/research/state-transparency")
+
+```
+
+```{r theme_pst}
+#### main plot theme ####
+theme_pst <- function(baseSize=bs) {
+  (theme(
+                       axis.line.x = element_line(
+                         colour = "#182125",
+                         linewidth = 0.5,
+                         linetype = "solid"
+                       ),
+                       axis.line.y = element_line(
+                         colour = "#182125",
+                         linewidth = 0.5,
+                         linetype = "solid"
+                       ),
+                       axis.ticks.y = element_line(
+                         colour = "#182125",
+                         linewidth = 0.5,
+                         linetype = "solid"
+                       ),
+                       text = element_text(family = pstFont),
+                       axis.text = element_text(colour = "#8C9394",
+                                                size = baseSize * .8),
+                       axis.title = element_text(colour ="black", 
+                                                 size= baseSize),
+                       panel.grid.minor.y = element_line(linetype = "dotted", 
+                                                         colour = "#C4C8C6"),
+                       panel.grid.major.y = element_line(colour = "#394C56", 
+                                                         linetype = "dotted"),
+                       panel.grid.major.x = element_blank(),
+                       panel.grid.minor.x = element_blank(),
+                       panel.background = element_blank(),
+                       panel.border = element_blank(),
+                       strip.background = element_rect(linetype = 0),
+                       strip.text = element_blank(),
+                       strip.text.x = element_blank(),
+                       strip.text.y = element_blank(),
+                       legend.text = element_text(colour = "black",
+                                                  size = baseSize * .8),
+                       legend.background = element_rect(fill = NULL, 
+                                                        color = "#182125"),
+                       legend.title = element_text( face = "bold", 
+                                                    colour = "black",
+                                                    size = baseSize),
+                       legend.position = "right",
+                       legend.key = element_blank(),
+                       legend.spacing.y = unit(.125, 'cm'),
+                       #legend.background = element_blank(),
+                       plot.tag.location = "plot",
+                       plot.title.position = "plot",
+                       plot.tag.position = "topright",
+                       plot.tag = element_text(size = baseSize *.66,
+                                               colour = "#8C9394"),
+                       plot.background = element_rect(fill = "#ffffff"),
+                       plot.title = element_text(face = "bold", 
+                                                 colour = "black",
+                                                 size = baseSize*1.2),
+                       plot.subtitle = element_text(colour = "#8C9394",
+                                                    size = baseSize),
+                       plot.caption = element_text(size = baseSize *.8)
+                     )
+  )
+}
+
+
+
+#### map theme ####
+theme_pst_map <- function(baseSize=bs) {
+  (theme_void() + 
+     theme(
+       legend.direction = "horizontal",
+       legend.position = "bottom",
+       plot.tag.location = "plot",
+       plot.title.position = "plot",
+       plot.tag.position = "topright",
+       text = element_text(family = pstFont),
+       legend.text = element_text(colour = "black",
+                                   size = baseSize * .8),
+       legend.background = element_rect(fill = NA, 
+                                        color = NA),
+       legend.title = element_text( face = "bold", 
+                                    colour = "black",
+                                    size = baseSize),
+       legend.key = element_blank(),
+       plot.background = element_rect(fill = "#ffffff", colour = NA),
+       plot.margin = unit(c(0,0,0,0), "cm"),
+       plot.tag = element_text(size = baseSize *.66,
+                               colour = "#8C9394"),
+       plot.title = element_text(face = "bold", 
+                                 colour = "black",
+                                 size = baseSize*1.2),
+       plot.subtitle = element_text(colour = "#8C9394",
+                                    size = baseSize),
+       plot.caption = element_text(size = baseSize *.8,
+                                   lineheight = .33)
+       )
+
+                    
+  )
+}
+
+#### flip theme ####
+theme_pst_flip <- function(baseSize=bs) {
+  (theme(
+                       axis.line.y = element_line(
+                         colour = "#182125",
+                         linewidth = 0.5,
+                         linetype = "solid"
+                       ),
+                       axis.line.x = element_line(
+                         colour = "#182125",
+                         linewidth = 0.5,
+                         linetype = "solid"
+                       ),
+                       axis.ticks.y = element_line(
+                         colour = "#182125",
+                         linewidth = 0.5,
+                         linetype = "solid"
+                       ),
+                       text = element_text(family = pstFont),
+                       axis.text = element_text(colour = "#8C9394",
+                                                size = baseSize * .8),
+                       axis.title = element_text(colour ="black", 
+                                                 size= baseSize),
+                       panel.grid.minor.x = element_line(linetype = "dotted", 
+                                                         colour = "#C4C8C6"),
+                       panel.grid.major.x = element_line(colour = "#394C56", 
+                                                         linetype = "dotted"),
+                       panel.grid.major.y = element_blank(),
+                       panel.grid.minor.y = element_blank(),
+                       panel.background = element_blank(),
+                       panel.border = element_blank(),
+                       strip.background = element_rect(linetype = 0),
+                       strip.text = element_blank(),
+                       strip.text.x = element_blank(),
+                       strip.text.y = element_blank(),
+                       legend.text = element_text(colour = "black",
+                                                  size = baseSize * .8),
+                       legend.background = element_rect(fill = NULL, 
+                                                        color = "#182125"),
+                       legend.title = element_text( face = "bold", 
+                                                    colour = "black",
+                                                    size = baseSize),
+                       legend.position = "right",
+                       legend.key = element_blank(),
+                       #legend.background = element_blank(),
+                       plot.tag.location = "plot",
+                       plot.title.position = "plot",
+                       plot.tag.position = "topright",
+                       plot.tag = element_text(size = baseSize *.66,
+                                               colour = "#8C9394"),
+                       plot.background = element_rect(fill = "#ffffff"),
+                       plot.title = element_text(face = "bold", 
+                                                 colour = "black",
+                                                 size = baseSize*1.2),
+                       plot.subtitle = element_text(colour = "#8C9394",
+                                                    size = baseSize),
+                       plot.caption = element_text(size = baseSize *.8)
+                     )
+  )
+}
+
+#### facet theme ####
+theme_pst_facet <- function(baseSize=bs) {
+  (theme(
+                       axis.line.x = element_line(
+                         colour = "#182125",
+                         linewidth = 0.5,
+                         linetype = "solid"
+                       ),
+                       axis.line.y = element_line(
+                         colour = "#182125",
+                         linewidth = 0.5,
+                         linetype = "solid"
+                       ),
+                       axis.ticks.y = element_line(
+                         colour = "#182125",
+                         linewidth = 0.5,
+                         linetype = "solid"
+                       ),
+                       text = element_text(family = pstFont),
+                       axis.text = element_text(colour = "#8C9394",
+                                                size = baseSize * .8),
+                       axis.title = element_text(colour ="black", 
+                                                 size= baseSize),
+                       panel.grid.minor.y = element_line(linetype = "dotted", 
+                                                         colour = "#C4C8C6"),
+                       panel.grid.major.y = element_line(colour = "#394C56", 
+                                                         linetype = "dotted"),
+                       panel.grid.major.x = element_blank(),
+                       panel.grid.minor.x = element_blank(),
+                       panel.border = element_blank(),
+                       strip.background = element_rect(linetype = 0),
+                       strip.text = element_blank(),
+                       strip.text.x = element_text(colour = "gray15",
+                                                  size = baseSize * .8,
+                                                  margin = ),
+                       strip.text.y = element_text(colour = "gray15",
+                                                  size = baseSize * .8),
+                       legend.text = element_text(colour = "black",
+                                                  size = baseSize * .8),
+                       legend.background = element_rect(fill = NULL, 
+                                                        color = "#182125"),
+                       legend.title = element_text( face = "bold", 
+                                                    colour = "black",
+                                                    size = baseSize),
+                       legend.position = "right",
+                       legend.key = element_blank(),
+                       legend.spacing.y = unit(.125, 'cm'),
+                       #legend.background = element_blank(),
+                       plot.tag.location = "plot",
+                       plot.title.position = "plot",
+                       plot.tag.position = "topright",
+                       plot.tag = element_text(size = baseSize *.66,
+                                               colour = "#8C9394"),
+                       plot.background = element_rect(fill = "#ffffff"),
+                       panel.background = element_rect(fill = "#f1f3f4"),
+                       plot.title = element_text(face = "bold", 
+                                                 colour = "black",
+                                                 size = baseSize*1.2),
+                       plot.subtitle = element_text(colour = "#8C9394",
+                                                    size = baseSize),
+                       plot.caption = element_text(size = baseSize *.8)
+                     )
+  )
+}
+
+
+```
+
+```{r nice colors}
+#brewer pal
+col <- brewer.pal(6,"Set2")
+green <- col[1]
+orange <- col[2]
+purple <- col[3]
+pink <- col[4]
+lime <- col[5]
+yellow <- col[6]
+
+ecru = "#FFEEDB"
+
+
+#pst 
+darkBlue <- "#003E59"
+midBlue <- "#00546F"
+bluGreen <- "#459197"
+liteGreen <- "#61A893"
+
+
+#pst contrast 
+#1
+honey <- "#F2AA18"
+lilac <- "#C297B8"
+# 2
+hunterGrn <- "#315C2B"
+maize <- "#E7BB41"
+
+crimson <- "#96140D"
+lavBlu <- "#C6CAED"
+
+#based on pst
+liteBlue <- "#5CCEFF"
+liteBlu2 <- "#0AC2FF"
+darkGreen <- "#3C685A"
+brown <- "#664400"
+
+## coolors
+purp = "#644695"
+
+# pst pairs
+blu_p = "#A8E5FF"
+crim_p = "#F27069"
+purp_p = "#9E86C6"
+lil_p = "#673C5D"
+green_p1 = "#3E7061"
+green_p2 = "#90C2B3"
+ecru_p = "#241300"
+
+
+#pals 
+pst1 <- c(darkBlue, liteGreen, lilac, honey, bluGreen, crimson)
+pst2 <- c(darkBlue, liteGreen, lilac, brown, maize, midBlue)
+pstMax <- c(darkBlue, liteGreen, lilac, honey, purp, brown, crimson, liteBlu2)
+pstPaired <- c(darkBlue, blu_p, green_p1, green_p2, lilac, lil_p, 
+               crimson, crim_p, ecru_p, ecru)
+
+```
+
+
+```{r incident data}
+#get df
+#remove outer continental shelf incidents 
+df <- read_csv(paste0(datadir, "clean/all_inc.csv") ) 
+
+#join, including transformation from wgs84 to nad 83
+df_sp <- df %>%
+  st_as_sf(coords = c("LOCATION_LONGITUDE", "LOCATION_LATITUDE"), crs = 4326)%>%
+  st_transform(2229)
+
+
+```
+
+```{r}
+juris <- read_xlsx("data/analysis.xlsx", sheet = 5)[,c(1:3,6,8)] %>%
+  rename("STATE_NAME" = 1,
+         "GT_INTRASTATE" = 2,
+         "GT_INTERSTATE" = 3,
+         "HL_INTRASTATE" = 4,
+         "HL_INTERSTATE" = 5)
+
+jb <- juris %>%
+  mutate(across(2:5, ~ if_else(is.na(.x), F,T)),
+         STATE_NAME = str_to_upper(STATE_NAME),
+         STATE_NAME = ifelse(grepl("LIQUID", STATE_NAME), 
+                             "CALIFORNIA LIQUID", STATE_NAME)) %>%
+  pivot_longer(!STATE_NAME,
+               names_to = c("SYS", "INTER_INTRA"),
+               names_sep = "_",
+               values_to = "bool")
+```
+
+```{r getting annual report data}
+# library(plyr)
+
+## read ar part H csvs <-
+#read following cols 
+# OPERATOR_ID, INTER_INTRA, PARTHONNTOTAL
+
+data_path = "data/reports"
+
+liqAR <- plyr::ldply(.data = list.files(pattern = "HL",
+                                        path = data_path,
+                                        full.names = T),
+               .fun = read.csv,
+               
+               )
+gtrAR <- plyr::ldply(.data = list.files(pattern = "GT",
+                                        path = data_path,
+                                        full.names = T),        
+                     .fun = read.csv
+               )
+
+gdsAR <- plyr::ldply(.data = list.files(pattern = "GD",
+                                        path = data_path,
+                                        full.names = T),              
+                     .fun = read.csv
+               )
+
+
+#detach("package:plyr", unload = T)
+```
+
+```{r annual reports to 202 miles}
+hl_miles <- liqAR %>%
+ # filter(REPORT_YEAR == 2022)%>%
+  group_by(STATE_NAME, INTER_INTRA, REPORT_YEAR) %>%
+  summarize(miles = sum(PARTHONTOTAL, na.rm = T)) %>% 
+  ungroup() %>%
+  mutate(SYS = "HL")
+
+gt_miles <- gtrAR %>%
+ # filter(REPORT_YEAR == 2022)%>%
+  group_by(STATE_NAME, INTER_INTRA, REPORT_YEAR) %>%
+  summarize(miles = sum(PARTHONTOTAL, na.rm = T))%>% 
+  ungroup() %>%
+  mutate(SYS = "GT")
+
+gd_miles <- gdsAR %>%
+  mutate(service_miles = (AVERAGE_LENGTH * NUM_SRVCS_TOTAL)/5280,
+         mileage = service_miles + MMILES_TOTAL)  %>%
+  group_by(STOP, REPORT_YEAR) %>%
+  summarize(miles = sum(mileage, na.rm = T))  %>%
+  rename(STATE = STOP) %>%
+  mutate(STATE_NAME = case_when(
+    STATE == "DC"  ~ "WASHINGTON, DC",
+    .default = str_to_upper(state.name[match(STATE, state.abb)])
+  ),
+  SYS = "GD"
+  )
+
+new_miles <- bind_rows(hl_miles, gt_miles, gd_miles)# %>%
+  # mutate(STATE = case_when(
+  #   STATE_NAME == "CALIFORNIA" ~ "CA-L",
+  #   STATE_NAME == "WASHINGTON DC"  ~ "DC",
+  #   .default = state.abb[match(str_to_title(STATE_NAME), state.name)]
+  # ))%>%
+  # bind_rows(gd_miles %>% 
+  #             mutate(STATE = ifelse(STATE == "CA", "CA-L",STATE),
+  #                    STATE_NAME = ifelse(STATE == "CALIFORNIA", 
+  #                                        "CALIFORNIA LIQUID",STATE_NAME))
+  #           ) %>%
+  # bind_rows(
+  #   bind_rows(hl_miles, gt_miles) %>%
+  #     filter(STATE_NAME %in% c( "ARKANSAS", "CALIFORNIA"))%>%
+  #     mutate(STATE = ifelse(STATE_NAME == "ARKANSAS", "AR-O", "CA-G"))%>%
+  #     bind_rows(gd_miles %>% filter(STATE %in% c("AR", "CA") )%>% 
+  #                 mutate(STATE = ifelse(STATE == "AR", "AR-O", "CA-G"),
+  #                        STATE_NAME = ifelse(STATE == "AR-O", 
+  #                                            "ARKANSAS OGC", "CALIFORNIA GAS")))
+  # ) 
+  
+
+# new_miles <- new_miles %>%
+#   rbind(new_miles %>% filter(REPORT_YEAR == 2023 ) 
+#         %>% mutate(REPORT_YEAR = 2024)) 
+
+```
+
+```{r}
+napsr_list = "ND, SD, NE, KS, MN, IA, MO, WI, IL, MI, IN" # central states
+napsr = str_trim(str_split(napsr_list, ",")[[1]])
+napsr_long = str_to_upper(state.name[match(napsr, state.abb)])
+
+new_miles %>% filter(SYS == "HL", STATE_NAME %in% napsr_long) %>% view
+```
+
+```{r}
+summary_cols = c("SIGNIFICANT", "SERIOUS")
+
+sumdf <- df %>%
+  group_by(STATE, IYEAR, SYS, INTER_INTRA)%>%
+  summarize(n=n(),
+            across(all_of(summary_cols), ~sum(.x == "YES", na.rm = T)),
+            across(all_of(c("TOTAL_RELEASE", "TOTAL_COST_CURRENT")),
+                   sum)) %>%
+  ungroup()%>%
+  complete(STATE, nesting(IYEAR, SYS, INTER_INTRA), 
+           fill = list(n = 0, SIGNIFICANT = 0,
+                                     SERIOUS = 0, TOTAL_COST_CURRENT=0,
+                                     TOTAL_RELEASE = 0))%>%
+  left_join(jb %>%
+              mutate(STATE = state.abb[match(STATE_NAME,
+                                       str_to_upper(state.name))]), 
+            by = c("STATE", "SYS", "INTER_INTRA")) %>%
+  mutate(bool = ifelse(SYS == "GD", T, bool)) %>%
+  filter(STATE %in% napsr & bool == T & between(IYEAR, 2019,2023)) %>%
+  ungroup()%>%
+  left_join(new_miles %>%
+               mutate(STATE = state.abb[match(STATE_NAME,
+                                              str_to_upper(state.name))],
+                      STATE = ifelse(grepl(" DC", STATE_NAME), "DC", STATE),
+                      INTER_INTRA = ifelse(SYS == "GD", "INTRASTATE", INTER_INTRA)),
+             by = c("IYEAR" = "REPORT_YEAR", 
+                    "STATE" = "STATE",
+                    "SYS" = "SYS",
+                    "INTER_INTRA" = "INTER_INTRA"),
+            suffix = c("", ".n"), keep = T)%>% 
+  drop_na(INTER_INTRA.n) %>%
+  mutate( ir = n / (miles/1000)) %>%
+  group_by(STATE, SYS)%>%
+  summarize(across(n:TOTAL_COST_CURRENT, ~sum(.x, na.rm = T)),
+            miles_19 = sum(miles[IYEAR == 2019], na.rm = T),
+            miles_23 = sum(miles[IYEAR == 2023], na.rm = T),
+            miles_sum = sum(miles, na.rm = T),
+            ir_19 = mean(ir[IYEAR == 2019], na.rm = T),
+            ir_23 = mean(ir[IYEAR == 2023], na.rm = T),
+            ir_mu = mean(ir),
+            years = sum(miles > 0, na.rm = T)) %>%
+  mutate(ir_5 = n / (miles_sum/5000),
+         state_lab = ifelse(STATE == "VA"& SYS != "HL", "VA*",STATE),
+         state_name = state.name[match(STATE, state.abb)],
+         state_name = ifelse(STATE == "DC", "Washington, D.C.", state_name),
+         state_name = ifelse(STATE == "VA" & SYS != "HL",
+                              "Virginia*", STATE))
+
+```
+
+```{r}
+sumdf %>%
+  mutate(SYS = case_when(
+    SYS == "GD" ~ "Gas Distribution",
+    SYS == "GT" ~ "Gas Transmission",
+    SYS == "HL" ~ "Hazardous Liquids"
+  ))%>% 
+  ggplot(aes(x = state_lab, y = ir_5, fill = SYS))+
+  geom_col(width = .7)+
+  coord_flip()+
+  scale_fill_manual(values = pstMax)+
+  theme_pst_facet()+
+  theme( panel.grid.minor.x = element_line(linetype = "dotted", 
+                                                         colour = "#C4C8C6"),
+         panel.grid.major.x = element_line(colour = "#394C56", 
+                                           linetype = "dotted"),
+         strip.background = element_rect(),
+         panel.grid.major.y = element_blank(),
+         panel.grid.minor.y = element_blank(),
+         axis.line.y = element_blank(),
+         legend.position = "none")+
+  scale_y_continuous(limits = c(0, NA), expand = expansion(mult = c(0,.1)))+
+  facet_wrap(~SYS, scales = "free")+
+  labs(x = NULL, y = "Incidents per 1,000 Miles",
+       subtitle = "All Incidents from 1/1/2019-12/31/2023",
+       title = "5-Year Incident Rate by System & Program", tag = tag)
+
+ggsave("napsr_plots/central/ir_comp.png", width = wdt, height = hgt)
+```
+
+```{r}
+sumdf %>%
+  mutate(SYS = case_when(
+    SYS == "GD" ~ "Gas Distribution",
+    SYS == "GT" ~ "Gas Transmission",
+    SYS == "HL" ~ "Hazardous Liquids"
+  ))%>% 
+  ggplot(aes(x = state_lab, y = TOTAL_COST_CURRENT/n, fill = SYS))+
+  geom_col(width = .7)+
+  coord_flip()+
+  scale_fill_manual(values = pstMax)+
+  theme_pst_facet()+
+  theme( panel.grid.minor.x = element_line(linetype = "dotted", 
+                                                         colour = "#C4C8C6"),
+         panel.grid.major.x = element_line(colour = "#394C56", 
+                                           linetype = "dotted"),
+         strip.background = element_rect(),
+         panel.grid.major.y = element_blank(),
+         panel.grid.minor.y = element_blank(),
+         axis.line.y = element_blank(),
+         legend.position = "none")+
+  scale_y_continuous(limits = c(0, NA), expand = expansion(mult = c(0,.1)),
+                     labels = function(x) 
+                       scales::dollar(x, 
+                         scale = ifelse(x >= 1e6, .000001, .001), 
+                         suffix = ifelse(x >= 1e6, "M", "K"))
+                     )+
+  facet_wrap(~SYS, scales = "free")+
+  labs(x = NULL, y = "Total Cost of Damage  per Incident",
+       subtitle = "All Incidents from 1/1/2019-12/31/2023",
+       title = "Incident Damage Cost by System & Program", tag = tag)
+
+ggsave("napsr_plots/central/dmg_comp.png", width = wdt, height = hgt)
+```
+
+
+```{r}
+sumdf %>%
+  mutate(SYS = case_when(
+    SYS == "GD" ~ "Gas Distribution\n(MSCF)",
+    SYS == "GT" ~ "Gas Transmission\n(MSCF)",
+    SYS == "HL" ~ "Hazardous Liquids\n(U.S. Gal.)"
+  ))%>%
+  ggplot(aes(x = state_lab, y = TOTAL_RELEASE/n, fill = SYS))+
+  geom_col(width = .7)+
+  coord_flip()+
+  scale_fill_manual(values = pstMax)+
+  theme_pst_facet()+
+  theme( panel.grid.minor.x = element_line(linetype = "dotted", 
+                                                         colour = "#C4C8C6"),
+         panel.grid.major.x = element_line(colour = "#394C56", 
+                                           linetype = "dotted"),
+         strip.background = element_rect(),
+         panel.grid.major.y = element_blank(),
+         panel.grid.minor.y = element_blank(),
+         axis.line.y = element_blank(),
+         legend.position = "none")+
+  scale_y_continuous(limits = c(0, NA), expand = expansion(mult = c(0,.1)),
+                     labels = function(x) 
+                       scales::comma(x, 
+                         scale = ifelse(x >= 1e3, .001, 1), 
+                         suffix = ifelse(x >= 1e3, "K", ""))
+                     )+
+  facet_wrap(~SYS, scales = "free")+
+  labs(x = NULL, y = "Total Product Released per Incident",
+       subtitle = "All Incidents from 1/1/2019-12/31/2023",
+       title = "Incident Release Size by System & Program", tag = tag)
+
+ggsave("napsr_plots/central/rel_comp.png", width = wdt, height = hgt)
+```
+
+
+#### transparency rating 
+
+```{r}
+
+years <- excel_sheets("data/transparency-history.xlsx")
+
+
+
+# start faceting more by pipeline miles 
+
+dfRaw <- map_dfr(years, read_xlsx, 
+              path = "data/transparency-history.xlsx", .id = "sheet") %>%
+  mutate(year = parse_number(years[as.numeric(sheet)]),
+         average = coalesce(total, average),
+         score = select(., findSite:sitingRouting) %>% rowSums(na.rm = T))%>%
+  select(!c(total, sheet))%>%
+  rename(state = State) %>%
+  mutate(eastern = state.abb[match(state,state.name)] %in% napsr ,
+         score_per = average/3)
+
+
+df_23 <- read_xlsx("data/2023_draft2.xlsx", sheet = 1,
+                    skip = 0) %>%
+  select("State",matches("^[0-9]")) %>%
+  mutate(score = 0)%>%
+  rename(Column1 = State) 
+
+specs <- tibble(
+  oldName = colnames(df_23),
+  newName = colnames(dfRaw)[1:length(colnames(df_23))]
+)
+  
+df_wide <- df_23 %>%
+  rename_with(~specs$newName, specs$oldName) %>%
+  mutate(year = 2023,
+         score = select(., findSite:sitingRouting) %>% rowSums(),
+         score_per = score / ifelse( year == 2013, 
+                                     30, ifelse(year == 2012, 
+                                                27, 33)),
+         average = score / ifelse( year == 2013, 
+                                   10, ifelse(year == 2012, 
+                                              9, 11)),
+         state = str_remove(state, "\\*"),
+         eastern = state.abb[match(state,state.name)] %in% napsr)%>%
+  bind_rows(dfRaw)%>%
+  mutate(class = case_when(
+    score_per == 1 ~ "Excellent",
+    between(score_per, 24.01/33, 32.99/33) ~ "Good",
+    between(score_per, 17/33, 24/33) ~ "Pass",
+    score_per < 16.99/33 ~ "Fail",
+    .default = "Not Rated"
+  ),
+  class_int = case_when(
+    score_per == 1 ~ 4,
+    between(score_per, 24.01/33, 32.99/33) ~ 3,
+    between(score_per, 17/33, 24/33) ~ 2,
+    score_per < 16.99/33 ~ 1,
+    .default = 0
+  ),
+  class = factor(
+    class,
+    levels = c("Not Rated","Fail", "Pass", "Good", "Excellent")
+  ),
+  state = if_else(state == "DC", "District of Columbia", state))
+
+df <- df_wide %>%
+  select(!class)%>%
+  pivot_longer(!c(state, year, eastern)) %>%
+  drop_na(value)
+
+state_list = df %>% filter(year == 2023) %>% pull(state) %>% unique()
+
+catAcs <- c("regAccess", "regDescription", "sitingRouting")
+catComm <- c("findSite","agencyCon", "companyCon")
+catData <- c("incData", "mapGT", "excavationData", 
+             "enforceRecs", "inpectRecs")
+allScores <- c(catAcs, catComm, catData)
+
+
+commsName = "Find + Connect"
+agencyName = "Agency Authority"
+dataName = "Data + Maps"
+
+valueLabs <- c("findSite" = "Find Website",
+               "mapGT" = "Trans. Pipe Maps",
+               "regDescription" = "Desc. Regulation",
+               "regAccess" = "Access Stat+Regs",
+               "agencyCon" = "Agency Contacts",
+               "companyCon" = "Comp. Contacts",
+               "excavationData" = "Excav. Dmg. Data",
+               "average" = "Avg. Score",
+               "incData" = "Incident Data",
+               "enforceRecs" = "Enforcement Data",
+               "inpectRecs" = "Inspection Records",
+               "sitingRouting" = "Siting + Routing",
+               "score" = "Composite Score",
+               "score_per" = "Percentage Score",
+               "class_int" = "Composite Score")
+valueLabsDf <- tibble(name = names(valueLabs), lName = valueLabs) %>%
+  mutate(name = factor(name, levels = c(allScores, "score", "score_per", "class_int")))
+
+```
+
+
+```{r hex data}
+hexes_new <- read_sf("/Users/jameseager/Documents/pst/phmsa-clean/data/gis/new_hex_st/HexStates.shp") %>%
+  mutate(State = if_else(grepl("OCG", State), "Arkansas OGC", State)) %>%
+  filter(State_Abbr %in% napsr)
+
+#for abbr things
+stab_check <- hexes_new %>%
+  st_drop_geometry()%>% select(State, State_Abbr)
+
+stab_ab = stab_check$State_Abbr
+stab_name = stab_check$State
+
+hn_center <- hexes_new %>%
+  st_centroid() %>%
+  mutate(x = st_coordinates(.)[1],
+         y = st_coordinates(.)[2])%>%
+  rename(sa = State_Abbr)
+
+df23_hex <- df_wide%>%
+  filter(year == 2023)%>%
+  right_join(hexes_new, by = c("state" = "State")) %>%
+  replace_na(list(class = "Not Rated"))
+
+df_cat_hex<- df %>%
+  filter(year == 2023)%>%
+  mutate(
+    cat = case_when(
+      name %in% catAcs ~ agencyName,
+      name %in% catComm ~ commsName,
+      name %in% catData ~ dataName,
+      name == "score" ~ "Score",
+      .default = NA
+    )
+  )%>%
+  drop_na(cat)%>% 
+  filter(cat != "Score")%>%
+  group_by(state, cat)%>%
+  summarize(value = mean(value))%>%
+  mutate(
+    cat_class = case_when(
+    value == 3 ~ "Excellent",
+    value > 24/11 & value <= 32/11 ~ "Good",
+     value > 17/11 & value <= 24/11  ~ "Pass",
+    value <= 17/11 ~ "Fail",
+    .default = NA
+  ),
+    cat_class = factor(
+    cat_class,
+    levels = c("Fail", "Pass", "Good", "Excellent")
+  ))%>%
+  ungroup()%>%
+  bind_rows(tibble(state = c("Alaska", "Hawaii"),
+                   State_Abbr = c("AK", "HI")))%>%
+  complete(state, cat, fill = list(value = NA))%>%
+  drop_na(cat)%>%
+  right_join(hexes_new, by = c("state" = "State")) %>%
+  filter(State_Abbr.y %in% napsr)
+``` 
+
+```{r class  map}
+
+new_pal = c("#000000","#49446E", "#3285A4", "#7EC8B0", "grey50")
+
+
+ggplot()+
+  layer_spatial(df23_hex, aes(fill = class), col = "#fffff0")+
+  geom_sf_text(data = hn_center, mapping = aes(label = sa), col = "#fffff0")+
+  scale_fill_manual(
+                    breaks = c("Excellent", "Good", "Pass", "Fail"),
+                    drop = FALSE,
+                    values = c( Excellent = new_pal[[4]],
+                                Good = new_pal[[3]],
+                                Pass = new_pal[[2]],
+                                Fail = new_pal[[1]],
+                                `Not Rated` = new_pal[[5]]), name = NULL)+
+  theme_pst_map()+
+  theme(legend.position = "right",
+        legend.direction = "vertical",
+        plot.margin = margin(6,6,3,6))+
+  labs(title = "NAPSR Central Transparency Ratings",
+       tag = tag)
+
+plot_name = "class_hex.pdf"
+ggsave(plot_name, path= "napsr_plots/central/", device = "pdf",
+       width = wdt, height = hgt)
+```
+
+```{r score  map}
+ggplot()+
+  layer_spatial(df23_hex, aes(fill = score), col = "#fffff0")+
+  geom_sf_text(data = hn_center, mapping = aes(label = sa), col = "#fffff0")+
+  scale_fill_viridis(option = "G", name = "Score", end = .8, limits = c(0,33),
+                     breaks = c(0,18,25,33))+
+  theme_pst_map()+
+  labs(title = "NAPSR Central Transparency Scores",
+       tag = tag)+
+  theme(legend.title = element_text(vjust = .8),
+        legend.position = "right",
+        legend.direction = "vertical",
+        plot.margin = margin(6,6,3,6))
+
+plot_name = "score_hex.pdf"
+ggsave(plot_name, path= "napsr_plots/central/", device = "pdf",
+       width = wdt, height = hgt)
+```
+
+
+```{r}
+ggplot()+
+  layer_spatial(df_cat_hex %>% filter(cat != "Score"), 
+                aes(fill = cat_class), col = "#fffff0")+
+  geom_sf_text(data = hn_center, mapping = aes(label = sa), 
+               col = "#fffff0", size = 3)+
+  scale_fill_manual(
+                    breaks = c("Excellent", "Good", "Pass", "Fail", "Not Rated"),
+                    drop = FALSE,
+                    values = c( Excellent = new_pal[[4]],
+                                Good = new_pal[[3]],
+                                Pass = new_pal[[2]],
+                                Fail = new_pal[[1]],
+                                `Not Rated` = new_pal[[5]]), name = NULL)+
+  #guides(fill = guide_legend(label.position = "bottom", show.limits = T))+
+  theme_pst_map()+
+  theme(panel.background = element_rect(colour = "gray45",
+                                        linewidth = .8),
+        strip.clip = "false",
+        strip.text = element_text(margin = margin(2,2,2,2,)),
+        plot.margin = margin(3,6,6,6),
+        legend.position = "right",
+        legend.direction = "vertical")+
+  facet_wrap(~cat, ncol = 3)+
+  labs(title = "Average State Score by Category: NAPSR Central", tag = tag)
+
+plot_name = "score_cat_hex.pdf"
+ggsave(plot_name, path= "napsr_plots/central/", 
+       width = wdt, height = hgt)
+```
+
+
+```{r avg score over time }
+df %>%
+  filter(name == "average") %>% 
+  group_by( year, eastern)%>%
+  summarize(score = mean(value))%>%
+  ggplot(aes(x = year, y = score, col = eastern))+
+  geom_line(linewidth = .95)+
+  scale_color_manual(
+                     values = c(`TRUE` = purp, 
+                                   `FALSE` = purp_p),
+                        name = "Region",
+                        labels = c(`TRUE` = "NAPSR Central",
+                                   `FALSE` = "All Others"))+
+  scale_x_continuous(limits = c(2014, 2023), expand = c(0,0))+
+  scale_y_continuous(limits = c(0, 3), 
+                     expand = expansion(0,0))+
+  # scale_linetype_manual(values = c(`TRUE` = "solid", 
+  #                                  `FALSE` = "dashed"),
+  #                       name = "Region",
+  #                       labels = c(`TRUE` = "NAPSR East", 
+  #                                  `FALSE` = "All Others"))+
+  theme_pst()+
+  theme(axis.text.y = element_text(color = "gray5"),
+        legend.position = c(.7,.17),
+        legend.key.width = unit(30, "pt"),
+        legend.box = "horizontal")+
+  labs(x = NULL, y = "Average Score",
+       tag = tag, title = "Average Score",
+       subtitle = "NAPSR Central Region Compared to All Other States")
+
+ggsave("napsr_plots/central/Avg_time.png", width = wdt, height = hgt, units = "in")
+```
+
+
+```{r scores by category pover time }
+#### over time ####
+df %>%
+  filter(name %in% c(catAcs, catComm, catData)) %>%
+  mutate(nameCat = case_when(name %in% catAcs ~ agencyName,
+                             name %in% catComm ~ commsName,
+                             name %in% catData ~ dataName)) %>%
+  group_by(nameCat, year, eastern)%>%
+  summarize(score = mean(value))%>%
+  mutate(nameCat = ifelse(nameCat == "Connection", "Find and Connect", nameCat))%>%
+  ggplot(aes(x = year, y = score, col = nameCat, 
+             linetype = eastern, alpha = eastern))+
+  geom_line(linewidth = .85)+
+  scale_color_manual(values = pstMax, name = "Category")+
+  scale_x_continuous(limits = c(2014, 2023), expand = c(0,0))+
+  scale_y_continuous(limits = c(0, 3), 
+                     expand = expansion(0,0))+
+  scale_linetype_manual(values = c(`TRUE` = "solid", 
+                                   `FALSE` = "dashed"),
+                        name = "Region",
+                        labels = c(`TRUE` = "NAPSR Central", 
+                                   `FALSE` = "All Others"))+
+  scale_alpha_manual(values = c(`TRUE` = 1, 
+                                   `FALSE` = .66),
+                        name = "Region",
+                        labels = c(`TRUE` = "NAPSR Central", 
+                                   `FALSE` = "All Others"))+
+  theme_pst()+
+  theme(axis.text.y = element_text(color = "gray5"),
+        legend.position = c(.7,.17),
+        legend.key.width = unit(30, "pt"),
+        legend.box = "horizontal")+
+  labs(x = NULL, y = "Average Score",
+       tag = tag, title = "Average Score by Category",
+       subtitle = "NAPSR Central Region Compared to All Other States")
+
+ggsave("napsr_plots/central/Category_Avg_time.png", width = wdt, height = hgt, units = "in")
+
+
+df %>%
+  filter(name %in% c(catAcs, catComm, catData)) %>%
+  mutate(nameCat = case_when(name %in% catAcs ~ agencyName,
+                             name %in% catComm ~ commsName,
+                             name %in% catData ~ dataName)) %>%
+  group_by(nameCat, year, eastern)%>%
+  summarize(score = mean(value))%>%
+  mutate(nameCat = ifelse(nameCat == "Connection", "Find and Connect", nameCat))%>%
+  filter(eastern) %>%
+  ggplot(aes(x = year, y = score, col = nameCat))+
+  geom_line(linewidth = .85)+
+  scale_color_manual(values = pstMax, name = "Category")+
+  scale_x_continuous(limits = c(2014, 2023), expand = c(0,0))+
+  scale_y_continuous(limits = c(0, 3), 
+                     expand = expansion(0,0))+
+  theme_pst()+
+  theme(axis.text.y = element_text(color = "gray5"),
+        legend.position = c(.7,.17),
+        legend.key.width = unit(30, "pt"),
+        legend.box = "horizontal")+
+  labs(x = NULL, y = "Average Score",
+       tag = tag, title = "Average Score by Category",
+       subtitle = "NAPSR Central Region")
+
+ggsave("napsr_plots/central/Category_Avg_time_onlyeast.png", width = wdt, height = hgt, units = "in")
+
+
+```
+
+```{r all scores matrix avg}
+score_names = c("score", "score_per", "class", "average")
+
+df %>%
+  filter(year == 2023, !name %in% score_names, eastern) %>%
+  left_join(df %>% filter(year == 2023, name == "score"), by = "state",
+            suffix = c("", ".j"))%>%
+  left_join(valueLabsDf)%>%
+  mutate(name = factor(name, 
+                       levels = c("class_int", catComm, catData, catAcs)),
+         value = ifelse(name == "class_int", value - 1, value))%>% 
+  filter(eastern)%>%
+  drop_na(name)%>%
+  ggplot(aes(y = name, x = reorder(state, value.j), fill = value))+
+  geom_tile(width = .8, height = .8)+
+  geom_text(data = . %>% filter(year == 2023, name == "class_int"),
+            aes(x = state, y = name, label = round(value.j, 2)#,
+               # col = value >= 2.95
+                ),
+            fontface = "bold",  size = 3, color = "#fffff0")+
+  scale_y_discrete(position = "right", label = valueLabs)+
+  scale_fill_viridis(option = "G", end = .8, name = "Rating", limits = c(0,3),
+                     breaks = seq(3,0,-1),
+                     labels = c(`3` = '3: Excellent',
+                                `2` = '2: Good',
+                                `1` = '1: Pass',
+                                `0` = '0: Fail'))+
+  #scale_color_manual(values = c("#fffff0", "#141400"))+
+  theme_pst()+
+  coord_flip()+
+  guides(fill = guide_legend())+
+  labs(title = "State Transparency Ratings: NAPSR Central",
+       subtitle = "State, Average Score, and Category Matrix",
+       tag = tag,
+       x = NULL,
+       y = NULL)+
+  theme(axis.line.y = element_blank(),
+        axis.line.x = element_blank(),
+        axis.text = element_text(color = "#182125"),
+        axis.text.x = element_text(angle = -27, hjust = 1),
+        panel.grid.major.y = element_blank(),
+       # legend.position = "none",
+        legend.justification = "left")
+
+plot_name = "napsr_plots/central/matrix_tile_avg.pdf"
+ggsave(plot_name,
+       width = wdt, height = hgt)
+
+```
+
+```{r cleveland 5 and  10 yr}
+df %>%
+  filter(year == 2013 | year == 2018| year == 2023,
+         name == "score", eastern)%>%
+  pivot_wider(names_from = c("name", "year")) %>%
+  drop_na(score_2013, score_2018, score_2023)%>%
+  group_by(state)%>%
+  mutate(min = min(score_2013,score_2018,score_2023 ),
+         max = max(score_2013,score_2018,score_2023 ))%>% 
+  ungroup()%>%
+  mutate(state = factor(state),
+         state = fct_reorder(state, score_2023)) %>% view
+  ggplot()+
+  # geom_hline(yintercept = 17/11, alpha = .7, 
+  #            col = new_pal[2], linetype = "dashed")+
+  # geom_hline(yintercept = 24/11, alpha = .7, 
+  #            col = new_pal[3], linetype = "dashed")+
+  geom_hline(yintercept = 33, alpha = .7,
+             col = new_pal[4], linetype = "dashed")+
+  # geom_text(aes(y = 17/11, x = as.factor("Florida"), label = "Pass"),
+  #           alpha = .7, col = new_pal[2], angle = 90)+
+  # geom_text(aes(y = 24/11, x = as.factor("Florida"), label = "Good"),
+  #            alpha = .7, col = new_pal[3], angle = 90)+
+   # geom_text(aes(y = 33, x = as.factor("Florida"), label = "Perfect"), 
+   #            alpha = .7,  col = new_pal[4], angle = 90)+
+  annotate(x = "Kansas", y = 32.5, angle = 90,
+           geom = "text", label = "Perfect", hjust =0.15,
+           color = liteGreen)+
+  geom_segment(aes(x = state, 
+                   xend = state, 
+                   y=min, yend = max),
+               color = "gray30", alpha = .5)+
+  geom_point(aes(x = state, y = score_2013, color = "2013"),
+             size = 3, alpha = .9)+
+  geom_point(aes(x = state, y = score_2018, color = "2018"), 
+             size = 3, alpha = .9)+
+  geom_point(aes(x = state, y = score_2023, color = "2023"), 
+             size = 3, alpha = .9)+
+  # scale_color_manual(values = c(darkBlue,  bluGreen, liteGreen), name = "Year")+
+  scale_color_manual(values = c("#9DCED2", "#2494A8",darkBlue), 
+                     name = "Year",
+                    breaks = c(2013, 2018, 2023))+
+  scale_y_continuous(minor_breaks = seq(5,35,10),
+                     limits = c(0,33.02),
+                     expand = expansion(0,0))+
+  coord_flip(clip = "off")+
+  theme_pst(12)+
+  theme(panel.grid.major.y = element_line(linetype = "dotted", 
+                                          colour = "gray90",
+                                          linewidth = .33),
+        panel.grid.minor.x = element_line(linetype = "dotted", 
+                                          colour = "#C4C8C6",
+                                          linewidth = .33),
+        panel.grid.major.x = element_line(colour = "#394C56", 
+                                          linetype = "dotted"),
+        panel.grid.minor.y = element_blank(),
+        legend.position = "none",
+        plot.tag.position = c(.97,.995)) +
+  labs(x = "State / Regulator",
+       y = "Composite Score",
+       tag = tag,
+       title = "State Transparency 5 & 10-Year Change")
+
+ggsave("napsr_plots/central/5_10_Year_Cleveland.pdf", width = wdt, height = hgt, units = "in")
+```
