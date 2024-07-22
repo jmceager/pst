@@ -55,7 +55,7 @@ showtext_auto()
 showtext_opts(dpi=300) 
 
 #setting plot items
-capt = "Source: PHMSA Incident and Mileage Data (2010-2023)"
+capt = "Source: PHMSA Incident and Mileage Data, 2024"
 datadir = "https://raw.githubusercontent.com/jmceager/pst/main/phmsa-clean/data/"
 tag = paste("PST", lubridate::year(Sys.Date()))
 bs = 10
@@ -361,6 +361,15 @@ pstRep <- c(
   `Petrol Product (non-HVL)` = liteGreen
 )
 
+pstSys <- c(
+  `Gas Distribution` = darkBlue,
+  `Gas Transmission` = liteGreen,
+  `Hazardous Liquids` = lilac,
+  `Gas Gathering` = honey,
+  `Underground Natural Gas Storage` = liteBlue
+)
+
+
 ```
 
 ```{r load gis data and get adjacent states}
@@ -652,7 +661,7 @@ df %>%
         legend.box = "horizontal",
         plot.margin = margin(3,30,3,4, "mm"),)+
   labs(title = paste(moStateL, "Pipeline Incident Rate"),
-       subtitle = "All Systems, All Incidents per 1,000 Miles (2010-2022)",
+       subtitle = "All Systems, All Incidents per 1,000 Miles (2014-2023)",
        caption = capt,
        tag = tag,
        y = "Incident Rate", 
@@ -702,7 +711,7 @@ df %>%
         plot.tag.position = "topright",
         plot.tag.location = "plot")+
   labs(title = paste(moStateL, "Significant Incident Rate"),
-       subtitle = "All Systems, Significant Incidents per 1,000 Miles (2010-2022)",
+       subtitle = "All Systems, Significant Incidents per 1,000 Miles (2014-2023)",
        caption = capt,
        tag = tag,
        y = "Significant Incident Rate", 
@@ -806,7 +815,7 @@ miles_tern <- milesFull %>%
          ))
 
 
-ggplot(data = miles_tern, aes(x = GD_p, y = GT_p, z = HL_p, 
+tern<-ggplot(data = miles_tern, aes(x = GD_p, y = GT_p, z = HL_p, 
                               size = total, col = do_col))+
   geom_point(data = . %>% filter(!do_col), alpha = .7)+
   geom_point(data = . %>% filter(do_col), alpha = .9)+
@@ -832,7 +841,11 @@ ggplot(data = miles_tern, aes(x = GD_p, y = GT_p, z = HL_p,
         tern.panel.grid.minor = element_line(linewidth = .3, linetype = "dotted", color = "gray80"),
         legend.position = "none",
         plot.margin = margin(0,0,0,0,"pt"))+
-  theme_mesh(5)
+  theme_mesh(5) 
+
+
+gridExtra::arrangeGrob(tern, tern, tern, layout_matrix = rbind(c(1,1,2),
+                                        c(1,1,3)))
 
 #ggplot2::ggsave("NY/arrange.png", ga, width = wdt, height = hgt, units = "px")
 
