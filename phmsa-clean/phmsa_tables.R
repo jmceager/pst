@@ -20,6 +20,7 @@ download.file("https://www.phmsa.dot.gov/sites/phmsa.dot.gov/files/data_statisti
 distData <- read_xlsx(unzip(temp, files = "gd2010toPresent.xlsx"), sheet = 2)
 tranData <- read_xlsx(unzip(temp, files = "gtggungs2010toPresent.xlsx"), sheet = 2)
 hzrdData <- read_xlsx(unzip(temp, files = "hl2010toPresent.xlsx"), sheet = 2)
+lngData <- read_xlsx(unzip(temp, files = "lng2011toPresent.xlsx"), sheet = 2)
 
 #### MILEAGE DATA ####
 
@@ -327,7 +328,7 @@ short_cols <- c( "REPORT_NUMBER", "NAME","OPERATOR_ID",  #basic characteristics
                  "FATALITY_IND","FATAL", "INJURY_IND","INJURE", #human impact
                  "EXPLODE_IND","IGNITE_IND" ,  "NUM_PUB_EVACUATED", "TOTAL_COST_CURRENT",#impact 2
                  "INSTALLATION_YEAR", "SYSTEM_PART_INVOLVED", "PIPE_DIAMETER", #inc char 
-                 "CAUSE","CAUSE_DETAILS", "NARRATIVE", #inc char 
+                 "CAUSE","CAUSE_DETAILS","MAP_CAUSE","MAP_SUBCAUSE", "NARRATIVE", #inc char 
                  "mileage", "pri.id","pri.name"
                  )  #joined char
 
