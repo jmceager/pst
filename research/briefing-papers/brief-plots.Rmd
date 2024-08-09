@@ -34,10 +34,10 @@ library(scales)
 library(readxl)
 library(kableExtra)
 library(lubridate)
-library(sp)
-library(rgeos)
+#library(sp)
+#library(rgeos)
 library(tufte)
-library(rgdal)
+#library(rgdal)
 library(ggspatial)
 library(mapboxapi)
 library(reactable)
@@ -48,7 +48,7 @@ options(knitr.table.format = "latex")
 wdt = 6
 hgt = wdt/1.62
 
-capt = "Source: PHMSA Incident and Mileage Data (2010-2021)"
+capt = "Source: PHMSA Incident and Mileage Data (2023)"
 datadir = "https://raw.githubusercontent.com/jmceager/pst/main/phmsa-clean/data/"
 tag = paste("PST", lubridate::year(Sys.Date()))
 ```
@@ -199,24 +199,24 @@ miles <- read.csv(paste0(datadir, "clean/sys_miles.csv"))
 
 ```{r add old data to df}
 
-gtOld <- read.csv( paste0(datadir, "raw/gtgg2002to2009.csv")) %>%
+gtOld <- read.csv( paste0(datadir, "raw/gtgg2002to2009.csv")) %>% 
   filter(grepl("GT", SYSTEM_TYPE), IYEAR > 2001, OFFSHORE_TEXT == "ONSHORE")%>%
-  select(IYEAR, ACSTATE, SIGNIFICANT, SERIOUS, CAUSE, FATAL) %>%
+  select(IYEAR, ACSTATE, SIGNIFICANT, SERIOUS, MAP_CAUSE, FATAL) %>%
   mutate(SYS = "GT")
 
 hlOld <- read.csv( paste0(datadir, "raw/hl2002to2009.csv")) %>%
   filter(IYEAR > 2001, OFFSHORE == "NO")%>%
-  select(IYEAR, ACSTATE, SIGNIFICANT, SERIOUS, CAUSE, FATAL) %>%
+  select(IYEAR, ACSTATE, SIGNIFICANT, SERIOUS, MAP_CAUSE, FATAL) %>%
   mutate(SYS = "HL")
 
 gdOldish <- read.csv(paste0(datadir, "raw/gdmar2004to2009.csv") ) %>%
-  select(IYEAR, ACSTATE, SIGNIFICANT, SERIOUS, CAUSE, FATAL) %>%
+  select(IYEAR, ACSTATE, SIGNIFICANT, SERIOUS, MAP_CAUSE, FATAL) %>%
   mutate(SYS = "GD")
 
 gdOldest <- read.csv(paste0(datadir, "raw/gd1986tofeb2004.csv") ) %>%
   mutate(IYEAR = year(mdy(IDATE)))%>%
   filter(IYEAR > 2001) %>%
-  select(IYEAR, ACCST, SIGNIFICANT, SERIOUS, CAUSE, FAT) %>%
+  select(IYEAR, ACCST, SIGNIFICANT, SERIOUS, MAP_CAUSE, FAT) %>%
   rename(ACSTATE = ACCST,
          FATAL = FAT)%>%
   mutate(SYS = "GD")
@@ -242,77 +242,270 @@ other <- c("NO DATA", "OTHER", "OTHER INCIDENT CAUSE")
 dfBig <- df %>% 
   filter(IYEAR < 2022, ON_OFF_SHORE == "ONSHORE")%>%
   select(intersect(colnames(dfOld), colnames(df))) %>%
-  rbind(dfOld) %>%
-  mutate(CAUSE = case_when(CAUSE %in% mat ~ "Materials and Equipment",
-                           CAUSE %in% op ~ "Operator",
-                           CAUSE %in% extr ~ "External",
-                           CAUSE %in% corr ~ "Corrosion",
-                           CAUSE %in% excv ~ "Excavation",
-                           CAUSE %in% other ~ "Other"
-                           )
-         )
+  rbind(dfOld)# %>%
+  # mutate(CAUSE2dontuse = case_when(CAUSE %in% mat ~ "Materials and Equipment",
+  #                          CAUSE %in% op ~ "Operator",
+  #                          CAUSE %in% extr ~ "External",
+  #                          CAUSE %in% corr ~ "Corrosion",
+  #                          CAUSE %in% excv ~ "Excavation",
+  #                          CAUSE %in% other ~ "Other"
+  #                          )
+  #        )
 ```
 
 ## Briefing Paper 6
 
-```{r sig onshore}
+```{r sig onshore dash}
 mainSYS <- c("HL","GT","GD")
+
+es_labs <- c("Distribución de Gas", 
+             "Transmisión de Gas",
+             "Líquidos Peligrosos")
+
+es_dist <- c(`GD` = "Distribución de Gas", 
+             `GT` = "Transmisión de Gas",
+             `HL` = "Líquidos Peligrosos")
   
-dfBig %>%
+sigon_dash <- dfBig %>%
   filter(SIGNIFICANT == "YES", SYS %in% mainSYS)%>%
   count(SYS, IYEAR) %>%
-  ggplot(aes(x = IYEAR, y = n, group = SYS, color = SYS))+
-  geom_smooth(method = "glm", alpha = .3, size = .5, linetype = "dashed")+
-  geom_line(size = .75)+
+  ggplot(aes(x = IYEAR, y = n, group = SYS, color = SYS, fill = SYS))+
+  geom_smooth(method = "glm", alpha = .3, linewidth = .5, linetype = "dashed")+
+  geom_line(linewidth = .75)+
   scale_color_manual(values = pst1,
-                     name = "System",
                      labels = c("Gas Distribution","Gas Transmission","Hazardous Liquids")
                      )+
-  scale_x_continuous(name = "Year",
-                     breaks = seq(2002,2021,2))+
+  scale_fill_manual(values = pst1,
+                     labels = c("Gas Distribution","Gas Transmission","Hazardous Liquids")
+                     )+
+  scale_x_continuous(breaks = seq(2002,2021,2))+
   scale_y_continuous(limits = c(10,190),
-                     breaks = seq(20,180, 40),
-                     name = "Significant Incidents")+
+                     breaks = seq(20,180, 40))+
   theme_pst()+
   theme(legend.direction = "horizontal",
-        legend.position = c(0.4,0.1))+
+        legend.position = c(0.4,0.1))
+  
+sigon +
   labs(title = "Significant Pipeline Incidents",
         subtitle = "Onshore Pipeline Systems (2010-2021)",
+        y = "Significant Incidents",
+         color = "System",
+       fill = "System",
+       x = "Year",
         tag = tag,
         caption = capt)
 
 
-ggsave("plots/AllSig.png", width = wdt, height = hgt, units = "in")
+ggsave("plots/en/AllSig_EN.pdf", width = wdt, height = hgt, units = "in")
+
+
+sigon +
+  scale_color_manual(values = pst1,
+                     labels = es_labs
+                     )+
+  scale_fill_manual(values = pst1,
+                     labels = es_labs
+                     )+
+  labs(title = "Incidentes principales en las tuberías",
+        subtitle = "Sistemas de tuberías en tierra firme (2010-2021)",
+        y = "Incidentes significativos",
+         color = "Sistema",
+       fill = "Sistema",
+       x = "Año",
+        tag = tag,
+        caption = "Fuente: Datos de incidentes y millaje de la PHMSA (2023)")+
+  theme(legend.position.inside = c(0.45,0.1))
+
+ggsave("plots/es/AllSig_ES.pdf", width = wdt, height = hgt, units = "in")
+
 ```
 
-```{r ser onshore}
+```{r sig onshore nodash}
+mainSYS <- c("HL","GT","GD")
+
+capt_es = "Fuente: Datos de incidentes y millaje de la PHMSA (2023)"
+
+es_labs <- c("Distribución de Gas", 
+             "Transmisión de Gas",
+             "Líquidos Peligrosos")
   
-dfBig %>%
-  filter(SERIOUS == "YES", SYS %in% mainSYS)%>%
-  count(SYS, IYEAR) %>% 
-  ggplot(aes(x = IYEAR, y = n, group = SYS, color = SYS))+
-  geom_smooth(method = "glm", alpha = .3, size = .5, linetype = "dashed")+
-  geom_line(size = .75)+
-  scale_color_manual(values = pst1, 
-                     name = "System",
-                     labels = c("Gas Distribution","Gas Transmission","Hazardous Liquids"))+
-  scale_x_continuous(name = "Year",
-                     breaks = seq(2002,2021,2))+
-  scale_y_continuous(limits = c(0,52),
-                     expand = c(0,0),
-                     name = "Serious Incidents")+
+sigon_none <- dfBig %>%
+  filter(SIGNIFICANT == "YES", SYS %in% mainSYS)%>%
+  count(SYS, IYEAR) %>%
+  ggplot(aes(x = IYEAR, y = n, group = SYS, color = SYS, fill = SYS))+
+  geom_smooth(method = "glm", alpha = .3, linewidth = 0, linetype = "dashed")+
+  geom_line(linewidth = .75)+
+  scale_color_manual(values = pst1,
+                     labels = c("Gas Distribution","Gas Transmission","Hazardous Liquids")
+                     )+
+  scale_fill_manual(values = pst1,
+                     labels = c("Gas Distribution","Gas Transmission","Hazardous Liquids")
+                     )+
+  scale_x_continuous(breaks = seq(2002,2021,2))+
+  scale_y_continuous(limits = c(10,190),
+                     breaks = seq(20,180, 40))+
   theme_pst()+
   theme(legend.direction = "horizontal",
-        legend.position = c(0.6,0.85))+
-  labs(title = "Serious Pipeline Incidents",
-       subtitle = "Onshore Pipeline Systems (2010-2021)",
-       tag = tag,
-       caption = capt)
+        legend.position = c(0.4,0.1))
+  
+sigon_none +
+  labs(title = "Significant Pipeline Incidents",
+        subtitle = "Onshore Pipeline Systems (2010-2021)",
+        y = "Significant Incidents",
+         color = "System",
+       fill = "System",
+       x = "Year",
+        tag = tag,
+        caption = capt)
 
 
-ggsave("plots/AllSer.png", width = wdt, height = hgt, units = "in")
+ggsave("plots/en/AllSigNew_EN_.pdf", width = wdt, height = hgt, units = "in")
+
+
+sigon_none +
+  scale_color_manual(values = pst1,
+                     labels = es_labs
+                     )+
+  scale_fill_manual(values = pst1,
+                     labels = es_labs
+                     )+
+  labs(title = "Incidentes principales en las tuberías",
+        subtitle = "Sistemas de tuberías en tierra firme (2010-2021)",
+        y = "Incidentes significativos",
+         color = "Sistema",
+       fill = "Sistema",
+       x = "Año",
+        tag = tag,
+        caption = "Fuente: Datos de incidentes y millaje de la PHMSA (2023)")+
+  theme(legend.position.inside = c(0.45,0.1))
+
+ggsave("plots/es/AllSigNew_ES.pdf", width = wdt, height = hgt, units = "in")
 
 ```
+
+```{r ser onshore dash}
+mainSYS <- c("HL","GT","GD")
+
+es_labs <- c("Distribución de Gas", 
+             "Transmisión de Gas",
+             "Líquidos Peligrosos")
+  
+sigon_dash <- dfBig %>%
+  filter(SERIOUS == "YES", SYS %in% mainSYS)%>%
+  count(SYS, IYEAR) %>%
+  ggplot(aes(x = IYEAR, y = n, group = SYS, color = SYS, fill = SYS))+
+  geom_smooth(method = "glm", alpha = .3, linewidth = .5, linetype = "dashed")+
+  geom_line(linewidth = .75)+
+  scale_color_manual(values = pst1,
+                     labels = c("Gas Distribution","Gas Transmission","Hazardous Liquids")
+                     )+
+  scale_fill_manual(values = pst1,
+                     labels = c("Gas Distribution","Gas Transmission","Hazardous Liquids")
+                     )+
+  scale_x_continuous(breaks = seq(2002,2021,2))+
+  scale_y_continuous(limits = c(0,52),
+                     expand = c(0,0))+
+  theme_pst()+
+  theme(legend.direction = "horizontal",
+        legend.position = c(0.6,0.85))
+  
+sigon_dash +
+  labs(title = "Serious Pipeline Incidents",
+        subtitle = "Onshore Pipeline Systems (2010-2021)",
+        y = "Serious Incidents",
+         color = "System",
+       fill = "System",
+       x = "Year",
+        tag = tag,
+        caption = capt)
+
+
+ggsave("plots/en/AllSer_EN.pdf", width = wdt, height = hgt, units = "in")
+
+
+sigon_dash +
+  scale_color_manual(values = pst1,
+                     labels = es_labs
+                     )+
+  scale_fill_manual(values = pst1,
+                     labels = es_labs
+                     )+
+  labs(title = "Incidentes serios en las tuberías",
+        subtitle = "Sistemas de tuberías en tierra firme (2010-2021)",
+        y = "Incidentes serios",
+         color = "Sistema",
+       fill = "Sistema",
+       x = "Año",
+        tag = tag,
+        caption = capt_es)+
+  theme(legend.position.inside = c(0.6,0.85))
+
+ggsave("plots/es/AllSer_ES.pdf", width = wdt, height = hgt, units = "in")
+
+```
+
+```{r ser onshore nodash}
+mainSYS <- c("HL","GT","GD")
+
+es_labs <- c("Distribución de Gas", 
+             "Transmisión de Gas",
+             "Líquidos Peligrosos")
+  
+sigon_none <- dfBig %>%
+  filter(SERIOUS == "YES", SYS %in% mainSYS)%>%
+  count(SYS, IYEAR) %>%
+  ggplot(aes(x = IYEAR, y = n, group = SYS, color = SYS, fill = SYS))+
+  geom_smooth(method = "glm", alpha = .3, linewidth = .0, linetype = "dashed")+
+  geom_line(linewidth = .75)+
+  scale_color_manual(values = pst1,
+                     labels = c("Gas Distribution","Gas Transmission","Hazardous Liquids")
+                     )+
+  scale_fill_manual(values = pst1,
+                     labels = c("Gas Distribution","Gas Transmission","Hazardous Liquids")
+                     )+
+  scale_x_continuous(breaks = seq(2002,2021,2))+
+  scale_y_continuous(limits = c(0,52),
+                     expand = c(0,0))+
+  theme_pst()+
+  theme(legend.direction = "horizontal",
+        legend.position = c(0.6,0.85))
+  
+sigon_none +
+  labs(title = "Significant Pipeline Incidents",
+        subtitle = "Onshore Pipeline Systems (2010-2021)",
+        y = "Significant Incidents",
+         color = "System",
+       fill = "System",
+       x = "Year",
+        tag = tag,
+        caption = capt)
+
+
+ggsave("plots/en/AllSerNew_EN.pdf", width = wdt, height = hgt, units = "in")
+
+
+sigon_none +
+  scale_color_manual(values = pst1,
+                     labels = es_labs
+                     )+
+  scale_fill_manual(values = pst1,
+                     labels = es_labs
+                     )+
+  labs(title = "Incidentes serios en las tuberías",
+        subtitle = "Sistemas de tuberías en tierra firme (2010-2021)",
+        y = "Incidentes serios",
+         color = "Sistema",
+       fill = "Sistema",
+       x = "Año",
+        tag = tag,
+        caption = capt_es)+
+  theme(legend.position.inside = c(0.6,0.85))
+
+ggsave("plots/es/AllSerNew_ES.pdf", width = wdt, height = hgt, units = "in")
+
+```
+
+
 
 ```{r sig table}
 ## TODO: redo with reactable and reactablefmtr
@@ -344,19 +537,36 @@ tdf%>%
 
 ```{r sig incident causes}
 
+pstNew <- c(`GD` = darkBlue,
+            `HL` = lilac, 
+            `GT` = liteGreen, 
+            `GG` = "#F2AA18")
+
+pstLabEN <- c(`GT` = "Gas Transmission",
+              `GD` = "Gas Distribution",
+              `HL` = "Hazardous Liquids", 
+              `GG` = "Gas Gathering")
+
+pstLabES <- c(`GT` = "Transporte de gas",
+              `GD` = "Distribución de gas",
+              `HL` = "Líquidos peligrosos", 
+              `GG` = "Recolección de gas")
+
+ 
+str_wrap(str_to_title(unique(dfBig$MAP_CAUSE)), 14)
 
 #### BY CAUSE
 ## bars 
-dfBig %>%
+cause_p <- dfBig %>%
   filter(SIGNIFICANT == "YES", SYS != "UNGS")%>%
-  count(SYS, CAUSE) %>%
-  complete(SYS, CAUSE, fill = list(n = 0))%>%
+  count(SYS, MAP_CAUSE) %>%
+  complete(SYS, MAP_CAUSE, fill = list(n = 0))%>%
   group_by(SYS)%>%
   mutate(total = sum(n))%>%
   ungroup()%>%
   mutate(prop = n/total,
-         CAUSE = str_wrap(CAUSE, width = 14))%>%
-  ggplot(aes(x = reorder(CAUSE, n), y = prop, fill = reorder(SYS,-total)))+
+         MAP_CAUSE = str_wrap(str_to_title(MAP_CAUSE), width = 14))%>%
+  ggplot(aes(x = reorder(MAP_CAUSE, n), y = prop, fill = reorder(SYS,-total)))+
   geom_bar(position = "dodge", stat = "identity")+
   theme_pst()+
   theme(panel.grid.minor.x = element_line(linetype = "dotted", 
@@ -365,23 +575,53 @@ dfBig %>%
                                           linetype = "dotted"),
         panel.grid.major.y = element_blank(),
         panel.grid.minor.y = element_blank(),
-        legend.position = "bottom"
+        legend.position = "right"
         )+
   scale_y_continuous(labels = scales::percent_format(), expand = c(0,0), limits = c(0,.45))+
-  scale_fill_manual(values = pst1, name = "System", 
-                    labels = c("Hazardous Liquid", "Gas Distribution",
-                               "Gas Transmission","Gas Gathering"))+
-  coord_flip()+
+  scale_fill_manual(values = pstNew, name = "System", 
+                    labels = rev(pstLabEN),
+                    guide = guide_legend(reverse = TRUE))+
+  coord_flip()
+
+cause_p +
   labs(x = "Cause", y = NULL,
        title = "Significant Incident Cause Breakdown",
        subtitle = "Percent of Significant Incidents by Cause for Each System",
        tag = tag, caption = capt)
 
-ggsave("plots/CausePropBar.png", width = wdt, height = hgt, units = "in")
+ggsave("plots/en/CausePropBar_EN.pdf", width = wdt, height = hgt, units = "in")
+
+cause_p + 
+  scale_x_discrete(
+    labels = c(
+      `Material/Weld/Equip\nFailure` = "Materiales, soldadura,\ny equipo",
+      `All Other\nCauses` ="Otros",
+      `Corrosion` = "Corrosión",
+      `Incorrect\nOperation` = "Error del operador" ,
+      `Natural Force\nDamage` = "Fuerzas naturales" ,
+      `Excavation\nDamage`  = "Excavación",
+      `Other Outside\nForce Damage` = "Fuerzas ajenas"
+    )
+  )+
+  scale_fill_manual(values = pstNew, name = "Sistema", 
+                    labels = pstLabES,
+                    guide = guide_legend(reverse = TRUE))+
+  labs(x = "Causa", y = NULL,
+       title = "Desglose de las causas de incidentes significativos",
+       subtitle = "Porcentaje de incidentes significativos por causa por cada sistema",
+       tag = tag, caption = capt_es)
+
+ggsave("plots/es/CausePropBar_ES.pdf", width = wdt, height = hgt, units = "in")
+
+
+```
+
+```{r}
 
 ##dots
 dfBig %>%
   filter(SIGNIFICANT == "YES", SYS != "UNGS")%>%
+  rename(CAUSE = MAP_CAUSE)%>%
   count(SYS, CAUSE) %>%
   complete(SYS, CAUSE, fill = list(n = 0))%>%
   group_by(SYS)%>%
@@ -412,7 +652,7 @@ dfBig %>%
        subtitle = "Percent of Significant Incidents by Cause for Each System",
        tag = tag, caption = capt)
 
-ggsave("plots/CausePropDot.png", width = wdt, height = hgt, units = "in")
+ggsave("plots/CausePropDot.pdf", width = wdt, height = hgt, units = "in")
 
 #### BY SYS
 ##dots
@@ -448,7 +688,7 @@ dfBig %>%
        tag = tag, 
        caption = capt)
 
-ggsave("plots/CausePropDotSYS.png", width = wdt, height = hgt, units = "in")
+ggsave("plots/CausePropDotSYS.pdf", width = wdt, height = hgt, units = "in")
 ```
 
 
@@ -475,6 +715,7 @@ southern <- c("GA","FL","SC","NC","AL","MS","TN","KY","PR")
 southwest <- c("TX","NM","OK","AR","LA")
 
 mileNorm <- miles %>%
+  distinct(IYEAR, SYS, OPERATOR_ID,STATE,  .keep_all = T)%>%
   filter(IYEAR >= 2010)%>%
   group_by(IYEAR, SYSTEM_TYPE, STATE) %>%
   summarise(mileage = sum(mileage, na.rm = T)) %>%
@@ -493,7 +734,8 @@ regionalIPM <- df %>%
          IYEAR < 2022) %>%
   count(IYEAR, STATE, SYS)%>%
   complete(IYEAR, STATE, SYS, fill = list(n = 0))%>%
-  full_join(select(mileNorm, !allmiles) , 
+  full_join(select(mileNorm, !allmiles) %>%
+              filter(IYEAR < 2022), 
             by = c("IYEAR", "SYS", "STATE")) %>%
   filter(mileage > 0 )  %>% #needed?
   mutate(region = case_when( STATE %in% western ~ "Western",
@@ -509,16 +751,17 @@ regionalIPM <- df %>%
   group_by(region, SYS)%>%
   summarise(ipm = mean(ipm.reg, na.rm = T))
 
-df %>% 
+ipm_p <- df %>% 
   filter(SYS %in% mainSYS,
          SYSTEM_PART_INVOLVED %in% parts,
          SIGNIFICANT == "YES",
          IYEAR < 2022)%>%
   count(IYEAR, SYS)%>%
-  full_join(select(mileNorm, !mileage) , 
+  full_join(select(mileNorm, !mileage) %>%
+              distinct(IYEAR, SYS, allmiles, .keep_all = T), 
             by = c("IYEAR", "SYS"))%>%
-  distinct(IYEAR, SYS, allmiles, .keep_all = T)%>%
-  mutate(ipm.yr = n/(allmiles/1000))%>%
+  mutate(ipm.yr = n/(allmiles/1000))%>% 
+  filter(IYEAR < 2022)%>%
   group_by(SYS)%>%
   summarise(ipm = mean(ipm.yr),
             region = "National")%>%
@@ -528,8 +771,11 @@ df %>%
   ggplot(aes(x = SYS, y = ipm, fill = region))+
   geom_bar(stat = "identity", position = "dodge")+
   scale_fill_manual(values = pst1, name = "Region")+
-  theme_pst(baseSize = 24)+
+  theme_pst(baseSize = 8)+
   theme(legend.position = c(.175,.6))+
+  scale_y_continuous(limits = c(0, .63), expand = c(0,0))
+
+ipm_p +
   labs(title = "Significant Incident Rates by System",
        subtitle = "National and Regional Averages (2010-2021)",
        y = "Incidents per 1,000 Miles",
@@ -537,7 +783,20 @@ df %>%
        caption = capt,
        tag = tag)
 
-ggsave("plots/SystemRateRegions.png", width = wdt, height = hgt, units = "in")
+ggsave("plots/en/SystemRateRegions_EN.pdf", width = wdt, height = hgt, units = "in")
+
+ipm_p +
+  scale_fill_manual(values = pst1, name = "Región",
+                    labels = c("Nacional" ,"Occidental", "Suroccidental",
+                               "Central","Oriental", "Sureño" ))+
+  labs(title = "Tasas de incidentes significativos por sistema",
+       subtitle = "Promedios nacionales y regionales (2010-2021) ",
+       y = "Incidentes por cada 1.000 millas ",
+       x = "Sistema",
+       caption = capt_es,
+       tag = tag)
+
+ggsave("plots/es/SystemRateRegions_ES.pdf", width = wdt, height = hgt, units = "in")
 
 
 ## 
@@ -677,8 +936,8 @@ ggsave("plots/StateRatesHex.png", width = wdt, height = hgt, units = "in")
 ```
 
 ```{r excavation trends}
-## overall 
-dfBig %>% filter(SIGNIFICANT == "YES", CAUSE == "Excavation", IYEAR < 2022, SYS %in% mainSYS) %>% count(IYEAR) %>%
+#### overall ####
+dfBig %>% filter(SIGNIFICANT == "YES", MAP_CAUSE == "EXCAVATION DAMAGE", IYEAR < 2022, SYS %in% mainSYS) %>% count(IYEAR) %>%
   ggplot(aes(x = IYEAR, y = n))+
   geom_smooth(color = midBlue, method = "glm",  alpha = .3, size = .5, linetype = "dashed")+
   geom_line(color = midBlue, size = 1.2)+
@@ -715,15 +974,239 @@ dfBig %>%
   filter(SIGNIFICANT == "YES", IYEAR < 2022) %>%
   mutate(Period = case_when(between(IYEAR,2002,2009 ) ~ "2002 - '12",
                             between(IYEAR, 2010,2021) ~ "2013 - '21"))%>%
-  count(Period,CAUSE) %>%
-  ggplot(aes(x = str_wrap(CAUSE, 15),y = n, color = Period))+
+  count(Period,MAP_CAUSE) %>%
+  ggplot(aes(x = str_wrap(MAP_CAUSE, 15),y = n, color = Period))+
   geom_point()+
   coord_flip()
 
 ```
 
+
+
+```{r nice colors 2}
+#brewer pal
+col <- brewer.pal(6,"Set2")
+green <- col[1]
+orange <- col[2]
+purple <- col[3]
+pink <- col[4]
+lime <- col[5]
+yellow <- col[6]
+
+ecru = "#FFEEDB"
+
+
+#pst 
+darkBlue <- "#003E59"
+midBlue <- "#00546F"
+bluGreen <- "#459197"
+liteGreen <- "#61A893"
+
+
+#pst contrast 
+#1
+honey <- "#F2AA18"
+lilac <- "#C297B8"
+# 2
+hunterGrn <- "#315C2B"
+maize <- "#E7BB41"
+
+crimson <- "#96140D"
+lavBlu <- "#C6CAED"
+
+#based on pst
+liteBlue <- "#5CCEFF"
+liteBlu2 <- "#0AC2FF"
+darkGreen <- "#3C685A"
+brown <- "#664400"
+
+## coolors
+purp = "#644695"
+
+# pst pairs
+blu_p = "#A8E5FF"
+crim_p = "#F27069"
+purp_p = "#9E86C6"
+lil_p = "#673C5D"
+green_p1 = "#3E7061"
+green_p2 = "#90C2B3"
+ecru_p = "#241300"
+
+
+#pals 
+pst1 <- c(darkBlue, liteGreen, lilac, honey, bluGreen, crimson)
+pst2 <- c(darkBlue, liteGreen, lilac, brown, maize, midBlue)
+pstMax <- c(darkBlue, liteGreen, lilac, honey, purp, brown, crimson, liteBlu2)
+pstPaired <- c(darkBlue, blu_p, green_p1, green_p2, lilac, lil_p, 
+               crimson, crim_p, ecru_p, ecru)
+
+```
+
+```{r}
+cause_es = tibble(
+  CAUSE = unique(dfBig$MAP_CAUSE),
+  en = str_to_title(unique(dfBig$MAP_CAUSE)),
+  es = c("Materiales, soldadura, y equipo",
+         "Otros",
+         "Corrosión",
+         "Error por parte del operador",
+         "Fuerzas naturales",
+         "Excavación",
+         "Fuerzas ajenas" 
+         )
+)
+
+ y = "EXCAVATION DAMAGE"
+
+
+cause_dict = c(
+  `Material/Weld/Equip Failure` = "Materiales, soldadura, y equipo",
+  `All Other Causes`    = "Otros",
+  `Corrosion`    =  "Corrosión",
+  `Incorrect Operation`    = "Error por parte del operador", 
+  `Natural Force Damage`  =  "Fuerzas naturales",
+  `Excavation Damage` ="Excavación",
+  `Other Outside Force Damage` = "Fuerzas ajenas" 
+)
+
+
+order <- dfBig %>%
+  rename(CAUSE = MAP_CAUSE)%>%
+  left_join(cause_es)%>%
+  filter(SIGNIFICANT == "YES")%>%
+  count( en, es, IYEAR)%>%
+  mutate(class = "Significant")%>%
+  rbind(dfBig %>%
+          rename(CAUSE = MAP_CAUSE)%>%
+          left_join(cause_es)%>%
+          filter(SERIOUS == "YES")%>%
+          count(en, es, IYEAR) %>%
+          mutate(class = "Serious")) %>% 
+  filter(class == "Significant")%>%
+  mutate(en = factor(en),
+         en = fct_reorder(en,-n))%>%
+  pull(en) %>% levels()
+
+
+ctp_sig = dfBig %>%
+  rename(CAUSE = MAP_CAUSE)%>%
+  left_join(cause_es)%>%
+  filter(SIGNIFICANT == "YES")%>%
+  count( en, es, IYEAR)%>%
+  mutate(class = "Significant")%>%
+  rbind(dfBig %>%
+          rename(CAUSE = MAP_CAUSE)%>%
+          left_join(cause_es)%>%
+          filter(SERIOUS == "YES")%>%
+          count(en, es, IYEAR) %>%
+          mutate(class = "Serious")) %>% 
+  filter(class == "Significant")%>%
+  mutate(en = factor(en),
+         en = fct_reorder(en,-n))%>%
+  ggplot(aes(x = IYEAR, y = n, group = en, color = en))+
+  geom_line(size = .75)+
+  theme_pst(baseSize = 8)
+
+ctp_sig +
+  scale_color_manual(values = pstMax, name = "Cause", 
+                     labels = function(x) str_wrap(x, 14))+
+  labs(y = "Incidents",
+       x = "Year",
+       title = "Pipeline Incidents by Cause",
+       subtitle = "Significant Incidents from 2002 to 2021",
+       caption = capt, 
+       tag = tag)+
+  theme(strip.text.x = element_text(colour = "gray10", family = pstFont,
+                                  size = 20, vjust = .9),
+        strip.background = element_blank(), strip.placement = "outside",
+        axis.text.y = element_text(lineheight = .25),
+        legend.spacing.y = unit(.0205, 'cm'),
+        legend.position = "right")
+
+
+ggsave("plots/en/SigCauseYears_EN.pdf", width = wdt, height = hgt, units = "in")
+
+ctp_sig +
+  scale_color_manual(values = pstMax, name = "Causa", 
+                     labels = str_wrap(cause_dict, 14))+
+  labs(y = "Incidentes ",
+       x = "Años",
+       title = "Incidentes en las tuberías por causa ",
+       subtitle = "Incidentes significativos entre 2002 y 2021",
+       caption = capt_es, 
+       tag = tag)+
+  theme(strip.text.x = element_text(colour = "gray10", family = pstFont,
+                                  size = 20, vjust = .9),
+        strip.background = element_blank(), strip.placement = "outside",
+        axis.text.y = element_text(lineheight = .25),
+        legend.spacing.y = unit(.0205, 'cm'),
+        legend.position = "right")
+
+
+ggsave("plots/es/SigCauseYears_ES.pdf", width = wdt, height = hgt, units = "in")
+
+
+
+ctp_ser = dfBig %>%
+  rename(CAUSE = MAP_CAUSE)%>%
+  left_join(cause_es)%>%
+  filter(SIGNIFICANT == "YES")%>%
+  count( en, es, IYEAR)%>%
+  mutate(class = "Significant")%>%
+  rbind(dfBig %>%
+          rename(CAUSE = MAP_CAUSE)%>%
+          left_join(cause_es)%>%
+          filter(SERIOUS == "YES")%>%
+          count(en, es, IYEAR) %>%
+          mutate(class = "Serious")) %>% 
+  filter(class == "Serious")%>%
+  mutate(en = factor(en, levels = order))%>%
+  ggplot(aes(x = IYEAR, y = n, group = en, color = en))+
+  geom_line(size = .75)+
+  theme_pst(baseSize = 8)
+
+ctp_ser +
+  scale_color_manual(values = pstMax, name = "Cause", 
+                     labels = function(x) str_wrap(x, 14))+
+  labs(y = "Incidents",
+       x = "Year",
+       title = "Pipeline Incidents by Cause",
+       subtitle = "Serious Incidents from 2002 to 2021",
+       caption = capt, 
+       tag = tag)+
+  theme(strip.text.x = element_text(colour = "gray10", family = pstFont,
+                                  size = 20, vjust = .9),
+        strip.background = element_blank(), strip.placement = "outside",
+        axis.text.y = element_text(lineheight = .25),
+        legend.spacing.y = unit(.0205, 'cm'),
+        legend.position = "right")
+
+
+ggsave("plots/en/SerCauseYears_EN.pdf", width = wdt, height = hgt, units = "in")
+
+ctp_ser +
+  scale_color_manual(values = pstMax, name = "Causa", 
+                     labels = str_wrap(cause_dict, 14))+
+  labs(y = "Incidentes ",
+       x = "Años",
+       title = "Incidentes en las tuberías por causa ",
+       subtitle = "Incidentes serios entre 2002 y 2021",
+       caption = capt_es, 
+       tag = tag)+
+  theme(strip.text.x = element_text(colour = "gray10", family = pstFont,
+                                  size = 20, vjust = .9),
+        strip.background = element_blank(), strip.placement = "outside",
+        axis.text.y = element_text(lineheight = .25),
+        legend.spacing.y = unit(.0205, 'cm'),
+        legend.position = "right")
+
+
+ggsave("plots/es/SerCauseYears_ES.pdf", width = wdt, height = hgt, units = "in")
+```
+
 ```{r}
 exSig <- dfBig %>%
+  rename(CAUSE = MAP_CAUSE)%>%
   filter(SIGNIFICANT == "YES") %>%
   mutate(period = case_when(IYEAR >= 2012 ~ "Post-2012",
                             IYEAR < 2012 ~ "Pre-2012")) %>%
@@ -741,7 +1224,8 @@ exSig <- dfBig %>%
   mutate(class = "Significant")
 
 
-dfBig %>%
+ecd_sig <- dfBig %>%
+  rename(CAUSE = MAP_CAUSE)%>%
   filter(SERIOUS == "YES") %>%
   mutate(period = case_when(IYEAR >= 2012 ~ "Post-2012",
                             IYEAR < 2012 ~ "Pre-2012")) %>%
@@ -750,26 +1234,29 @@ dfBig %>%
   ungroup()%>%
   group_by(period, CAUSE)%>%
   summarise(causeInc = n(),
-            inc = inc)%>%
+            inc = inc) %>% 
   distinct(period, CAUSE, .keep_all = T)%>%
   mutate(percent = causeInc/inc)%>%
   select(!c(causeInc, inc))%>%
   pivot_wider(names_from = c("period"),
               values_from = c("percent"))%>%
   mutate(class = "Serious")%>%
+  rbind(exSig) %>% 
+  left_join(cause_es)%>%
   mutate( class = factor(class, levels = c("Significant","Serious")),
-          CAUSE = factor(CAUSE, levels = c("Materials and Equipment", "Corrosion","External","Excavation","Operator","Other")))%>%
-  rbind(exSig) %>%
+          en = factor(en, levels = order)) %>%
+  filter(class == "Significant")%>%
   ggplot()+
-  geom_segment(aes(x = fct_rev(str_wrap(CAUSE, 15)),
-                   xend = fct_rev(str_wrap(CAUSE, 15)), 
+  geom_segment(aes(x = fct_rev(en),
+                   xend = fct_rev(en), 
                    y = `Pre-2012`,
-                   yend = `Post-2012`))+
-  geom_point(aes(x = str_wrap(CAUSE, 15), y = `Post-2012`, color = "Post-2012"))+
-  geom_point(aes(x = str_wrap(CAUSE, 15), y = `Pre-2012`, color = "Pre-2012"))+
-  scale_color_manual(values = c(pst1[2],pst1[1]), name = "Period")+
+                   yend = `Post-2012`), alpha = .8)+
+  geom_point(aes(x = en, y = `Post-2012`, color = "Post-2012"),
+             size = 2.7, alpha = .9)+
+  geom_point(aes(x = en, y = `Pre-2012`, color = "Pre-2012"),
+             size = 2.7, alpha = .9)+
   scale_y_continuous(labels = scales::percent_format())+
-  theme_pst(baseSize = 20)+
+  theme_pst(baseSize = 8)+
   theme(panel.grid.minor.x = element_line(linetype = "dotted", 
                                                          colour = "#C4C8C6"),
         panel.grid.major.x = element_line(colour = "#394C56", 
@@ -782,78 +1269,145 @@ dfBig %>%
         axis.text.y = element_text(lineheight = .25),
         legend.spacing.y = unit(.125, 'cm'),
         legend.position = c(.9,.175))+
-  coord_flip()+
+  coord_flip()
+
+ecd_sig +
+  scale_color_manual(values = c(pst1[2],pst1[1]), name = "Period",
+                     labels = c("2002-2012", "2012-2021"))+
   labs(x = "Cause", 
        y = "Percent of Incidents",
        title = "Incidents by Cause in 10-Year Periods",
-       subtitle = "Serious and Significant Incidents from 2002 to 2021",
+       subtitle = "Significant Incidents from 2002 to 2021",
        caption = capt,
-       tag = tag)+
-  facet_wrap(~fct_rev(class), strip.position = "top", scales = "free")
+       tag = tag)
 
 
+ggsave("plots/en/SigCauseChange_EN.pdf", width = wdt, height = hgt, units = "in")
+
+ecd_sig +
+  scale_color_manual(values = c(pst1[2],pst1[1]), name = "Periodo",
+                     labels = c("2002-2012", "2012-2021"))+
+  scale_x_discrete(labels = cause_dict)+
+  labs(x = "Causa", 
+       y = NULL,
+       title = "Incidentes por causa en periodos de 10 años",
+       subtitle = "Incidentes significativos entre 2002 y 2021",
+       caption = capt_es,
+       tag = tag)
 
 
-ggsave("plots/ExcavationChange.png", width = wdt, height = hgt, units = "in")
-```
+ggsave("plots/es/SigCauseChange_ES.pdf", width = wdt, height = hgt, units = "in")
 
-```{r}
-dfBig %>%
-  filter(SIGNIFICANT == "YES")%>%
-  count(CAUSE, IYEAR) %>%
-  mutate(class = "Significant")%>%
-  rbind(dfBig %>%
-          filter(SERIOUS == "YES")%>%
-          count(CAUSE, IYEAR) %>%
-          mutate(class = "Serious"))%>%
-  ggplot(aes(x = IYEAR, y = n, group = CAUSE, color = CAUSE))+
-  geom_line(size = .75)+
-  theme_pst(baseSize = 20)+
-  scale_color_manual(values = pst1, name = "Cause")+
-  labs(y = "Incidents",
-       x = "Year",
-       title = "Pipeline Incidents by Cause",
-       subtitle = "Significant and Serious Incidents from 2002 to 2021")+
-  theme(strip.text.x = element_text(colour = "gray10", family = pstFont,
+
+ecd_ser <- dfBig %>%
+  rename(CAUSE = MAP_CAUSE)%>%
+  filter(SERIOUS == "YES") %>%
+  mutate(period = case_when(IYEAR >= 2012 ~ "Post-2012",
+                            IYEAR < 2012 ~ "Pre-2012")) %>%
+  group_by(period)%>%
+  mutate(inc = n())%>%
+  ungroup()%>%
+  group_by(period, CAUSE)%>%
+  summarise(causeInc = n(),
+            inc = inc) %>% 
+  distinct(period, CAUSE, .keep_all = T)%>%
+  mutate(percent = causeInc/inc)%>%
+  select(!c(causeInc, inc))%>%
+  pivot_wider(names_from = c("period"),
+              values_from = c("percent"))%>%
+  mutate(class = "Serious")%>%
+  rbind(exSig) %>% 
+  left_join(cause_es)%>%
+  mutate( class = factor(class, levels = c("Significant","Serious")),
+          en = factor(en, levels = order)) %>%
+  filter(class == "Serious")%>%
+  ggplot()+
+  geom_segment(aes(x = fct_rev(en),
+                   xend = fct_rev(en), 
+                   y = `Pre-2012`,
+                   yend = `Post-2012`), alpha = .8)+
+  geom_point(aes(x = en, y = `Post-2012`, color = "Post-2012"),
+             size = 2.7, alpha = .9)+
+  geom_point(aes(x = en, y = `Pre-2012`, color = "Pre-2012"),
+             size = 2.7, alpha = .9)+
+  scale_y_continuous(labels = scales::percent_format())+
+  theme_pst(baseSize = 8)+
+  theme(panel.grid.minor.x = element_line(linetype = "dotted", 
+                                                         colour = "#C4C8C6"),
+        panel.grid.major.x = element_line(colour = "#394C56", 
+                                          linetype = "dotted"),
+        panel.grid.major.y = element_blank(),
+        panel.grid.minor.y = element_blank(),
+        strip.text.x = element_text(colour = "gray10", family = pstFont,
                                   size = 20, vjust = .9),
         strip.background = element_blank(), strip.placement = "outside",
         axis.text.y = element_text(lineheight = .25),
-        legend.spacing.y = unit(.0205, 'cm'),
-        legend.position = c(.85,.7))+
-  facet_wrap(~fct_rev(class), scales = "free_y")
+        legend.spacing.y = unit(.125, 'cm'),
+        legend.position = c(.9,.175))+
+  coord_flip()
 
-ggsave("plots/ExcavationYears.png", width = wdt, height = hgt, units = "in")
+ecd_ser +
+  scale_color_manual(values = c(pst1[2],pst1[1]), name = "Period",
+                     labels = c("2002-2012", "2012-2021"))+
+  labs(x = "Cause", 
+       y = "Percent of Incidents",
+       title = "Incidents by Cause in 10-Year Periods",
+       subtitle = "Serious Incidents from 2002 to 2021",
+       caption = capt,
+       tag = tag)
 
+
+ggsave("plots/en/SerCauseChange_EN.pdf", width = wdt, height = hgt, units = "in")
+
+ecd_ser +
+  scale_color_manual(values = c(pst1[2],pst1[1]), name = "Periodo",
+                     labels = c("2002-2012", "2012-2021"))+
+  scale_x_discrete(labels = cause_dict)+
+  labs(x = "Causa", 
+       y = NULL,
+       title = "Incidentes por causa en periodos de 10 años",
+       subtitle = "Incidentes serios entre 2002 y 2021",
+       caption = capt_es,
+       tag = tag)
+
+
+ggsave("plots/es/SerCauseChange_ES.pdf", width = wdt, height = hgt, units = "in")
 ```
-
 
 #### HCA Vibes
 
 ```{r hca trends data }
 library(plyr)
 
+data_path = "/Users/jameseager/Documents/pst/phmsa-clean/data/raw/reports"
 
-setwd("./reports")
-
-liqAR <- ldply(.data = list.files(pattern = "_liquid_"),
+liqAR <- plyr::ldply(.data = list.files(pattern = "_liquid",
+                                        path = data_path,
+                                        full.names = T),
                .fun = read.csv,
                skip = 2
                )
-gtrAR <- ldply(.data = list.files(pattern = "_transmission_"),
-               .fun = read.csv,
-               skip =2
+gtrAR <- plyr::ldply(.data = list.files(pattern = "_transmission",
+                                        path = data_path,
+                                        full.names = T),        
+                     .fun = read.csv,
+                     skip = 2
                )
 
-setwd("./old")
+data_path = paste0(data_path, "/old")
 
-liqAROld <- ldply(.data = list.files(pattern = "_liquid_"),
-                  .fun = read.csv
-                  )
-gtrAROld <- ldply(.data = list.files(pattern = "_transmission_"),
-                  .fun = read.csv
-                  )
+liqAROld <- plyr::ldply(.data = list.files(pattern = "_liquid",
+                                        path = data_path,
+                                        full.names = T),
+               .fun = read_xlsx,
+               
+               )
+gtrAROld <- plyr::ldply(.data = list.files(pattern = "_transmission",
+                                        path = data_path,
+                                        full.names = T),        
+                     .fun = read_xlsx
+               )
    
-setwd("..")
 
 detach("package:plyr", unload = T)
 ```
@@ -909,7 +1463,7 @@ hlHCA <- read.csv( paste0(datadir, "raw/hl2002to2009.csv")) %>%
 
 ```{r hca incidents plots }
 
-hcaLiqMile %>%
+hl_hca_dash =  hcaLiqMile %>%
   filter(REPORT_YEAR > 2004)%>%
   rename(IYEAR = REPORT_YEAR)%>%
   select(IYEAR, HCA, nonHCA)%>%
@@ -921,17 +1475,77 @@ hcaLiqMile %>%
   ggplot(aes(x = IYEAR, y = rate, color = name, fill = name))+
   geom_line(size = .75)+
   geom_smooth(method = "glm", alpha = .3, size = .5, linetype = "dashed")+
-  scale_color_manual(values = pst1,
-                     name = "Possible HCA?")+
-  scale_fill_manual(values = pst1, guide = NULL)+
-  theme_pst(baseSize = 20)+
-  theme(legend.position = c(.15,.8))+
+  scale_color_manual(values = pst1)+
+  scale_fill_manual(values = pst1)+
+  scale_x_continuous(limits = c(2005, 2021), expand = c(0,0))+
+  theme_pst(baseSize = 8)+
+  theme(legend.position = c(.15,.8))
+
+hl_hca_dash +
+  labs(title = "Significant Incident Rate by HCA Status",
+       subtitle = "Singificant Hazardous Liquid Incidents per 1,000 Miles (2005-2021)",
+       x = "Year",
+       color = "Possible HCA?",
+       fill = "Possible HCA?",
+       y = "Incidents per 1,000 Miles",
+       caption = capt, tag = tag)
+  
+ggsave("plots/en/HLHCA_EN.pdf", width = wdt, height = hgt, units = "in")
+
+hl_hca_dash +
+  scale_color_manual(values = pst1, labels = c("SÍ", "NO"))+
+  scale_fill_manual(values = pst1, labels = c("SÍ", "NO"))+  
+  labs(title = "Tasas de incidentes significativos por estado de HCA ",
+       subtitle = "Incidentes significativos en tuberías de líquidos peligrosos por cada 1.000 millas (2010-2021)",
+       x = "Año",
+       color = "¿Una posible HCA?",
+       fill = "¿Una posible HCA?",
+       y = "Incidentes por cada 1.000 millas",
+       caption = capt_es, tag = tag)
+  
+ggsave("plots/es/HLHCA_ES.pdf", width = wdt, height = hgt, units = "in")
+
+hl_hca_nodash =  hcaLiqMile %>%
+  filter(REPORT_YEAR > 2004)%>%
+  rename(IYEAR = REPORT_YEAR)%>%
+  select(IYEAR, HCA, nonHCA)%>%
+  pivot_longer(!IYEAR)%>%
+  mutate(name = if_else(name == "HCA", "YES", "NO"),
+         value = value/1000) %>%
+  left_join(hlHCA, by = c("IYEAR" = "IYEAR", "name" = "HCA")) %>%  
+  mutate(rate = n/value) %>%
+  ggplot(aes(x = IYEAR, y = rate, color = name, fill = name))+
+  geom_line(size = .75)+
+  geom_smooth(method = "glm", alpha = .3, linewidth = 0, linetype = 0)+
+  scale_x_continuous(limits = c(2005, 2021), expand = c(0,0))+
+  theme_pst(baseSize = 8)+
+  theme(legend.position = c(.15,.8))
+
+hl_hca_nodash +
+  scale_color_manual(values = pst1)+
+  scale_fill_manual(values = pst1)+  
   labs(title = "Significant Incident Rate by HCA Status",
        subtitle = "Singificant Hazardous Liquid Incidents per 1,000 Miles (2010-2021)",
        x = "Year",
-       y = "Incidents per 1,000 Miles")
+       color = "Possible HCA?",
+       fill = "Possible HCA?",
+       y = "Incidents per 1,000 Miles",
+       caption = capt, tag = tag)
   
-ggsave("plots/HLHCA.png", width = wdt, height = hgt, units = "in")
+ggsave("plots/en/HLHCA_New_EN.pdf", width = wdt, height = hgt, units = "in")
+
+hl_hca_nodash +
+  scale_color_manual(values = pst1, labels = c("SÍ", "NO"))+
+  scale_fill_manual(values = pst1, labels = c("SÍ", "NO"))+  
+  labs(title = "Tasas de incidentes significativos por estado de HCA ",
+       subtitle = "Incidentes significativos en tuberías de líquidos peligrosos por cada 1.000 millas (2010-2021)",
+       x = "Año",
+       color = "¿Una posible HCA?",
+       fill = "¿Una posible HCA?",
+       y = "Incidentes por cada 1.000 millas",
+       caption = capt_es, tag = tag)
+  
+ggsave("plots/es/HLHCA_New_ES.pdf", width = wdt, height = hgt, units = "in")
 
 ```
 
@@ -953,7 +1567,7 @@ gtHCA <- read.csv( paste0(datadir, "raw/gtgg2002to2009.csv")) %>%
 
 ```{r}
 
-hcaTranMile %>%
+gt_hca_dash = hcaTranMile %>%
   rename(IYEAR = REPORT_YEAR)%>%
   select(IYEAR, HCA, nonHCA)%>%
   pivot_longer(!IYEAR)%>%
@@ -964,21 +1578,83 @@ hcaTranMile %>%
   ggplot(aes(x = IYEAR, y = rate, color = name))+
   geom_line(size = .75)+
   geom_smooth(aes(fill = name), method = "glm", alpha = .3, size = .5, linetype = "dashed")+
-  scale_color_manual(values = pst1,
-                     name = "Possible HCA?")+
-  scale_fill_manual(values = pst1, guide = NULL)+
-  theme_pst(baseSize = 20)+
-  theme(legend.position = c(.8,.8))+
+  scale_color_manual(values = pst1)+
+  scale_fill_manual(values = pst1)+
+  theme_pst(baseSize = 8)+
+  scale_x_continuous(limits = c(2010, 2021), expand = c(0,0),
+                     breaks = seq(2010, 2022, 2))+
+  theme(legend.position = c(.8,.8))
+
+gt_hca_dash +
   labs(title = "Significant Incident Rate by HCA Status",
        subtitle = "Singificant Gas Transmission Incidents per 1,000 Miles (2010-2021)",
        x = "Year",
-       y = "Incidents per 1,000 Miles")
+       color = "Possible HCA?",
+       fill = "Possible HCA?",
+       y = "Incidents per 1,000 Miles",
+       caption = capt, tag = tag)
 
-ggsave("plots/GTHCA.png", width = wdt, height = hgt, units = "in")
+ggsave("plots/en/GTHCA_EN.pdf", width = wdt, height = hgt, units = "in")
+
+gt_hca_dash +
+  scale_color_manual(values = pst1, labels = c("SÍ", "NO"))+
+  scale_fill_manual(values = pst1, labels = c("SÍ", "NO"))+  
+  labs(title = "Tasas de incidentes significativos por estado de HCA ",
+       subtitle = "Incidentes significativos en tuberías de transmisión de gas por cada 1.000 millas (2010-2021)",
+       x = "Año",
+       color = "¿Una posible HCA?",
+       fill = "¿Una posible HCA?",
+       y = "Incidentes por cada 1.000 millas",
+       caption = capt_es, tag = tag)
+
+ggsave("plots/es/GTHCA_ES.pdf", width = wdt, height = hgt, units = "in")
+
+
+gt_hca_nodash = hcaTranMile %>%
+  rename(IYEAR = REPORT_YEAR)%>%
+  select(IYEAR, HCA, nonHCA)%>%
+  pivot_longer(!IYEAR)%>%
+  mutate(name = if_else(name == "HCA", "YES", "NO"),
+         value = value/1000) %>%
+  left_join(gtHCA, by = c("IYEAR" = "IYEAR", "name" = "HCA")) %>% 
+  mutate(rate = n/value) %>%
+  ggplot(aes(x = IYEAR, y = rate, color = name))+
+  geom_line(size = .75)+
+  geom_smooth(aes(fill = name), method = "glm", alpha = .3, linewidth = 0, linetype = 0)+
+  scale_color_manual(values = pst1)+
+  scale_fill_manual(values = pst1)+
+  theme_pst(baseSize = 8)+
+  scale_x_continuous(limits = c(2010, 2021), expand = c(0,0),
+                     breaks = seq(2010, 2022, 2))+
+  theme(legend.position = c(.8,.8))
+
+gt_hca_nodash +
+  labs(title = "Significant Incident Rate by HCA Status",
+       subtitle = "Singificant Gas Transmission Incidents per 1,000 Miles (2010-2021)",
+       x = "Year",
+       color = "Possible HCA?",
+       fill = "Possible HCA?",
+       y = "Incidents per 1,000 Miles",
+       caption = capt, tag = tag)
+
+ggsave("plots/en/GTHCA_New_EN.pdf", width = wdt, height = hgt, units = "in")
+
+gt_hca_nodash +
+  scale_color_manual(values = pst1, labels = c("SÍ", "NO"))+
+  scale_fill_manual(values = pst1, labels = c("SÍ", "NO"))+  
+  labs(title = "Tasas de incidentes significativos por estado de HCA ",
+       subtitle = "Incidentes significativos en tuberías de transmisión de gas por cada 1.000 millas (2010-2021)",
+       x = "Año",
+       color = "¿Una posible HCA?",
+       fill = "¿Una posible HCA?",
+       y = "Incidentes por cada 1.000 millas",
+       caption = capt_es, tag = tag)
+
+ggsave("plots/es/GTHCA_New_ES.pdf", width = wdt, height = hgt, units = "in")
 
 ```
 
-```{r}
+```{r diff en dash}
 hcaLiqMile %>%
   filter(REPORT_YEAR > 2004)%>%
   rename(IYEAR = REPORT_YEAR)%>%
@@ -1010,15 +1686,15 @@ hcaLiqMile %>%
   geom_hline(yintercept = 0, color = "Gray10")+
   geom_smooth(method = "glm", alpha = .3, size = .33, linetype = "dashed")+
   geom_line(size = .66)+
-  annotate("text",x = 2004.7, y = .15, label = "Getting Worse →",angle = 90 ,size = 8, fontface = "bold")+
-  annotate("text",x = 2004.7, y = -.15, label = "← Getting Better ",angle = 90 , size = 8, fontface = "bold")+
+  annotate("text",x = 2004.7, y = .15, label = "Getting Worse →",angle = 90 ,size = 2.4, fontface = "bold")+
+  annotate("text",x = 2004.7, y = -.15, label = "← Getting Better ",angle = 90 , size = 2.4, fontface = "bold")+
   scale_color_manual(values = pst1)+
   scale_fill_manual(values = pst1)+
-  scale_y_continuous(limits = c(-.25,.6))+
   scale_x_continuous(expand = expansion(add = c(.5,0)))+
-  theme_pst(baseSize = 20)+
+  coord_cartesian(clip = "off", ylim = c(-.25,.6))+
+  theme_pst(baseSize = 8)+
   theme(legend.position = c(0.15,0.8),
-        plot.caption = element_text(lineheight = .175))+
+        plot.caption = element_text(lineheight = .5))+
   labs(title = "Significant Incident Rates by System",
        subtitle = "Difference from non-HCA rate for available years",
        tag = tag,
@@ -1027,8 +1703,170 @@ hcaLiqMile %>%
        y = "Difference in Incident Rate",
        x = "Year")
 
-ggsave("plots/HCADiff.png", width = wdt, height = hgt, units = "in")
+ggsave("plots/en/HCADiff_EN.pdf", width = wdt, height = hgt, units = "in")
 ```
+
+```{r diff en no dash}
+hcaLiqMile %>%
+  filter(REPORT_YEAR > 2004)%>%
+  rename(IYEAR = REPORT_YEAR)%>%
+  select(IYEAR, HCA, nonHCA)%>%
+  pivot_longer(!IYEAR)%>%
+  mutate(name = if_else(name == "HCA", "YES", "NO"),
+         value = value/1000) %>%
+  left_join(hlHCA, by = c("IYEAR" = "IYEAR", "name" = "HCA")) %>% 
+  mutate(rate = n/value) %>%
+  pivot_wider(id_cols = "IYEAR",
+              values_from = "rate")  %>% 
+  mutate(diff = YES - NO,
+         System = "HL")%>%
+  rbind(
+    hcaTranMile %>%
+      rename(IYEAR = REPORT_YEAR)%>%
+      select(IYEAR, HCA, nonHCA)%>%
+      pivot_longer(!IYEAR)%>%
+      mutate(name = if_else(name == "HCA", "YES", "NO"),
+             value = value/1000) %>%
+      left_join(gtHCA, by = c("IYEAR" = "IYEAR", "name" = "HCA")) %>% 
+      mutate(rate = n/value) %>%
+      pivot_wider(id_cols = "IYEAR",
+                  values_from = "rate")  %>% 
+      mutate(diff = YES - NO,
+             System = "GT")
+  )%>%
+  ggplot(aes(x = IYEAR, y = diff, color = System, fill = System))+
+  geom_hline(yintercept = 0, color = "Gray10")+
+  geom_smooth(method = "glm", alpha = .3, linewidth = 0 , linetype = 0)+
+  geom_line(size = .66)+
+  annotate("text",x = 2004.7, y = .15, label = "Getting Worse →",angle = 90 ,size = 2.4, fontface = "bold")+
+  annotate("text",x = 2004.7, y = -.15, label = "← Getting Better ",angle = 90 , size = 2.4, fontface = "bold")+
+  scale_color_manual(values = pst1)+
+  scale_fill_manual(values = pst1)+
+  scale_x_continuous(expand = expansion(add = c(.5,0)))+
+  coord_cartesian(clip = "off", ylim = c(-.25,.6))+
+  theme_pst(baseSize = 8)+
+  theme(legend.position = c(0.15,0.8),
+        plot.caption = element_text(lineheight = .5))+
+  labs(title = "Significant Incident Rates by System",
+       subtitle = "Difference from non-HCA rate for available years",
+       tag = tag,
+       caption = "Incident Rate = Incidents per 1,000 Miles\n
+                  Source: PHMSA Annual Reports, Flagged Files, and Mileage Data (2005-Present)",
+       y = "Difference in Incident Rate",
+       x = "Year")
+
+ggsave("plots/en/HCADiff_New_EN.pdf", width = wdt, height = hgt, units = "in", dpi = 300)
+```
+
+```{r diff es dash}
+hcaLiqMile %>%
+  filter(REPORT_YEAR > 2004)%>%
+  rename(IYEAR = REPORT_YEAR)%>%
+  select(IYEAR, HCA, nonHCA)%>%
+  pivot_longer(!IYEAR)%>%
+  mutate(name = if_else(name == "HCA", "YES", "NO"),
+         value = value/1000) %>%
+  left_join(hlHCA, by = c("IYEAR" = "IYEAR", "name" = "HCA")) %>% 
+  mutate(rate = n/value) %>%
+  pivot_wider(id_cols = "IYEAR",
+              values_from = "rate")  %>% 
+  mutate(diff = YES - NO,
+         System = "HL")%>%
+  rbind(
+    hcaTranMile %>%
+      rename(IYEAR = REPORT_YEAR)%>%
+      select(IYEAR, HCA, nonHCA)%>%
+      pivot_longer(!IYEAR)%>%
+      mutate(name = if_else(name == "HCA", "YES", "NO"),
+             value = value/1000) %>%
+      left_join(gtHCA, by = c("IYEAR" = "IYEAR", "name" = "HCA")) %>% 
+      mutate(rate = n/value) %>%
+      pivot_wider(id_cols = "IYEAR",
+                  values_from = "rate")  %>% 
+      mutate(diff = YES - NO,
+             System = "GT")
+  )%>%
+  ggplot(aes(x = IYEAR, y = diff, color = System, fill = System))+
+  geom_hline(yintercept = 0, color = "Gray10")+
+  geom_smooth(method = "glm", alpha = .3, size = .33, linetype = "dashed")+
+  geom_line(size = .66)+
+  annotate("text",x = 2004.7, y = .15, label = "Empeorando →",angle = 90 ,size = 2.4, fontface = "bold")+
+  annotate("text",x = 2004.7, y = -.15, label = "← Mejorando ",angle = 90 , size = 2.4, fontface = "bold")+
+  scale_color_manual(values = pst1, 
+                     labels = es_dist)+
+  scale_fill_manual(values = pst1, labels = es_dist)+
+  scale_x_continuous(expand = expansion(add = c(.5,0)))+
+  coord_cartesian(clip = "off", ylim = c(-.25,.6))+
+  theme_pst(baseSize = 8)+
+  theme(legend.position = c(0.15,0.8),
+        plot.caption = element_text(lineheight = .5))+
+  labs(title = "Tasas de incidentes de las HCA por sistema",
+       subtitle = "Diferencia en la tasa de las no HCA para los años disponibles",
+       tag = tag,
+       caption = "Tasa de incidentes = incidentes por cada 1.000 millas\n
+                  Fuente: Informes Anuales de la PHMSA, archivos marcados y datos del millaje (2006 al presente) ",
+       y = "Diferencia en la tasa de incidentes ",
+       color = "Sistema",
+       fill = "Sistema",
+       x = "Año")
+
+ggsave("plots/es/HCADiff_ES.pdf", width = wdt, height = hgt, units = "in")
+```
+
+```{r diff es no dash}
+hcaLiqMile %>%
+  filter(REPORT_YEAR > 2004)%>%
+  rename(IYEAR = REPORT_YEAR)%>%
+  select(IYEAR, HCA, nonHCA)%>%
+  pivot_longer(!IYEAR)%>%
+  mutate(name = if_else(name == "HCA", "YES", "NO"),
+         value = value/1000) %>%
+  left_join(hlHCA, by = c("IYEAR" = "IYEAR", "name" = "HCA")) %>% 
+  mutate(rate = n/value) %>%
+  pivot_wider(id_cols = "IYEAR",
+              values_from = "rate")  %>% 
+  mutate(diff = YES - NO,
+         System = "HL")%>%
+  rbind(
+    hcaTranMile %>%
+      rename(IYEAR = REPORT_YEAR)%>%
+      select(IYEAR, HCA, nonHCA)%>%
+      pivot_longer(!IYEAR)%>%
+      mutate(name = if_else(name == "HCA", "YES", "NO"),
+             value = value/1000) %>%
+      left_join(gtHCA, by = c("IYEAR" = "IYEAR", "name" = "HCA")) %>% 
+      mutate(rate = n/value) %>%
+      pivot_wider(id_cols = "IYEAR",
+                  values_from = "rate")  %>% 
+      mutate(diff = YES - NO,
+             System = "GT")
+  )%>%
+  ggplot(aes(x = IYEAR, y = diff, color = System, fill = System))+
+  geom_hline(yintercept = 0, color = "Gray10")+
+  geom_smooth(method = "glm", alpha = .3, linewidth = 0 , linetype = 0)+
+  geom_line(size = .66)+
+  annotate("text",x = 2004.7, y = .15, label = "Empeorando →",angle = 90 ,size = 2.4, fontface = "bold")+
+  annotate("text",x = 2004.7, y = -.15, label = "← Mejorando ",angle = 90 , size = 2.4, fontface = "bold")+
+  scale_color_manual(values = pst1, labels = es_dist)+
+  scale_fill_manual(values = pst1, labels = es_dist)+
+  scale_x_continuous(expand = expansion(add = c(.5,0)))+
+  coord_cartesian(clip = "off", ylim = c(-.25,.6))+
+  theme_pst(baseSize = 8)+
+  theme(legend.position = c(0.15,0.8),
+        plot.caption = element_text(lineheight = .5))+
+  labs(title = "Tasas de incidentes de las HCA por sistema",
+       subtitle = "Diferencia en la tasa de las no HCA para los años disponibles",
+       tag = tag,
+       caption = "Tasa de incidentes = incidentes por cada 1.000 millas\n
+                  Fuente: Informes Anuales de la PHMSA, archivos marcados y datos del millaje (2006 al presente) ",
+       y = "Diferencia en la tasa de incidentes ",
+       color = "Sistema",
+       fill = "Sistema",
+       x = "Año")
+
+ggsave("plots/es/HCADiff_New_ES.pdf", width = wdt, height = hgt, units = "in", dpi = 300)
+```
+
 
 ```{r}
 hl2010 <- read_csv("https://github.com/jmceager/pst/blob/main/phmsa-clean/data/clean/hl_inc.csv?raw=true")
