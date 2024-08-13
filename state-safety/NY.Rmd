@@ -815,7 +815,7 @@ miles_tern <- milesFull %>%
          ))
 
 
-tern<-ggplot(data = miles_tern, aes(x = GD_p, y = GT_p, z = HL_p, 
+pt <- ggplot(data = miles_tern, aes(x = GD_p, y = GT_p, z = HL_p, 
                               size = total, col = do_col))+
   geom_point(data = . %>% filter(!do_col), alpha = .7)+
   geom_point(data = . %>% filter(do_col), alpha = .9)+
@@ -823,10 +823,16 @@ tern<-ggplot(data = miles_tern, aes(x = GD_p, y = GT_p, z = HL_p,
   # geom_text(data = . %>% filter(do_col),aes(label=STATE), alpha = .9)+
   # geom_label(data = .%>% filter(do_col),
   #            aes(label = long_lab, x = 1, y =.5))+
-  coord_tern()+
-  scale_size_area()+
+  coord_tern(expand = F)+
+  Rlab("HL", labelarrow = "More HL Miles")+
+  Tlab("GT", labelarrow = "More GT Miles")+
+  Llab("GD", labelarrow = "More GD Miles")+
+  scale_size_area(name = "Total Mileage",
+                  breaks = c( 1000,50000 , 250000),
+                  max_size = 8)+
   scale_color_manual(values = c(`TRUE`= honey,
                                 `FALSE` = muted(brown, 67, 5)))+
+  guides(color = "none")+
   theme_nomask()+
   theme_showarrows()+
   theme_pst()+
@@ -839,32 +845,37 @@ tern<-ggplot(data = miles_tern, aes(x = GD_p, y = GT_p, z = HL_p,
         tern.axis.arrow.L = element_line(color = liteGreen),
         tern.panel.grid.major = element_line(linewidth = .5, linetype = "dotted", color = "gray60"),
         tern.panel.grid.minor = element_line(linewidth = .3, linetype = "dotted", color = "gray80"),
-        legend.position = "none",
+        legend.position = "right",
         plot.margin = margin(0,0,0,0,"pt"))+
-  theme_mesh(5) 
+  theme_mesh(5) +
+  labs(x = NULL, y = NULL,
+       title = "ok")
 
 
-gridExtra::arrangeGrob(tern, tern, tern, layout_matrix = rbind(c(1,1,2),
-                                        c(1,1,3)))
 
-#ggplot2::ggsave("NY/arrange.png", ga, width = wdt, height = hgt, units = "px")
+ggplot2::ggsave("NY/arrange.png",  width = wdt, height = hgt, units = "px")
 
 
-   
-# pc<- miles_tern %>% 
-#   filter(do_col) %>% 
-#   pivot_longer(!STATE) %>%
-#   filter(name %in% c("GT", "GD", "HL"))%>%
-#   ggplot(aes(x = name, y = value))+
-#   geom_col()+
-#   labs(x = NULL, y = NULL)+
-#   theme_pst()+
-#   theme(plot.margin = margin(6,12,3,0,"pt"))
+pc <- miles_tern %>%
+  filter(do_col) %>%
+  select(!long_lab)%>%
+  select(STATE, starts_with(c("GD","GT", "HL")))%>%
+  pivot_longer(!STATE) %>%
+  mutate(prop = ifelse(grepl("_p", name), "Perc", "Raw") ,
+         name = str_sub(name,1,2))%>%
+  pivot_wider(id_cols = c("STATE", "name"),
+              names_from = prop)%>%
+  ggplot(aes(x = name, y = Perc, fill = name))+
+  geom_col()+
+  labs(x = NULL, y = NULL)+
+  theme_pst()+
+  scale_fill_manual(values = pstMax)+
+  theme(plot.margin = margin(6,12,3,0,"pt"))
 
 
-# ga <- grid.arrange(pt, pc, widths = c(2,1.3))
+ga = grid.arrange(pt, pc, widths = c(3,1.85), top = grid::textGrob("NY"))
 
-#ggplot2::ggsave("NY/arrange.png", ga, width = wdt, height = hgt, units = "px")
+ggplot2::ggsave("NY/arrange.png", ga, width = wdt, height = hgt, units = "px")
 
 detach(package:ggtern)
 ```
@@ -1396,4 +1407,329 @@ df.all%>%
 ```
 
 
+```{r}
+direct <- c("INCORRECT OPERATION", "MATERIAL/WELD/EQUIP FAILURE", "CORROSION")
+
+
+geog_cols <- c( darkBlue, liteGreen,lilac)
+
+names(geog_cols) <- c(moStateL, adjL, usL)
+
+selcol = "GD Releases"
+
+df %>%
+  mutate(opc = CAUSE %in% direct) %>%
+  group_by(opc) %>% 
+  summarize(
+    n = n(),
+    sig = sum(SIGNIFICANT == "YES") /n(),
+    cost = sum(TOTAL_COST_CURRENT) /n(),
+    fat = sum(FATAL) /n(),
+    relgt = sum(TOTAL_RELEASE[SYS == "GT"])/n(),
+    relgd = sum(TOTAL_RELEASE[SYS == "GD"])/n(),
+    relhl = sum(TOTAL_RELEASE[SYS == "HL"])/n()
+  )%>%
+  ungroup() %>%
+  mutate(psig = (sig[opc == T] - sig[opc==F])/sig[opc==F],
+         pcost = (cost[opc == T] - cost[opc==F])/cost[opc==F],
+         pfat = (fat[opc == T] - fat[opc==F])/fat[opc==F],
+         prgd = (relgd[opc == T] - relgd[opc==F])/relgd[opc==F],
+         prgt = (relgt[opc == T] - relgt[opc==F])/relgt[opc==F],
+         prhl = (relhl[opc == T] - relhl[opc==F])/relhl[opc==F],
+         geog = moStateL)%>% 
+  rbind(
+    df.adj %>%
+      mutate(opc = CAUSE %in% direct) %>%
+      group_by(opc) %>%
+     summarize(
+        n = n(),
+        sig = sum(SIGNIFICANT == "YES") /n(),
+        cost = (sum(TOTAL_COST_CURRENT)-1.793700e+09)  /(n()-1),
+        #cost = sum(TOTAL_COST_CURRENT) /n(),
+        fat = sum(FATAL) /n(),
+        relgt = sum(TOTAL_RELEASE[SYS == "GT"])/n(),
+        relgd = sum(TOTAL_RELEASE[SYS == "GD"])/n(),
+        relhl = sum(TOTAL_RELEASE[SYS == "HL"])/n()
+      )%>%
+      ungroup() %>%
+      mutate(psig = (sig[opc == T] - sig[opc==F])/sig[opc==F],
+             pcost = (cost[opc == T] - cost[opc==F])/cost[opc==F],
+             pfat = (fat[opc == T] - fat[opc==F])/fat[opc==F],
+             prgd = (relgd[opc == T] - relgd[opc==F])/relgd[opc==F],
+             prgt = (relgt[opc == T] - relgt[opc==F])/relgt[opc==F],
+             prhl = (relhl[opc == T] - relhl[opc==F])/relhl[opc==F],
+             geog = adjL)
+  ) %>%
+  rbind(
+    df.all %>%
+      mutate(opc = CAUSE %in% direct) %>%
+      group_by(opc) %>%
+     summarize(
+        n = n(),
+        sig = sum(SIGNIFICANT == "YES") /n(),
+        cost = sum(TOTAL_COST_CURRENT) /n(),
+        fat = sum(FATAL) /n(),
+        relgt = sum(TOTAL_RELEASE[SYS == "GT"])/n(),
+        relgd = sum(TOTAL_RELEASE[SYS == "GD"])/n(),
+        relhl = sum(TOTAL_RELEASE[SYS == "HL"])/n()
+      )%>%
+      ungroup() %>%
+      mutate(psig = (sig[opc == T] - sig[opc==F])/sig[opc==F],
+             pcost = (cost[opc == T] - cost[opc==F])/cost[opc==F],
+             pfat = (fat[opc == T] - fat[opc==F])/fat[opc==F],
+             prgd = (relgd[opc == T] - relgd[opc==F])/relgd[opc==F],
+             prgt = (relgt[opc == T] - relgt[opc==F])/relgt[opc==F],
+             prhl = (relhl[opc == T] - relhl[opc==F])/relhl[opc==F],
+             geog = usL)
+  ) %>%
+  filter(opc) %>%
+  select(geog, psig, pcost, pfat, prgd, prgt, prhl) %>%
+  pivot_longer(
+    !c("geog")
+  ) %>%
+  mutate(geog = factor(geog, levels = c(moStateL, adjL, usL)),
+         name = factor(name, levels = c("psig", "pcost", "pfat",
+                                        "prgd","prgt", "prhl" ),
+                       labels = c("Significant", "Damage Cost*", "Fatalities",
+                                  "GD Releases", "GT Releases", "HL Releases"))
+         )%>% 
+  ggplot(aes(y = fct_rev(name), x = value, fill = geog, col = geog))+
+  geom_vline(xintercept = 0)+
+  #geom_col(position = "dodge")+
+  geom_point( size = 3, alpha = .66)+
+  # geom_segment(aes(y = name,yend = name,x = 0, xend = value ),
+  #              data = . %>% filter(geog == moStateL, name == selcol),
+  #              show.legend = F)+
+  geom_label_repel(aes(y = name, x = value, label = str_wrap(paste0("GD Incidents in ", moState,
+                                                           " release ",
+                                                           scales::percent(value, accuracy = 1),
+                                                           " more gas from incidents causes under direct operator control than indirect control."
+                                                           ), 40 
+                       )),
+               data = . %>% filter(geog == moStateL, name == selcol),
+               show.legend = F, nudge_x = .5, nudge_y = .2,
+               hjust = 0,
+               col = darkBlue, fill = "#f2f2f2", min.segment.length = 0)+
+  annotate(y = "Significant", x = .15, label = "More Direct Cause Impacts →", geom = "text", angle = 0,
+           vjust = -5.3, size = 2.7, hjust = 0, fontface = "bold")+
+  annotate(y = "Significant", x = -.15, label = "← More Indirect Cause Impacts", geom = "text", angle = 0,
+           vjust = -5.3, size =2.7, hjust = 1, fontface = "bold")+
+  scale_color_manual(values = geog_cols, name = NULL)+
+  scale_x_continuous(breaks = seq(-1,4,1), labels = scales::label_percent())+
+  coord_cartesian(clip = "off")+
+  theme_pst_flip()+
+  theme(axis.line.y = element_blank(),
+        )+
+  labs(title = "Comparing Impact of Direct and Indirect Operator-Caused Incidents",
+       subtitle = "Percent Difference Between per Incident Impacts by Geography\n",
+       y = "Impacts",
+       fill = NULL,
+       x = "Percent Difference",
+       caption = paste0("*Adjacent states' damage cost does not include $1.8 billion Merrimack Valley, MA incident.\nWith this incident, the percent difference in damage cost is nearly 7000%\n",capt), tag = tag)
+
+
+plotName = "comp_direct.png"
+plotExport = paste0(exportdir, plotName)
+wdt = 2560
+hgt = wdt/1.62
+ggsave(plotExport, width = wdt, height = hgt, units = "px")
+
+```
+
+```{r}
+direct <- c("INCORRECT OPERATION", "MATERIAL/WELD/EQUIP FAILURE", "CORROSION")
+
+
+geog_cols <- c( darkBlue, liteGreen,lilac)
+
+names(geog_cols) <- c(moStateL, adjL, usL)
+
+selcol = "GD Releases"
+
+df %>%
+  mutate(opc = MAP_CAUSE %in% direct) %>%
+  group_by(opc) %>% 
+  summarize(
+    n = n(),
+    sig = sum(SIGNIFICANT == "YES") /n(),
+    cost = sum(TOTAL_COST_CURRENT) /n(),
+    fat = sum(FATAL) /n(),
+    relgt = sum(TOTAL_RELEASE[SYS == "GT"])/n(),
+    relgd = sum(TOTAL_RELEASE[SYS == "GD"])/n(),
+    relhl = sum(TOTAL_RELEASE[SYS == "HL"])/n()
+  )%>%
+  ungroup() %>%
+  mutate(psig = (sig[opc == T] - sig[opc==F])/sig[opc==F],
+         pcost = (cost[opc == T] - cost[opc==F])/cost[opc==F],
+         pfat = (fat[opc == T] - fat[opc==F])/fat[opc==F],
+         prgd = (relgd[opc == T] - relgd[opc==F])/relgd[opc==F],
+         prgt = (relgt[opc == T] - relgt[opc==F])/relgt[opc==F],
+         prhl = (relhl[opc == T] - relhl[opc==F])/relhl[opc==F],
+         geog = moStateL)%>% 
+  rbind(
+    df.adj %>%
+      mutate(opc = MAP_CAUSE %in% direct) %>%
+      group_by(opc) %>%
+     summarize(
+        n = n(),
+        sig = sum(SIGNIFICANT == "YES") /n(),
+        cost = (sum(TOTAL_COST_CURRENT)-1.793700e+09)  /(n()-1),
+        #cost = sum(TOTAL_COST_CURRENT) /n(),
+        fat = sum(FATAL) /n(),
+        relgt = sum(TOTAL_RELEASE[SYS == "GT"])/n(),
+        relgd = sum(TOTAL_RELEASE[SYS == "GD"])/n(),
+        relhl = sum(TOTAL_RELEASE[SYS == "HL"])/n()
+      )%>%
+      ungroup() %>%
+      mutate(psig = (sig[opc == T] - sig[opc==F])/sig[opc==F],
+             pcost = (cost[opc == T] - cost[opc==F])/cost[opc==F],
+             pfat = (fat[opc == T] - fat[opc==F])/fat[opc==F],
+             prgd = (relgd[opc == T] - relgd[opc==F])/relgd[opc==F],
+             prgt = (relgt[opc == T] - relgt[opc==F])/relgt[opc==F],
+             prhl = (relhl[opc == T] - relhl[opc==F])/relhl[opc==F],
+             geog = adjL)
+  ) %>%
+  rbind(
+    df.all %>%
+      mutate(opc = MAP_CAUSE %in% direct) %>%
+      group_by(opc) %>%
+     summarize(
+        n = n(),
+        sig = sum(SIGNIFICANT == "YES") /n(),
+        cost = sum(TOTAL_COST_CURRENT) /n(),
+        fat = sum(FATAL) /n(),
+        relgt = sum(TOTAL_RELEASE[SYS == "GT"])/n(),
+        relgd = sum(TOTAL_RELEASE[SYS == "GD"])/n(),
+        relhl = sum(TOTAL_RELEASE[SYS == "HL"])/n()
+      )%>%
+      ungroup() %>%
+      mutate(psig = (sig[opc == T] - sig[opc==F])/sig[opc==F],
+             pcost = (cost[opc == T] - cost[opc==F])/cost[opc==F],
+             pfat = (fat[opc == T] - fat[opc==F])/fat[opc==F],
+             prgd = (relgd[opc == T] - relgd[opc==F])/relgd[opc==F],
+             prgt = (relgt[opc == T] - relgt[opc==F])/relgt[opc==F],
+             prhl = (relhl[opc == T] - relhl[opc==F])/relhl[opc==F],
+             geog = usL)
+  ) %>%
+ # filter(opc) %>%
+  select(opc, geog, relgd, relgt, relhl) %>%
+  pivot_longer(
+    !c("geog", "opc")
+  ) %>%
+  mutate(geog = factor(geog, levels = c(moStateL, adjL, usL)),
+         sys = str_to_upper(str_sub(name,-2)),
+         sys = factor(sys,levels = c("GD", "GT", "HL"),
+                      labels = c("Gas Distribution", "Gas Transmission", "Hazardous Liquids"))
+         # name = factor(name, levels = c("psig", "pcost", "pfat",
+         #                                "prgd","prgt", "prhl" ),
+         #               labels = c("Significant", "Damage Cost*", "Fatalities",
+         #                          "GD Releases", "GT Releases", "HL Releases"))
+         )%>%
+  ggplot(aes(y = geog, x = value, fill = opc, col = opc))+
+  geom_segment(aes(y = geog, yend = geog, x = min, xend = max),
+               data = . %>% group_by(geog, sys) %>% summarize(min = min(value), max = max(value)),
+               inherit.aes = F, alpha =.6)+
+  geom_point(size = 2.7, alpha = .8)+
+  scale_color_manual(values = c( `TRUE` = honey,
+                                 `FALSE` = midBlue),
+                     labels = c( `TRUE` = "Direct",
+                                 `FALSE` = "Indirect"))+
+  scale_fill_manual(values = c( `TRUE` = honey,
+                                 `FALSE` = midBlue),
+                     labels = c( `TRUE` = "Direct",
+                                 `FALSE` = "Indirect"))+
+  coord_cartesian(xlim = c(0,NA), clip = "off")+
+  scale_x_continuous(expand = expansion(c(0,.05),0),
+                     labels = function(x) ifelse(x >= 1000,
+                                                 paste0(x/1000, "K"),
+                                                 x))+
+  facet_wrap(~sys, scales = "free_x", nrow = 3)+
+  theme_pst_facet()+
+  theme(axis.line.y = element_blank(),
+        panel.grid.minor.x = element_line(linetype = "dotted", 
+                                          colour = "#C4C8C6"),
+        panel.grid.major.x = element_line(colour = "#394C56", 
+                                          linetype = "dotted"),
+        panel.grid.major.y = element_blank(),
+        panel.grid.minor.y = element_blank())+
+  labs(caption = capt, tag = tag,
+       title = "Comparing Releases of Direct and Indirect Operator-Caused Incidents",
+       subtitle = "Total Releases per Incident by Operator Control of Cause",
+       y = NULL, x = "Release per Incident")
+
+
+plotName = "comp_direct_release.png"
+plotExport = paste0(exportdir, plotName)
+wdt = 2560
+hgt = wdt/1.62
+ggsave(plotExport, width = wdt, height = hgt, units = "px")
+
+```
+
+
+```{r}
+df %>%
+  mutate(opc = MAP_CAUSE %in% direct) %>%
+  group_by(opc, SYS) %>%
+  summarize(cost = sum(TOTAL_COST_CURRENT)) %>%
+  ungroup()%>%
+  group_by(SYS)%>%
+  mutate(pc = cost / sum(cost))%>%
+  ungroup()%>%
+  mutate(geog = moStateL)%>%
+  # rbind(
+  #   df.adj %>%
+  #     mutate(opc = CAUSE %in% direct) %>%
+  # group_by(opc, SYS) %>%
+  #     summarize(cost = sum(TOTAL_COST_CURRENT)) %>%
+  #     mutate(geog = adjL,
+  #        pc = cost / sum(cost))
+  # )%>%
+  # rbind(
+  #   df.all %>%
+  #     mutate(opc = CAUSE %in% direct) %>%
+  # group_by(opc, SYS) %>%
+  #     summarize(cost = sum(TOTAL_COST_CURRENT)) %>%
+  #     mutate(geog = usL,
+  #        pc = cost / sum(cost))
+  # ) %>%
+  ungroup()%>%
+  complete(opc, SYS, geog, fill = list(pc = 0, cost = 0))%>%
+  mutate(plab = ifelse(cost >= 1e6,
+                       paste0(scales::dollar(cost, accuracy = .1,
+                                             scale = .000001,
+                                             suffix = "M"),"\n",
+                              scales::percent(pc, accuracy = .1)),
+                       paste0(scales::dollar(cost, accuracy = 1,
+                                             scale = .001,
+                                             suffix = "K"),"\n",
+                              scales::percent(pc, accuracy = .1))),
+         geog = factor(geog, levels = c(moStateL, adjL, usL)),
+         opc = ifelse(opc, "Direct", "Indirect"))%>%
+  ggplot(aes(x = opc, y = pc, fill = SYS, group  =SYS))+
+  geom_col(position = position_dodge(.7), width = .7)+
+  geom_text(aes(label = plab),
+            position = position_dodge(width = .7),
+            vjust = -.2, fontface = "bold",hjust = .5)+
+  scale_fill_manual(values = pstMax)+
+  scale_y_continuous(limits = c(0,1), expand = c(0,0), labels = scales::label_percent())+
+  coord_cartesian(clip = "off")+
+  theme_pst()+
+  labs(
+    title = "Pipeline Incident Cost by Operator Control of Cause",
+    subtitle = "All operators in New York (2014-2023) \n ",
+    tag = tag, caption = capt,
+    x = "Operator Control of Cause",
+    y = "Percent of System Cost",
+    fill = "System"
+  )
+  
+  
+plotName = "comp_direct_cost.png"
+plotExport = paste0(exportdir, plotName)
+wdt = 2560
+hgt = wdt/1.62
+ggsave(plotExport, width = wdt, height = hgt, units = "px")
+  
+```
 
