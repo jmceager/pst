@@ -1200,44 +1200,56 @@ df.c <- df %>%
   mutate(inc = n(), 
          pri.name = first(pri.name))%>%
   ungroup()%>%
-  group_by(pri.name, CAUSE) %>%
+  group_by(pri.name, MAP_CAUSE) %>%
   summarise(cPer = n()/inc, 
             inc = sum(unique(inc), na.rm=T))%>%
   ungroup()%>%
-  distinct(pri.name, CAUSE, cPer, inc)%>%
-  complete(pri.name, CAUSE, fill = list(cPer = 0, inc = 0))%>%
+  distinct(pri.name, MAP_CAUSE, cPer, inc)%>%
+  complete(pri.name, MAP_CAUSE, fill = list(cPer = 0, inc = 0))%>%
   arrange(inc) %>%
   mutate(pri.name = factor(pri.name),
          pri.name = fct_reorder(pri.name, desc(inc)),
-         colText = if_else(cPer >.4 , "black", "white"))
+         colText = if_else(cPer <.4 , "black", "white"))
 
 
 #finish with map causes
 df.c%>%
-  mutate(CAUSE = factor(CAUSE, 
-                        levels = c()))
-  ggplot(aes(y=str_wrap(pri.name, 16), x = str_wrap(str_to_sentence(CAUSE),15), fill = cPer))+
+  mutate(MAP_CAUSE = factor(MAP_CAUSE,
+                        levels = c(direct,
+                                   "EXCAVATION DAMAGE", "NATURAL FORCE DAMAGE",
+                                   "OTHER OUTSIDE FORCE DAMAGE", "ALL OTHER CAUSES")))%>%
+  ggplot(aes(y=str_wrap(pri.name, 16), x = (MAP_CAUSE), fill = cPer))+
+  annotate("rect", xmin = .5, xmax = 3.5, ymin = .5, ymax = 7.5, fill = "gray80")+
   geom_tile(width = .8, height = .8)+
-  geom_text(aes(label = percent(cPer, accuracy = .1), color = colText, 
-                fontface = ifelse(colText == "black", "bold","plain")), 
-            size = 4.2, family = pstFont)+
-  scale_fill_viridis(name = "Percent\nof Incidents", labels = percent_format())+
-  scale_color_manual(values = c("gray15", "gray85"), guide = NULL)+
-  scale_x_discrete(position = "top", name = "Cause")+
+  geom_text(aes(label = percent(cPer, accuracy = 1), color = colText, 
+                fontface = ifelse(colText == "white", "bold","plain")), 
+            size = 5, family = pstFont)+
+  annotate("text", x = 2, y = .3, label = "Direct", family = pstFont,
+           fontface = "italic")+
+  annotate("text", x = 5.5, y = .3, label = "Indirect", family = pstFont,
+           fontface = "italic")+
+   scale_fill_gradient(low = muted(liteGreen, l = 95, c = 3), 
+                   high = midBlue, limits = c(0,1), 
+                   labels = scales::label_percent(), 
+                   name = "Percent of\nIncidents", breaks = seq(0,1,.25))+
+  scale_color_manual(values = c("gray25", "#fffff0"), guide = NULL)+
+  scale_x_discrete(position = "top", name = "Cause",
+                   labels = function(x) str_wrap(str_to_sentence(x),15))+
+  coord_cartesian(clip = "off")+
   labs(y = NULL,
        title = "Incident Cause Proportions by Operator",
        subtitle = paste0("Selected Operators in ", moStateL, " (2014-2023)"),
        tag = tag, 
-       caption = capt)+
+       caption = paste0("\n",capt))+
   theme_pst()+
-  theme(axis.text.x = element_text(angle = -36, hjust = 1, size = bs*.75),
-        axis.text.y = element_text(size = bs*.75),
+  theme(axis.text.x = element_text(angle = -36, hjust = 1, size = bs*.75, color = "gray10"),
+        axis.text.y = element_text(size = bs*.75, color = "gray10"),
         panel.grid.major.y = element_blank(),
         legend.text = element_text(size = bs*.5),
         legend.title = element_text(size = bs*.75),
         axis.title.x = element_text(size = bs*.75),
-        legend.position = "bottom",
-        legend.direction = "horizontal",
+        legend.position = "right",
+        legend.direction = "vertical",
         plot.title = element_text(size = bs),
         plot.subtitle = element_text(size = bs*.75),
         plot.tag = element_text(size = bs*.5),
@@ -1248,6 +1260,17 @@ plotExport = paste0(exportdir, plotName)
 wdt = 2560
 hgt = wdt/1.62
 ggsave(plotExport, width = wdt, height = hgt, units = "px")
+```
+
+```{r what are the national trends for causes}
+df.all %>%
+  count(SYS,MAP_CAUSE) %>%
+  group_by(SYS) %>%
+  mutate(total = sum(n))%>%
+  ungroup()%>%
+  mutate(per = n/total)%>% view
+
+
 ```
 
 
@@ -1321,7 +1344,7 @@ df.state%>%
            ylim = c(byn , byx),
            expand = TRUE)+
   labs(title = paste0("Incident Locations and Cost in ", moStateL),
-       subtitle = "All Systems (2010 - 2022)",
+       subtitle = "All Systems (2014 - 2023)",
        x = NULL,
        y = NULL,
        caption = capt,
