@@ -983,6 +983,13 @@ names <- df.t %>%
   filter(n >1) %>%
   pull(pri.name)
 
+# df %>%
+#   left_join(ops, by = c("OPERATOR_ID" = "sub.id", "SYS" = "sub.sys",
+#                         "IYEAR" = "seqy"),
+#             suffix = c("_x", ""))%>%
+#   distinct(OPERATOR_ID, NAME, pri.id, pri.name) %>% 
+#   mutate(check = pri.id == OPERATOR_ID) %>%
+#   view
 
 lumpD <- 5
 nGD <- nrow(df.t[df.t$SYS == "GD", "pri.name"]) - lumpD
@@ -1000,7 +1007,7 @@ t.gd <- df.t %>%
                 ~ifelse(grepl("Others", pri.name), .x/nGD, .x)))%>%
   arrange(desc(n))
 
-lumpT <- 3
+lumpT <- 2
 nGT <- nrow(df.t[df.t$SYS == "GT", "pri.name"]) - lumpT
 t.gt <- df.t %>%
   filter(SYS == "GT") %>%
@@ -1011,7 +1018,7 @@ t.gt <- df.t %>%
   group_by(pri.name)%>%
   summarise(across(!any_of(c("pri.name", "pri.id", "SYS")), 
                   ~sum(.x, na.rm = T)))%>%
-  mutate(across(!any_of(c("pri.name", "pri.id")), ~ifelse(grepl("Others", pri.name), .x/nGD, .x)))%>%
+  mutate(across(!any_of(c("pri.name", "pri.id")), ~ifelse(grepl("Others", pri.name), .x/nGT, .x)))%>%
   arrange(desc(n))
 
 lumpH <- 1
@@ -1025,7 +1032,7 @@ t.hl <- df.t %>%
   group_by(pri.name)%>%
   summarise(across(!any_of(c("pri.name", "pri.id", "SYS")), 
                    ~sum(.x, na.rm = T)))%>%
-  mutate(across(!any_of(c("pri.name", "pri.id")), ~ifelse(grepl("Others", pri.name), .x/nGD, .x)))%>%
+  mutate(across(!any_of(c("pri.name", "pri.id")), ~ifelse(grepl("Others", pri.name), .x/nHL, .x)))%>%
   arrange(desc(n))
 
 df.k <- rbind(t.hl, t.gd, t.gt) 
@@ -1084,7 +1091,12 @@ df.trend <- df %>%
 
 df.lines <- split(df.trend$n, df.trend$pri.name)
 
-df.lines <- df.lines[order(df.k$pri.name, levels(df.k$pri.name))]
+
+ordered_names = c(as.character(t.hl$pri.name), 
+           as.character(t.gd$pri.name), 
+           as.character(t.gt$pri.name))
+
+df.lines <- df.lines[ordered_names]
 
 df.k %>%
   select(!c(fatal, injure,evac)) %>%
@@ -1093,15 +1105,15 @@ df.k %>%
          sig = paste0(round(sig*100, 0), "%"))%>%
   mutate_at(vars(cost:rpi), round, 0)%>%
   #table building
-  kbl(col.names = c("Parent Operator","2022 Mileage", "Total", "Percent Significant",
-                    "per 1K Miles", "Trend","Total","per Incident", "Total","per Incident"),
+  kbl(col.names = c("Parent Operator","Mileage", "Total", "Percent Significant",
+                    "Rate", "Trend","Total","per Incident", "Total","per Incident"),
       format.args = list(big.mark = ","), digits = 2, booktabs = TRUE) %>%
   kable_classic_2(lightable_options = c("striped","hover"))%>%
   add_header_above(c(" "=2, "Incidents" = 4, "Cost\n(K, USD)" =2, "Releases" = 2)) %>% 
   # color columns relative to values
   column_spec(6, image = spec_plot(df.lines, same_lim = T, 
-                                   min = list(col = orange, pch = 20, cex = .2),
-                                   max = list(col = green, pch = 20, cex = .2)))%>%
+                                   min = list(col = midBlue, pch = 20, cex = .2),
+                                   max = list(col = honey, pch = 20, cex = .2)))%>%
   column_spec(5, color=spec_color(df.k$ipm, option = "B", end = .7), bold = T)%>%
   column_spec(8, color=spec_color(df.k$cpi, option = "B", end = .7), bold = T)%>%
   column_spec(10, color=spec_color(df.k$rpi, option = "B", end = .7), bold = T) %>%
@@ -1109,7 +1121,7 @@ df.k %>%
   # TODO: automate start/ends? 
   group_rows(start_row = 1, end_row = lumpH+1, group_label = "Hazardous Liquids")%>%
   group_rows(start_row = lumpH+2, end_row = lumpH+2+lumpD, group_label = "Gas Distribution")%>%
-  group_rows(start_row = lumpH+3+lumpD, end_row = lumpH+3+lumpD+lumpT, group_label = "Gas Transmission")
+  group_rows(start_row = lumpH+3+lumpD, end_row = lumpH+3+lumpD+lumpT, group_label = "Gas Transmission") %>%
   cat(., file = paste0(exportdir, "table.html"))
 ```
 
