@@ -51,6 +51,8 @@ hgt = wdt/1.62
 capt = "Source: PHMSA Incident and Mileage Data (2023)"
 datadir = "https://raw.githubusercontent.com/jmceager/pst/main/phmsa-clean/data/"
 tag = paste("PST", lubridate::year(Sys.Date()))
+
+setwd("/Users/jameseager/Documents/pst/research/briefing-papers")
 ```
 
 ```{r theme_pst}
@@ -1060,10 +1062,10 @@ cause_es = tibble(
 
 
 cause_dict = c(
-  `Material/Weld/Equip Failure` = "Materiales, soldadura, y equipo",
+  `Material/Weld/Equip Failure` = "Materiales, soldadura,\ny equipo",
   `All Other Causes`    = "Otros",
   `Corrosion`    =  "Corrosión",
-  `Incorrect Operation`    = "Error por parte del operador", 
+  `Incorrect Operation`    = "Error por parte\ndel operador", 
   `Natural Force Damage`  =  "Fuerzas naturales",
   `Excavation Damage` ="Excavación",
   `Other Outside Force Damage` = "Fuerzas ajenas" 
@@ -1128,7 +1130,7 @@ ggsave("plots/en/SigCauseYears_EN.pdf", width = wdt, height = hgt, units = "in")
 
 ctp_sig +
   scale_color_manual(values = pstMax, name = "Causa", 
-                     labels = str_wrap(cause_dict, 14))+
+                     labels = cause_dict)+
   labs(y = "Incidentes ",
        x = "Años",
        title = "Incidentes en las tuberías por causa ",
@@ -1186,7 +1188,7 @@ ggsave("plots/en/SerCauseYears_EN.pdf", width = wdt, height = hgt, units = "in")
 
 ctp_ser +
   scale_color_manual(values = pstMax, name = "Causa", 
-                     labels = str_wrap(cause_dict, 14))+
+                     labels = cause_dict)+
   labs(y = "Incidentes ",
        x = "Años",
        title = "Incidentes en las tuberías por causa ",
@@ -1493,8 +1495,8 @@ hl_hca_dash +
 ggsave("plots/en/HLHCA_EN.pdf", width = wdt, height = hgt, units = "in")
 
 hl_hca_dash +
-  scale_color_manual(values = pst1, labels = c("SÍ", "NO"))+
-  scale_fill_manual(values = pst1, labels = c("SÍ", "NO"))+  
+  scale_color_manual(values = pst1, labels = c( "NO", "SÍ"))+
+  scale_fill_manual(values = pst1, labels = c("NO","SÍ"))+  
   labs(title = "Tasas de incidentes significativos por estado de HCA ",
        subtitle = "Incidentes significativos en tuberías de líquidos peligrosos por cada 1.000 millas (2010-2021)",
        x = "Año",
@@ -1535,8 +1537,8 @@ hl_hca_nodash +
 ggsave("plots/en/HLHCA_New_EN.pdf", width = wdt, height = hgt, units = "in")
 
 hl_hca_nodash +
-  scale_color_manual(values = pst1, labels = c("SÍ", "NO"))+
-  scale_fill_manual(values = pst1, labels = c("SÍ", "NO"))+  
+  scale_color_manual(values = pst1, labels = c( "NO", "SÍ"))+
+  scale_fill_manual(values = pst1, labels =c( "NO", "SÍ"))+
   labs(title = "Tasas de incidentes significativos por estado de HCA ",
        subtitle = "Incidentes significativos en tuberías de líquidos peligrosos por cada 1.000 millas (2010-2021)",
        x = "Año",
@@ -1597,8 +1599,8 @@ gt_hca_dash +
 ggsave("plots/en/GTHCA_EN.pdf", width = wdt, height = hgt, units = "in")
 
 gt_hca_dash +
-  scale_color_manual(values = pst1, labels = c("SÍ", "NO"))+
-  scale_fill_manual(values = pst1, labels = c("SÍ", "NO"))+  
+  scale_color_manual(values = pst1, labels = c( "NO", "SÍ"))+
+  scale_fill_manual(values = pst1, labels = c( "NO", "SÍ"))+
   labs(title = "Tasas de incidentes significativos por estado de HCA ",
        subtitle = "Incidentes significativos en tuberías de transmisión de gas por cada 1.000 millas (2010-2021)",
        x = "Año",
@@ -1640,8 +1642,8 @@ gt_hca_nodash +
 ggsave("plots/en/GTHCA_New_EN.pdf", width = wdt, height = hgt, units = "in")
 
 gt_hca_nodash +
-  scale_color_manual(values = pst1, labels = c("SÍ", "NO"))+
-  scale_fill_manual(values = pst1, labels = c("SÍ", "NO"))+  
+  scale_color_manual(values = pst1, labels = c( "NO", "SÍ"))+
+  scale_fill_manual(values = pst1, labels = c( "NO", "SÍ"))+
   labs(title = "Tasas de incidentes significativos por estado de HCA ",
        subtitle = "Incidentes significativos en tuberías de transmisión de gas por cada 1.000 millas (2010-2021)",
        x = "Año",
