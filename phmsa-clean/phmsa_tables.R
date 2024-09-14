@@ -316,6 +316,18 @@ hl.full <- hzrdData %>%
 #   miles.op <- bind_rows(miles.op, row_match)
 # }
 
+
+
+#### ENFORCEMENT DATA ####
+# enforcement <- read_tsv("https://primis.phmsa.dot.gov/enforcement-documents/PHMSA%20Pipeline%20Enforcement%20Raw%20Data.txt")
+# 
+# enforcement %>%
+#   mutate(reg = str_split(Cited_Regulations, ",")) %>%
+#   unnest(reg)%>%
+#   mutate(reg = str_trim(reg))%>%
+#   count(reg)%>% view
+
+
 #### JOINS, BINDS, RATE ####
 
 #columns for abridged incidents
