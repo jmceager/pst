@@ -211,6 +211,16 @@ hlOld <- read.csv( paste0(datadir, "raw/hl2002to2009.csv")) %>%
   select(IYEAR, ACSTATE, SIGNIFICANT, SERIOUS, MAP_CAUSE, FATAL) %>%
   mutate(SYS = "HL")
 
+hlOldMOre <- read.csv( paste0(datadir, "raw/hl2002to2009.csv")) %>%
+  filter(IYEAR > 2001, OFFSHORE == "NO")#%>%
+  select(IYEAR, ACSTATE, SIGNIFICANT, SERIOUS, MAP_CAUSE, FATAL) %>%
+  mutate(SYS = "HL")
+  
+hlOldMOre2 <- read.csv( paste0(datadir, "raw/hl1986to2001.csv")) %>%
+  filter(OFFSHORE == "NO")#%>%
+  select(IYEAR, ACSTATE, SIGNIFICANT, SERIOUS, MAP_CAUSE, FATAL) %>%
+  mutate(SYS = "HL")
+
 gdOldish <- read.csv(paste0(datadir, "raw/gdmar2004to2009.csv") ) %>%
   select(IYEAR, ACSTATE, SIGNIFICANT, SERIOUS, MAP_CAUSE, FATAL) %>%
   mutate(SYS = "GD")
@@ -473,9 +483,9 @@ sigon_none <- dfBig %>%
         legend.position = c(0.6,0.85))
   
 sigon_none +
-  labs(title = "Significant Pipeline Incidents",
+  labs(title = "Serious Pipeline Incidents",
         subtitle = "Onshore Pipeline Systems (2010-2021)",
-        y = "Significant Incidents",
+        y = "Serious Incidents",
          color = "System",
        fill = "System",
        x = "Year",
@@ -774,7 +784,8 @@ ipm_p <- df %>%
   geom_bar(stat = "identity", position = "dodge")+
   scale_fill_manual(values = pst1, name = "Region")+
   theme_pst(baseSize = 8)+
-  theme(legend.position = c(.175,.6))+
+  theme(axis.text.x = element_text(color = "#01161E", size = 7.5),
+        legend.position = c(.175,.6))+
   scale_y_continuous(limits = c(0, .63), expand = c(0,0))
 
 ipm_p +
@@ -788,13 +799,15 @@ ipm_p +
 ggsave("plots/en/SystemRateRegions_EN.pdf", width = wdt, height = hgt, units = "in")
 
 ipm_p +
+  scale_x_discrete(labels = es_dist)+
   scale_fill_manual(values = pst1, name = "Región",
                     labels = c("Nacional" ,"Occidental", "Suroccidental",
                                "Central","Oriental", "Sureño" ))+
+  theme(axis.text.x = element_text(color = "#01161E", size = 7.5))+
   labs(title = "Tasas de incidentes significativos por sistema",
        subtitle = "Promedios nacionales y regionales (2010-2021) ",
        y = "Incidentes por cada 1.000 millas ",
-       x = "Sistema",
+       x = NULL,
        caption = capt_es,
        tag = tag)
 
