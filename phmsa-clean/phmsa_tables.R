@@ -92,8 +92,11 @@ ops<-safe %>%
          start = if_else(is.na(IM_ENTER_DATE), ymd("1200-12-12"),
                               ymd(IM_ENTER_DATE)),
          end = if_else(is.na(IM_EXIT_DATE), ymd(Sys.Date()),
-                      ymd(IM_EXIT_DATE))
+                      ymd(IM_EXIT_DATE)) - days(1) # subtract 1 day to prevent overlaps 
   )%>%
+  #fix for energy transfer weirdness
+  filter(!pri.id %in% c(18718,39706)) %>% 
+  #both opids overlap with the main ET opid 32099
   select(sub.id,sub.name,sub.sys,sub.status,pri.id,pri.name, pri.status, start,end) %>%
   distinct() %>% 
   mutate(pri.name = if_else(str_detect(pri.name,regex("enbridge",ignore_case = TRUE)),
@@ -113,9 +116,22 @@ ops<-safe %>%
     str_replace(.,"PF",""), # fix lngpf to lng,
   end = if_else(pri.status == "Current",ymd(Sys.Date()), end)
   ) %>%
-  filter(!is.na(pri.status))
+  filter(!is.na(pri.status), end >= start)
 
-ops.simple <- ops %>%
+opsDate <- ops %>%
+  mutate(date = map2(start, end, \(x,y) seq(x,y,1))) %>%
+  unnest(date) %>% 
+  mutate(prop = case_when(
+    year(start ) > 1990 & yday(start) > 1 & year(start) == year(date) ~  day_yr(start) ,
+    year(end ) > year(today()) & yday(end) < 365 & !leap_year(end) & year(date) == year(end) ~  day_yr(end) ,
+    year(end ) > year(today()) & yday(end) < 366 & year(date) == year(end) ~  day_yr(end) ,
+    .default = 1
+    )
+    )
+
+
+
+ ops.simple <- ops %>%
   select(sub.id, sub.name, sub.sys, pri.id, pri.name)
 
 write_csv(ops, "Op_IM_Dates.csv")
@@ -155,22 +171,24 @@ gd.full <- distData %>%
                                OFF_ACCIDENT_ORIGIN, SYS), 
                           locCleaner) %>% unlist()) %>%
   select(!OFF_ACCIDENT_ORIGIN)%>%
-  left_join(miles, by = c("OPERATOR_ID", "SYS", "STATE","IYEAR"))%>%
-  mutate(mileage = replace_na(mileage, 0))%>%
+  #removing mileage join because i have never used it and it doesnt make sense 
+  #ops havbe years with mileage but no 
+  # left_join(miles, by = c("OPERATOR_ID", "SYS", "STATE","IYEAR"))%>%
+  # mutate(mileage = replace_na(mileage, 0))%>%
   ## add safety data
   #many to many left join
-  left_join(filter(ops, sub.sys == "GT"), 
-            by = c("OPERATOR_ID" = "sub.id"),
-            suffix = c("", ".o"))%>%
+  left_join(filter(opsDate, sub.sys == "GD"), 
+            by = c("OPERATOR_ID" = "sub.id", "MDY" = "date"),
+            suffix = c("", ".o"))#%>%
   #determine valid records by checking date of incident by dates in safety rec
-  mutate(valid = between(MDY, start, end-days(1)) ,
-         valid = replace_na(valid, T))%>%
-  group_by(REPORT_NUMBER)%>%
-  mutate(rep = n())%>%
-  ungroup()%>%
-  filter(valid  | rep == 1)%>%
-  #clean up 
-  rename(NAME = NAME.x)
+  # mutate(valid = between(MDY, start, end-days(1)) ,
+  #        valid = replace_na(valid, T))%>%
+  # group_by(REPORT_NUMBER)%>%
+  # mutate(rep = n())%>%
+  # ungroup()%>%
+  # filter(valid  | rep == 1)%>%
+  # #clean up 
+  # rename(NAME = NAME.x)
 
 
 
@@ -211,27 +229,13 @@ gt.full <- tranData %>%
                                OPERATOR_ID, REPORT_NUMBER, STATE,
                                OFF_ACCIDENT_ORIGIN, SYS), 
                           locCleaner) %>% unlist()) %>%
-  left_join(miles, by = c("OPERATOR_ID", "SYS", "STATE","IYEAR"))%>%
-  mutate(mileage = replace_na(mileage, 0))%>%
+  # left_join(miles, by = c("OPERATOR_ID", "SYS", "STATE","IYEAR"))%>%
+  # mutate(mileage = replace_na(mileage, 0))%>%
     ## add safety data
     #many to many left join
-    left_join(filter(ops, sub.sys == "GT"), 
-              by = c("OPERATOR_ID" = "sub.id"),
-              suffix = c("", ".o"))%>%
-    #determine valid records by checking date of incident by dates in safety rec
-    mutate(valid = between(MDY, start, end-days(1)) ,
-           valid = replace_na(valid, T))%>%
-    group_by(REPORT_NUMBER)%>%
-    mutate(rep = n())%>%
-    ungroup()%>%
-    filter(valid  | rep == 1)%>%
-    select(!c("rep", "valid")) %>%
-    #repeat step to catch any overlapping dates, 
-    #typically occurs when one primary is suprseded and one current
-    group_by(REPORT_NUMBER)%>%
-    mutate(rep2 = n())%>%
-    ungroup()%>%
-    filter(ifelse(rep2 > 1,pri.status != "Current", TRUE ) ) %>%
+  left_join(filter(opsDate, sub.sys == "GT"), 
+            by = c("OPERATOR_ID" = "sub.id", "MDY" = "date"),
+            suffix = c("", ".o"))%>%
   rename(INTER_INTRA = PIPE_FACILITY_TYPE)
     
   
@@ -277,28 +281,21 @@ hl.full <- hzrdData %>%
                                OPERATOR_ID, REPORT_NUMBER, STATE,
                                OFF_ACCIDENT_ORIGIN, SYS), 
                           locCleaner) %>% unlist()) %>%
-  left_join(miles, by = c("OPERATOR_ID", "SYS", "STATE","IYEAR"))%>%
-  mutate(mileage = replace_na(mileage, 0))%>%
+  #left_join(miles, by = c("OPERATOR_ID", "SYS", "STATE","IYEAR"))%>%
+  #mutate(mileage = replace_na(mileage, 0))%>%
   ## add safety data
   #many to many left join
-  left_join(filter(ops, sub.sys == "HL"), 
-            by = c("OPERATOR_ID" = "sub.id"),
-            suffix = c("", ".o"))%>%
-  #determine valid records by checking date of incident by dates in safety rec
-  mutate(valid = between(MDY, start, end-days(1)) ,
-         valid = replace_na(valid, T))%>%
-  group_by(REPORT_NUMBER)%>%
-  mutate(rep = n())%>%
-  ungroup()%>%
-  filter(valid  | rep == 1)%>%
-  select(!c("rep", "valid")) %>%
-  #repeat step to catch any overlapping dates, 
-  #typically occurs when one primary is suprseded and one current
-  group_by(REPORT_NUMBER)%>%
-  mutate(rep2 = n())%>%
-  ungroup()%>%
-  filter(ifelse(rep2 > 1,pri.status != "Current", TRUE ) )
-# 
+  left_join(filter(opsDate, sub.sys == "HL"), 
+            by = c("OPERATOR_ID" = "sub.id", "MDY" = "date"),
+            suffix = c("", ".o"))
+
+
+hl.full %>%
+  group_by(OPERATOR_ID, MDY, REPORT_NUMBER) %>%
+  mutate(n = n()) %>% filter(n > 1) %>% 
+  select(MDY, REPORT_NUMBER, OPERATOR_ID, pri.id, NAME, pri.name, start, end) %>%view
+
+
 # miles.op <- tibble()
 # for(i in 1:nrow(miles)){
 #   row <- miles[i,]
@@ -316,7 +313,7 @@ hl.full <- hzrdData %>%
 #   miles.op <- bind_rows(miles.op, row_match)
 # }
 
-
+## need to add new systems and start treating everything more carefully 
 
 #### ENFORCEMENT DATA ####
 # enforcement <- read_tsv("https://primis.phmsa.dot.gov/enforcement-documents/PHMSA%20Pipeline%20Enforcement%20Raw%20Data.txt")
@@ -341,12 +338,12 @@ short_cols <- c( "REPORT_NUMBER", "NAME","OPERATOR_ID",  #basic characteristics
                  "EXPLODE_IND","IGNITE_IND" ,  "NUM_PUB_EVACUATED", "TOTAL_COST_CURRENT",#impact 2
                  "INSTALLATION_YEAR", "SYSTEM_PART_INVOLVED", "PIPE_DIAMETER", #inc char 
                  "CAUSE","CAUSE_DETAILS","MAP_CAUSE","MAP_SUBCAUSE", "NARRATIVE", #inc char 
-                 "mileage", "pri.id","pri.name"
+                  "pri.id","pri.name"
                  )  #joined char
 
 #abridged all inc  
-all.inc <- rbind(select(hl.full%>%  rename(NAME = NAME.x), all_of(short_cols)), 
-                 select(gt.full %>%  rename(NAME = NAME.x), all_of(short_cols)), 
+all.inc <- rbind(select(hl.full, all_of(short_cols)), 
+                 select(gt.full , all_of(short_cols)), 
                  select(gd.full, all_of(short_cols)))
 
 
