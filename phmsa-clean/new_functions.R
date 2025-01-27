@@ -207,5 +207,15 @@ locCleaner <- function(loc, lat, lon,
   return(locFix)
 }
 
+#function built to get proportion of mileage relevant to a primary op 
+#basically: if OP A becomes the submitting op for pipe X on 3/1, 
+#how do we handle that when it comes to incident rates? 
+#in the cases where the operator doesnt have the mileage for a full year 
+#maybe this is dumb idk 
+day_yr <- function(x){
+  ly = leap_year(x)
+  dy = if_else(ly, 366, 365)
+  (dy - yday(x))/dy
+}
 
 
