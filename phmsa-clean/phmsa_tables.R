@@ -5,7 +5,7 @@ library(readxl)
 library(fuzzyjoin)
 
 library(httr)
-
+select = dplyr::select
 httr::set_config(config(http_version = 1.1))
 source("new_functions.R")
 
@@ -136,9 +136,12 @@ opsDate <- ops %>%
 
 write_csv(ops, "Op_IM_Dates.csv")
 
+write_csv(opsDate, "Op_IM_Dates_ext.csv")
+
 write_csv(ops.simple, "Op_IM_Simple.csv")
 
 #### INCIDENT DATA ####
+
 
 # gd big 
 gd.full <- distData %>% 
@@ -238,7 +241,6 @@ gt.full <- tranData %>%
             suffix = c("", ".o"))%>%
   rename(INTER_INTRA = PIPE_FACILITY_TYPE)
     
-  
 
 
 #{if(rep > 1) filter(pri.status != "Current")}%>%
@@ -288,13 +290,6 @@ hl.full <- hzrdData %>%
   left_join(filter(opsDate, sub.sys == "HL"), 
             by = c("OPERATOR_ID" = "sub.id", "MDY" = "date"),
             suffix = c("", ".o"))
-
-
-hl.full %>%
-  group_by(OPERATOR_ID, MDY, REPORT_NUMBER) %>%
-  mutate(n = n()) %>% filter(n > 1) %>% 
-  select(MDY, REPORT_NUMBER, OPERATOR_ID, pri.id, NAME, pri.name, start, end) %>%view
-
 
 # miles.op <- tibble()
 # for(i in 1:nrow(miles)){
