@@ -157,6 +157,9 @@ gd.full <- distData %>%
          INTER_INTRA = "INTRASTATE",
          TOTAL_RELEASE = UNINTENTIONAL_RELEASE + INTENTIONAL_RELEASE,
          TOTAL_COST_CURRENT = replace_na(parse_number(TOTAL_COST_CURRENT), 0),
+         LOCATION_LONGITUDE = if_else(LOCATION_LONGITUDE > 0, 
+                                      LOCATION_LONGITUDE * -1,
+                                      LOCATION_LONGITUDE),
          EXPLODE_IND = replace_na(EXPLODE_IND, "NO"),
          IGNITE_IND = replace_na(IGNITE_IND, "NO"),
          FATAL = replace_na(FATAL, 0),
@@ -207,6 +210,9 @@ gt.full <- tranData %>%
          UNITS = "mscf",
          TOTAL_RELEASE = UNINTENTIONAL_RELEASE + INTENTIONAL_RELEASE,
          TOTAL_COST_CURRENT = replace_na(parse_number(TOTAL_COST_CURRENT), 0),
+         LOCATION_LONGITUDE = if_else(LOCATION_LONGITUDE > 0, 
+                                      LOCATION_LONGITUDE * -1,
+                                      LOCATION_LONGITUDE),
          EXPLODE_IND = replace_na(EXPLODE_IND, "NO"),
          IGNITE_IND = replace_na(IGNITE_IND, "NO"),
          FATAL = replace_na(FATAL, 0),
@@ -260,6 +266,9 @@ hl.full <- hzrdData %>%
          UNITS = "US Gal.",
          TOTAL_RELEASE = UNINTENTIONAL_RELEASE + INTENTIONAL_RELEASE,
          TOTAL_COST_CURRENT = replace_na(parse_number(TOTAL_COST_CURRENT), 0),
+         LOCATION_LONGITUDE = if_else(LOCATION_LONGITUDE > 0, 
+                                      LOCATION_LONGITUDE * -1,
+                                      LOCATION_LONGITUDE),
          EXPLODE_IND = replace_na(EXPLODE_IND, "NO"),
          IGNITE_IND = replace_na(IGNITE_IND, "NO"),
          FATAL = replace_na(FATAL, 0),
@@ -333,7 +342,7 @@ short_cols <- c( "REPORT_NUMBER", "NAME","OPERATOR_ID",  #basic characteristics
                  "EXPLODE_IND","IGNITE_IND" ,  "NUM_PUB_EVACUATED", "TOTAL_COST_CURRENT",#impact 2
                  "INSTALLATION_YEAR", "SYSTEM_PART_INVOLVED", "PIPE_DIAMETER", #inc char 
                  "CAUSE","CAUSE_DETAILS","MAP_CAUSE","MAP_SUBCAUSE", "NARRATIVE", #inc char 
-                  "pri.id","pri.name"
+                  "pri.id","pri.name", "prop"
                  )  #joined char
 
 #abridged all inc  
