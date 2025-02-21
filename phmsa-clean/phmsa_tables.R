@@ -22,48 +22,6 @@ tranData <- read_xlsx(unzip(temp, files = "gtggungs2010toPresent.xlsx"), sheet =
 hzrdData <- read_xlsx(unzip(temp, files = "hl2010toPresent.xlsx"), sheet = 2)
 lngData <- read_xlsx(unzip(temp, files = "lng2011toPresent.xlsx"), sheet = 2)
 
-#### MILEAGE DATA ####
-
-## getting mileage data 
-mileCols <- c("Operator.ID", "Operator.Business.Name",
-              "system", "Calendar.Year", "State.Abbreviation", 
-              "Total.Miles.by.Decade", "Total.By.Decade.Miles")
-
-miles <- read.csv("data/raw/GD_MilesDecadeAge.csv") %>% 
-  mutate(system = "GD (Gas Distribution)",
-         services = select(., Unknown.services:X2020.2029.Number.of.Services) %>% rowSums(na.rm = T),
-         Total.Miles.by.Decade = Total.Miles.by.Decade + (services * 0.0134) )%>%
-  select(any_of(mileCols))%>%
-  rbind(select(
-    read.csv("data/raw/GT_MilesDecadeAge.csv"), 
-    any_of(mileCols)) %>% 
-      mutate(system = "GT (Gas Transmission)") %>%
-      rename(Total.Miles.by.Decade = Total.By.Decade.Miles)
-  )%>%
-  rbind(select(
-    read.csv("data/raw/HL_MilesDecadeAge.csv"), 
-    any_of(mileCols)) %>% 
-      mutate(system = "HL (Hazardous Liquids)")
-  )%>%
-  #make colnames match incident data
-  rename(mileage = Total.Miles.by.Decade, 
-         SYSTEM_TYPE = system,
-         OPERATOR_ID = Operator.ID,
-         STATE = State.Abbreviation,
-         IYEAR = Calendar.Year,
-         NAME = Operator.Business.Name)%>%
-  #give snapshots of operator's yearly mileage to match incident years
-  group_by(OPERATOR_ID, NAME, SYSTEM_TYPE, STATE, IYEAR)%>% 
-  summarise(mileage = sum(mileage, na.rm = T))%>%
-  mutate(SYS = str_sub(SYSTEM_TYPE, 1,2)) %>% 
-  ungroup()
-
-miles <- miles %>%
-  rbind(miles %>% filter(IYEAR == max(IYEAR)) %>% mutate(IYEAR = max(IYEAR)+1) )
-
-## note: possible to add mileage for install_decade? 
-## note: possible handling of on/offshore mileage 
-
 #### OPERATOR DATA ####
 # from safety program 
 safe <- read_xlsx("data/raw/Safety_Program_Data.xlsx", skip = 2, sheet = 2)
