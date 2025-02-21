@@ -13,7 +13,8 @@ library(maps)
 # rn <- gt.sample$REPORT_NUMBER
 # sys <- rep("GT", nrow(gt.sample))
 
-bad_location_names = c("NA", "N/A", "Municipality", " Miles", "[[:digit:]]", "Near", "Outer Continental Shelf")
+bad_location_names = c("NA", "N/A", "Municipality", " Miles", "[[:digit:]]",
+                       "Near", "Outer Continental Shelf", "Unincorporated", "County")
 
 #load census state and county data
 land <- st_read("data/gis/census_county/cb_2021_us_county_5m.shp") %>%
@@ -174,7 +175,7 @@ locCleaner <- function(loc, lat, lon,
   
   locFix = NULL
   #bad location names
-  if(grepl(paste(bad_location_names, collapse = "|"), loc )|| 
+  if(grepl(paste(bad_location_names, collapse = "|"), loc, ignore.case = T )|| 
            !is.na(org)){
     #grab state shapefile
     state_shape <- land %>% filter(STATE_ABB == state)
