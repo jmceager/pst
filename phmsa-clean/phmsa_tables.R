@@ -12,8 +12,7 @@ source("new_functions.R")
 crs = 4326
 
 #### Data Setup ####
-## TODO: unpack zip to raw/ directory and continue cleaning 
-## TODO: replace 2022 miles with 2021 numbers 
+## TODO: add lng and gg 
 
 temp <- tempfile()
 download.file("https://www.phmsa.dot.gov/sites/phmsa.dot.gov/files/data_statistics/pipeline/PHMSA_Pipeline_Safety_Flagged_Incidents.zip", destfile =  temp, method = "curl")
@@ -382,3 +381,21 @@ write_csv(all.inc, "data/clean/all_inc.csv")
 
 #csv for op match 
 write.csv(ops, "data/clean/operator_id_match.csv")
+
+
+#### adding old data ####
+# load old distribution incidents
+dist2009 <- read_xlsx(unzip(temp, files = "gdmar2004to2009.xlsx"), sheet = 2)
+dist2004 <- read_xlsx(unzip(temp, files = "gd1986tofeb2004"), sheet = 2)
+
+# load old transmission incidents 
+tranData <- read_xlsx(unzip(temp, files = "gtggungs2010toPresent.xlsx"), sheet = 2)
+
+#load old hazard incidetns 
+hzrdData <- read_xlsx(unzip(temp, files = "hl2010toPresent.xlsx"), sheet = 2)
+lngData <- read_xlsx(unzip(temp, files = "lng2011toPresent.xlsx"), sheet = 2)
+
+
+
+
+
