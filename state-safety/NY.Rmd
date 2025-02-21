@@ -507,6 +507,34 @@ ggsave(plotExport, width = wdt, height = hgt, units = "in")
 
 \newthought{This makes it caps} or something to start new sections. Links might not show up properly so use this formatting: \href{https://www.phmsa.dot.gov/data-and-statistics/pipeline/pipeline-incident-flagged-files}{\textcolor{Cerulean}{\underline{PHMSA's website}}}. 
 
+```{r}
+beeg <- gtrAR %>%
+  filter(REPORT_YEAR == max(REPORT_YEAR))%>%
+  group_by(OPERATOR_ID,) %>%
+  summarize(miles = sum(PARTHONTOTAL, na.rm = T)+ sum(PARTHOFFTOTAL, na.rm = T))%>%
+  slice_max(miles, n = 10) %>%
+  pull(OPERATOR_ID)
+
+
+gtOld <- read.csv( paste0(datadir, "raw/gtgg2002to2009.csv")) %>% 
+  filter(grepl("GT", SYSTEM_TYPE), IYEAR > 2001, OFFSHORE_TEXT == "ONSHORE")%>%
+  mutate(SYS = "GT")
+
+gt <- read.csv(paste0(datadir, "clean/gt_inc.csv"))
+
+gtOld %>%
+  filter(IYEAR >= 2006, OPERATOR_ID %in% beeg)%>%
+  dplyr::select(OPERATOR_ID, SIGNIFICANT, TOTAL_COST_CURRENT )%>%
+  rbind(gt %>% dplyr::select(OPERATOR_ID, SIGNIFICANT, TOTAL_COST_CURRENT) %>%
+          filter(OPERATOR_ID %in% beeg)) %>%
+  group_by(OPERATOR_ID)%>%
+  summarize(n = n(),sig = sum(SIGNIFICANT == "YES"),
+            cost = sum(TOTAL_COST_CURRENT, na.rm = T)
+            )
+
+```
+
+
 ## Overview  
 ```{r quick facts}
 sig <- df %>%
