@@ -298,9 +298,11 @@ short_cols <- c( "REPORT_NUMBER", "NAME","OPERATOR_ID",  #basic characteristics
                  "FATALITY_IND","FATAL", "INJURY_IND","INJURE", #human impact
                  "EXPLODE_IND","IGNITE_IND" ,  "NUM_PUB_EVACUATED", "TOTAL_COST_CURRENT",#impact 2
                  "INSTALLATION_YEAR", "SYSTEM_PART_INVOLVED", "PIPE_DIAMETER", #inc char 
-                 "CAUSE","CAUSE_DETAILS","MAP_CAUSE","MAP_SUBCAUSE", "NARRATIVE", #inc char 
+                 "CAUSE","CAUSE_DETAILS","MAP_EIGHT_CAUSE","MAP_EIGHT_SUBCAUSE", "NARRATIVE", #inc char 
                   "pri.id","pri.name", "prop"
                  )  #joined char
+
+
 
 #abridged all inc  
 all.inc <- rbind(select(hl.full, all_of(short_cols)), 
@@ -386,7 +388,22 @@ write.csv(ops, "data/clean/operator_id_match.csv")
 #### adding old data ####
 # load old distribution incidents
 dist2009 <- read_xlsx(unzip(temp, files = "gdmar2004to2009.xlsx"), sheet = 2)
-dist2004 <- read_xlsx(unzip(temp, files = "gd1986tofeb2004"), sheet = 2)
+dist2004 <- read_xlsx(unzip(temp, files = "gd1986tofeb2004.xlsx"), sheet = 2)
+intersect(colnames(dist2009), colnames(dist2004))
+setdiff(colnames(dist2009), colnames(dist2004))
+
+#create colname lists for time periods 2004 to present and all incidents 
+dist_col_04present <- c("OPERATOR_ID", "MDY", "")
+
+dist_col_all
+
+#create 04 to present table
+dist2009 %>%
+  mutate(period = "04-09",
+         )
+
+#create 1986 to present table
+
 
 # load old transmission incidents 
 tranData <- read_xlsx(unzip(temp, files = "gtggungs2010toPresent.xlsx"), sheet = 2)
